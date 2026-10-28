@@ -69,6 +69,27 @@ portfolio project.
 - Ransomware and leak tracker: ransomware.live (free PRO tier), breach.house (paid API, account TBD), RansomLook (open source, also covers markets, forums, Telegram).
 - Watchlist of organizations, sectors, and countries with alerts on new victims.
 - Credential exposure: Have I Been Pwned domain search, Hudson Rock free infostealer API, IntelligenceX free tier, LeakCheck.
+- Identity lookup (username or email as the seed), added 2026-10-27 after a
+  work task showed the need. Free building blocks:
+  - Username enumeration across sites: WhatsMyName data file (open source
+    JSON used by whatsmyname.app), Maigret (3000+ sites, pulls profile
+    details and avatars), Sherlock as a cross-check.
+  - Email to services: holehe (which sites have an account for this email,
+    without alerting the owner).
+  - Breach association: HIBP (email in, breach names out), LeakCheck public
+    API (username or email in, breach sources and field types out, no
+    values), Hudson Rock free API (search by username, email, domain),
+    IntelligenceX free tier (document previews), psbdmp (paste search).
+  - Email discovery from public artefacts: GitHub commit emails via the
+    .patch trick, Gravatar profile JSON, PGP keyserver search, Keybase,
+    historical WHOIS, GHunt-style Google account checks.
+  - Result view: services found, avatars, breach sources, candidate emails
+    with the evidence for each, and a confidence note.
+  - Honest limit: full plaintext email-to-username pairs from breach corpora
+    are the paid product at every vendor (DeHashed, Snusbase, osint.ly). The
+    free tier tells you which breach and which fields exist. If the last
+    step is needed often at work, a DeHashed credit pack is cheaper than
+    analyst time; follow employer policy on breach data.
 - Newly registered domain monitoring: WhoisDS daily NRD files, ICANN CZDS zone files, certstream certificate transparency. dnstwist permutations of org domains, OpenSquat patterns.
   - Scheduled daily run against org domains.
   - Manual run over a selectable window (1, 7, 30 days).
@@ -117,6 +138,16 @@ portfolio project.
 - Detection templates from IOC sets: YARA, Sigma, SQL, KQL. SPL skipped.
 - Dockerfile and Docker Compose (app, Tor, SpiderFoot).
 - README with demo, tests, CI.
+- System health page (added 2026-10-27): installed package versions versus
+  latest on PyPI (PyPI JSON API), pip-audit findings, versions of wrapped
+  tools (Maigret, dnstwist, theHarvester, SpiderFoot) versus their latest
+  releases, vendored JavaScript versions, and the age of each data feed
+  (NRD files, KEV, EPSS). Read-only: it reports, the operator decides.
+- Isolation ladder for third-party code: app venv (our own code and
+  mainstream packages) -> separate venv per wrapped tool -> container
+  (phase 8) -> VirtualBox VM for unfamiliar or untrusted sources. A container
+  is a convenience and reproducibility boundary; a VM is the security
+  boundary.
 
 ### Phase 9: Back burner
 - MITRE ATT&CK lookup and mapping (plugin has a local dataset).
@@ -140,6 +171,26 @@ portfolio project.
 - Features, each a button beside deterministic results: enrichment summary, article summary, translation of non-English posts, TTP and ATT&CK extraction from reports, feed relevance ranking, report paragraph drafting.
 - Sensitive data routed to local model or excluded.
 - Cost reference: Haiku 5.5 is $0.10 per million input tokens and $0.50 per million output tokens; about 1,000 enrichment summaries per month costs roughly $0.65.
+
+## Dependency and supply-chain policy
+
+Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
+
+1. Few dependencies, from well-known maintainers, copied by exact name from
+   PyPI to avoid typosquats.
+2. Every version pinned and hash-locked in requirements.txt; installs use
+   `--require-hashes` so a swapped package fails to install.
+3. Wheels only (`--only-binary=:all:`) so no package runs build code at
+   install time.
+4. No upgrades without reading the changelog; prefer versions at least a
+   week old (lets the ecosystem catch a hijacked release).
+5. `pip-audit` before each commit that changes dependencies; Dependabot
+   alerts enabled on the GitHub repository.
+6. Third-party OSINT tools (theHarvester, Maigret, dnstwist, SpiderFoot) run
+   in their own venvs or containers, never in the app's venv, and ideally in
+   a VM when the source is less established.
+7. Vendored JavaScript (Cytoscape.js, HTMX) downloaded from official releases
+   with the SHA-256 recorded in docs/.
 
 ## Decisions log
 

@@ -1,0 +1,10 @@
+# Phase 1 core dependencies. Loose list; requirements.txt is the hash-locked
+# version generated from this with pip-tools. See docs/runbooks/dependency-policy.md.
+fastapi
+uvicorn[standard]
+httpx
+pydantic
+pydantic-settings
+jinja2
+python-dotenv
+python-multipart

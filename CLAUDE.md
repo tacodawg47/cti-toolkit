@@ -37,6 +37,9 @@ questions. Work proceeds phase by phase in the order listed there.
   porting with attribution.
 - Prefer small, testable modules: one package per tool under app/modules/,
   shared code under app/core/.
+- Dependencies: few, well known, pinned with hashes, installed wheels-only
+  with `--require-hashes --only-binary=:all:`. See the policy in ROADMAP.md.
+  Propose any new dependency by name, maintainer, and reason before adding.
 - No automated joining of Telegram channels, no engagement with threat
   actors, no purchases, no bypassing of anti-bot protections.
 
