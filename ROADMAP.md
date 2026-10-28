@@ -85,11 +85,34 @@ portfolio project.
     historical WHOIS, GHunt-style Google account checks.
   - Result view: services found, avatars, breach sources, candidate emails
     with the evidence for each, and a confidence note.
-  - Honest limit: full plaintext email-to-username pairs from breach corpora
-    are the paid product at every vendor (DeHashed, Snusbase, osint.ly). The
-    free tier tells you which breach and which fields exist. If the last
-    step is needed often at work, a DeHashed credit pack is cheaper than
-    analyst time; follow employer policy on breach data.
+  - Free tier limit: free APIs return which breach and which field types, not
+    the plaintext email-to-username pair. A paid vendor key (DeHashed,
+    Intelligence X) drops into the adapter slot to fill that gap.
+- Local breach index (username <-> email correlation), added 2026-10-27.
+  A personal research index over breach compilations the operator has
+  lawfully obtained from public sources, for legitimate OSINT/CTI casework.
+  - Scope: this is a personal analyst tool, not a public lookup service and
+    not for targeting private individuals outside legitimate casework.
+  - Acquisition is out of band and the operator's responsibility: download
+    and first-touch happen in an isolated VM, never on the host (mirrors the
+    darkweb-collection posture where the skill provides the matcher and the
+    analyst does the collection off-host). The toolkit ingests from a local
+    quarantine path; it does not fetch dumps itself.
+  - Minimize at ingest: parse combolist (email:pass, user:pass), CSV, JSON,
+    and SQL-dump formats; store username, email, and source only. Drop
+    passwords (optional: keep a present/absent flag and hash type, never the
+    value).
+  - Provenance per record: source name, date added, file SHA-256, record
+    count. Every answer cites its source dump.
+  - Malware hygiene: hash each file and optionally check VirusTotal before
+    opening; open only in the VM.
+  - Governance: suppression/deletion list to honor removal requests; local
+    query audit log; optional encryption at rest for the store (external
+    drive). Store never leaves the machine; never committed to git.
+  - Storage: SQLite with indexes (and FTS where useful). Start with a couple
+    of major compilations, measure, then decide on scale.
+  - Search: username -> associated emails and the reverse, with source
+    attribution and a confidence note.
 - Newly registered domain monitoring: WhoisDS daily NRD files, ICANN CZDS zone files, certstream certificate transparency. dnstwist permutations of org domains, OpenSquat patterns.
   - Scheduled daily run against org domains.
   - Manual run over a selectable window (1, 7, 30 days).
@@ -122,6 +145,23 @@ portfolio project.
 ### Phase 6: Infrastructure pivoting
 - Graph model: nodes are indicators, edges are pivots with a confidence label from the plugin's pivot quality table.
 - Pivots: passive DNS (VT, OTX), certificate SHA-256 (Shodan, Censys, crt.sh), JARM, favicon hash, HTTP body hash, subdomains, WHOIS registrant and nameserver, ASN neighbors, VT relationship walks for hashes (contacted IPs and domains, dropped files).
+- Advanced fingerprint pivots (added 2026-10-28, confirmed worth doing):
+  - JARM: active TLS server fingerprint. Pivot via Shodan `ssl.jarm:"<hash>"`
+    to find hosts (often the same C2 family) presenting the same TLS stack.
+    Strong for unusual JARMs, weak for default-config tools, so label
+    confidence per the pivot quality table.
+  - JA3 / JA3S and the JA4+ suite (JA4, JA4S, JA4H, JA4X, JA4T): TLS and HTTP
+    fingerprints. JA4+ is the modern, more robust successor; prefer it where a
+    source exposes it. Strong for custom clients, weak for OS-default stacks.
+  - Favicon hash (mmh3): pivot via Shodan `http.favicon.hash:<n>` to find
+    hosts serving the same favicon (phishing kits, panels, C2 UIs).
+  - HTTP response body / HTML content hash and page-title pivots (urlscan,
+    Shodan) to cluster templated infrastructure.
+  - Tracking-ID pivots: Google Analytics / GA4 / AdSense / Facebook Pixel IDs
+    embedded in page source (urlscan, publicwww) tie sites to one operator.
+  - SSH host key fingerprint and HTTP header hash (HHHash) via Shodan.
+  - Each pivot carries a confidence and a false-positive note; the graph never
+    presents a weak pivot (same registrar, same /24, shared CDN) as strong.
 - Cytoscape.js graph view, hop-by-hop expansion, pivot chain export.
 - Paid data (bulk historical passive DNS, reverse WHOIS) noted as upgrade path; SecurityTrails and Validin free tiers for light use.
 
@@ -171,6 +211,25 @@ portfolio project.
 - Features, each a button beside deterministic results: enrichment summary, article summary, translation of non-English posts, TTP and ATT&CK extraction from reports, feed relevance ranking, report paragraph drafting.
 - Sensitive data routed to local model or excluded.
 - Cost reference: Haiku 5.5 is $0.10 per million input tokens and $0.50 per million output tokens; about 1,000 enrichment summaries per month costs roughly $0.65.
+
+## Data handling policy (breach and leak data)
+
+Adopted 2026-10-27.
+
+- Purpose limit: breach/leak data is used for legitimate OSINT/CTI casework
+  (personal and professional), not a public service, not arbitrary targeting
+  of private individuals.
+- Lawful public sources only. No unauthorized access, no purchase of stolen
+  data, no criminal-market engagement to acquire it.
+- Acquisition and first-touch happen off-host in a VM. The toolkit ingests
+  from a local quarantine path and never fetches dumps itself.
+- Minimize: keep username, email, and provenance; drop passwords by default.
+- The store lives on local/external disk, is git-ignored, may be encrypted
+  at rest, and never leaves the machine.
+- Keep a query audit log and a suppression list (honor deletion requests).
+- Jurisdiction note: if the corpus includes EU/UK residents, the operator is
+  a data controller; "legitimate interest for security research" is the basis
+  and carries security + data-subject-request obligations.
 
 ## Dependency and supply-chain policy
 

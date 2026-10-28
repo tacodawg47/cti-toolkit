@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>IOC Enrichment</h1>
+<form method="post" action="/enrich">
+  <input type="text" name="indicator" value="{{ indicator | default('') }}"
+         placeholder="hash, IP, domain, or URL (defanged input is fine)" autofocus>
+  <button type="submit">Enrich</button>
+</form>
+
+{% if itype is defined %}
+  <p>Detected type: <code>{{ itype }}</code>
+     {% if value and value != indicator %}(refanged to <code>{{ value }}</code>){% endif %}</p>
+
+  {% if itype == "unknown" %}
+    <div class="card">Could not recognise that as a hash, IP, domain, or URL.</div>
+  {% endif %}
+
+  {% for r in results %}
+    <div class="card">
+      <h3>{{ r.source }}
+        <span class="verdict-{{ r.verdict }}">{{ r.verdict | upper }}</span>
+        {% if r.cached %}<small>(cached)</small>{% endif %}
+      </h3>
+      {% if r.error %}<p class="no">{{ r.error }}</p>{% endif %}
+      {% if r.detection_ratio %}<p>Detection ratio: <code>{{ r.detection_ratio }}</code></p>{% endif %}
+      {% if r.summary %}
+        <table>
+          {% for k, v in r.summary.items() %}
+            {% if v is not none and v != [] and v != "" %}
+              <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+            {% endif %}
+          {% endfor %}
+        </table>
+      {% endif %}
+    </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}

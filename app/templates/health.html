@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Health — CTI Toolkit{% endblock %}
+{% block content %}
+<h1>System Health</h1>
+
+<div class="card">
+  <h3>Server</h3>
+  <table>
+    <tr><th>Bind address</th><td><code>{{ settings.host }}:{{ settings.port }}</code></td></tr>
+    <tr><th>Data directory</th><td><code>{{ settings.data_dir }}</code></td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3>API keys configured</h3>
+  <table>
+    {% for name, present in keys.items() %}
+      <tr><th>{{ name }}</th>
+        <td>{% if present %}<span class="ok">yes</span>{% else %}<span class="no">no</span>{% endif %}</td></tr>
+    {% endfor %}
+  </table>
+  <small>Only presence is shown; key values are never displayed.</small>
+</div>
+
+<div class="card">
+  <h3>VirusTotal quota (today, UTC)</h3>
+  <table>
+    <tr><th>Used today</th><td>{{ quota.day }} / {{ quota.rpd }}</td></tr>
+    <tr><th>Per-minute limit</th><td>{{ quota.rpm }}</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3>Package versions</h3>
+  <table>
+    {% for name, v in versions.items() %}
+      <tr><th>{{ name }}</th><td><code>{{ v }}</code></td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}
