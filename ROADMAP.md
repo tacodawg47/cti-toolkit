@@ -43,10 +43,21 @@ portfolio project.
 ### Phase 1: Skeleton and IOC enrichment
 - Project layout, config, key vault, SQLite cache with TTL, rate limiter per vendor, job runner, base UI shell.
 - Input: hash, IP, domain, URL. Auto-detect type, defang/refang.
-- Vendors: VirusTotal, AbuseIPDB, OTX, GreyNoise, Shodan, urlscan, Censys (optional).
+- Vendors with keys: VirusTotal, AbuseIPDB, OTX, Shodan, urlscan, abuse.ch
+  (ThreatFox IOC search, MalwareBazaar hash lookup, URLhaus URL/host lookup,
+  YARAify). Censys optional.
+- Vendors with no key: Shodan InternetDB (ports, vulns, tags per IP),
+  CIRCL hashlookup (known-good hash filter), RDAP (official WHOIS replacement),
+  BGPView (ASN and prefix), ip-api.com (geo, 45/min non-commercial),
+  crt.sh (certificates), GreyNoise community endpoint (about 10/day).
+- Rate limiting is a first-class feature: per-vendor token bucket (VirusTotal
+  is 4/min and 500/day on the free key), a queue that spaces bulk lookups,
+  a result cache with per-vendor TTL so repeats cost nothing, and a quota
+  meter in the UI. Bulk jobs run in the background with an ETA.
 - Normalized verdict card per IOC plus raw vendor JSON.
 - Bulk paste of many IOCs.
-- Keys needed: VT, AbuseIPDB, OTX, GreyNoise, Shodan, urlscan.
+- Allowlist filter: Tranco top sites and CIRCL hashlookup suppress obvious
+  false positives before quota is spent.
 
 ### Phase 2: IOC extraction and vulnerability intelligence
 - Paste text, a URL, or upload a PDF; extract defanged and plain IOCs with iocextract; one click sends them to enrichment.
@@ -70,7 +81,16 @@ portfolio project.
 - Vulnerability enrichment from news: link articles to CVEs.
 
 ### Phase 5: Telegram and dark web monitoring
-- Telegram: Telethon read-only monitor, channel catalog seeded from the plugin's 30+ channel list, snowball discovery queue (new links found in collected messages, joined manually per OPSEC), local full-text search over everything collected. Third-party indexers (TGStat, Telemetr, Lyzem) for discovery.
+- Telegram: Telethon read-only monitor, channel catalog seeded from the plugin's 30+ channel list, snowball discovery queue (new links found in collected messages, joined manually per OPSEC), local full-text search over everything collected.
+- Telegram without an account: public channels expose a web preview at
+  t.me/s/<channel> that can be read with plain HTTP. Use it to preview a
+  channel before joining and as a low-cost poller for channels not yet joined.
+- Telegram discovery: Lyzem, TelegramDB, TGStat, Telemetr, and a Google
+  Custom Search over site:t.me. SocialLinks' similar-channels tool for
+  snowballing. (Source: The-Osint-Toolbox/Telegram-OSINT list.)
+- Excluded: Telegram "lookup bots" (Telelog, Sherlock-style phone lookups,
+  leak bots). Unknown operators, breach-derived personal data, and every
+  query leaks your selectors to a third party.
 - Onion indexer search: Ahmia, dark.fail, IntelligenceX, ported from the plugin's onion_search.py.
 - Forum catalog seeded from the plugin's 35+ forum list (status, mirror, access tier).
 - Selector watchlists using the six families from the plugin: brand, identity, email, domain, network, technical artefacts. Ported keyword_match.py logic.
@@ -106,7 +126,16 @@ portfolio project.
 - IntelOwl as an optional enrichment backend connector.
 - MISP and OpenCTI push.
 
-### Phase 10: AI assist (last)
+### Phase 10: Documentation and runbooks
+- Documentation is written as we go: every approved action produces a runbook
+  under docs/runbooks/ (exact commands, why, how to repeat by hand), and every
+  module gets a docs page when its phase closes.
+- This phase consolidates: user guide per tool, analyst workflow runbooks
+  (triage an IOC, investigate a domain, respond to a ransomware victim alert,
+  weekly vulnerability review), operations runbook (start, stop, backup,
+  rotate keys), and a contributor guide.
+
+### Phase 11: AI assist (last)
 - Provider abstraction: none (default), Ollama, Claude Haiku 5.5 via the official Anthropic SDK.
 - Features, each a button beside deterministic results: enrichment summary, article summary, translation of non-English posts, TTP and ATT&CK extraction from reports, feed relevance ranking, report paragraph drafting.
 - Sensitive data routed to local model or excluded.
@@ -121,13 +150,40 @@ portfolio project.
 - 2026-10-12: Python end to end (FastAPI + HTMX), not React. Reason: single language, no Node toolchain, user is new to both.
 - 2026-10-13: AI only as an optional last-phase layer.
 - 2026-10-22: Develop and run on Linux (dual boot) from the start. Code stays OS-agnostic.
+- 2026-10-22 (later): Linux dual boot hit a kernel panic after an upgrade
+  ("Unable to mount root fs on unknown-block(0,0)"). Development continues on
+  Windows until Linux is required (Tor, SpiderFoot, always-on monitoring).
+  Options then: boot the previous kernel from the GRUB advanced menu,
+  reinstall the partition, or install WSL2 inside Windows instead.
+- 2026-10-22: Repository is private at github.com/tacodawg47/cti-toolkit.
+- 2026-10-23: Approval-first workflow. Claude asks before any install, git or
+  GitHub operation, script execution, or external call, and writes a runbook
+  afterwards. Commits are approved one by one.
+- 2026-10-23: abuse.ch suite and several keyless sources added to phase 1.
+  GreyNoise demoted to a best-effort source because free keys are no longer
+  issued to consumer email domains.
+- 2026-10-23: Documentation phase inserted before the AI phase.
+
+## Additional free sources to consider (by phase)
+
+- Phase 1: Pulsedive (free key), Google Safe Browsing (free key), PhishTank
+  and OpenPhish (free feeds), Hybrid Analysis (free key, sandbox reports),
+  MalShare (free key), Malpedia (free account, malware family context),
+  ipinfo.io (free key, 50K/month), Team Cymru IP-to-ASN.
+- Phase 2: NVD API key (free, raises rate limit), Vulners (free tier),
+  AttackerKB (free key), Nuclei templates as an exploit-availability signal.
+- Phase 3: SecurityTrails (free, 50/month), WhoisXML (free, 500/month),
+  Validin (free tier), ransomwatch archive.
+- Phase 6: Validin and SecurityTrails for passive DNS, crt.sh for cert pivots.
 
 ## Open questions
 
 - breach.house: does the user have an advanced or enterprise account? API needs one.
 - Feedly: does the user's plan include the developer token? Fallback is OPML export.
 - Is the Linux machine always on? If so it hosts the monitoring instance.
-- GitHub account for the repository (needed for the resume angle and for CI).
+- Resolved 2026-10-22: GitHub repository created (private).
+- GreyNoise: live with the 10/day community endpoint, or obtain a key later
+  through a non-consumer email domain.
 
 ## Reference material
 

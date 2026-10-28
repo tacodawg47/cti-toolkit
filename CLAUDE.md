@@ -8,14 +8,30 @@ questions. Work proceeds phase by phase in the order listed there.
 
 ## Working agreement
 
-- The user is new to Python, FastAPI, and web development. Explain choices
-  briefly as you go and keep the code readable over clever.
+- **Approval before side effects.** Before installing anything, running any
+  git or GitHub operation, executing scripts or commands that change the
+  system, creating accounts or keys, or sending data to an external service:
+  say what will be done and why, then wait for the user's go-ahead. Writing
+  and editing code and docs inside the project folder is normal work and
+  needs no prompt. Read-only steps (reading files, web research, version
+  checks) need no prompt.
+- **Human in the loop for commits.** Every commit and push is approved
+  individually. Show the files and the proposed message first.
+- **Teach as you go.** After each approved action, add a short runbook under
+  docs/runbooks/ with the exact commands so the user can repeat it by hand.
+  The user wants to learn to do this without AI.
+- The user is new to Python, FastAPI, web development, and git. Explain
+  choices briefly as you go and keep the code readable over clever.
 - Deterministic core. No AI anywhere except the final "assist" phase, and
   that must be optional with a "none" provider as the default.
 - The app binds to 127.0.0.1 only.
 - Code must run on Linux (primary) and Windows. Use pathlib, no shell-specific
   calls, no hard-coded paths.
-- API keys live in .env (git-ignored). Never commit secrets. Never print keys.
+- API keys live in .env (git-ignored). Never commit secrets. Never print keys
+  or echo them back in chat. Keys on hand (values in .env only): VirusTotal
+  (free: 4/min, 500/day, 15.5K/month, non-commercial), AbuseIPDB, OTX, Shodan,
+  urlscan, abuse.ch Auth-Key (ThreatFox, MalwareBazaar, URLhaus, YARAify).
+  GreyNoise: no key, community endpoint only (about 10 lookups/day).
 - Reuse open source tools by wrapping them. The MIT-licensed cti-skills plugin
   (Liberty91) has stdlib Python vendor clients and dark web scripts worth
   porting with attribution.
@@ -31,5 +47,7 @@ APScheduler, Cytoscape.js (vendored). pip + venv. Docker in phase 8.
 
 ## Current status
 
-Phase 1 not started. Project folder created 2026-10-12 on Windows; development
-moving to the user's Linux dual-boot install on 2026-10-22.
+Phase 1 not started. Developing on Windows 11 for now (Python 3.12 installed
+at the user level; Git with Credential Manager). Linux dual boot is broken by
+a kernel panic; switch when Linux-only tooling is needed. Repository:
+github.com/tacodawg47/cti-toolkit (private).

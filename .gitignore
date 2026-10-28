@@ -1,0 +1,38 @@
+# Secrets: never commit. .env holds real API keys; .env.example is the blank template.
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local data and caches
+data/
+.cache/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+
+# Telegram session files are equivalent to credentials
+*.session
+*.session-journal
+
+# Future Claude session exports contain conversation text, including pasted keys
+docs/exports/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
