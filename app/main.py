@@ -19,7 +19,7 @@ from .core import db
 from .core.config import settings
 from .core.indicators import detect_type, refang
 from .core.ratelimit import rate_limiter
-from .modules.enrich import registry
+from .modules.enrich import registry, shodan
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -56,7 +56,7 @@ async def enrich(request: Request, indicator: str = Form(...)):
 
 
 @app.get("/health", response_class=HTMLResponse)
-def health(request: Request):
+async def health(request: Request):
     keys = {
         "virustotal": bool(settings.virustotal_api_key),
         "abuseipdb": bool(settings.abuseipdb_api_key),
@@ -79,6 +79,6 @@ def health(request: Request):
     }
     return templates.TemplateResponse(
         request, "health.html",
-        {"keys": keys, "versions": versions,
-         "quotas": quotas, "settings": settings},
+        {"keys": keys, "versions": versions, "quotas": quotas,
+         "shodan_account": await shodan.account_info(), "settings": settings},
     )

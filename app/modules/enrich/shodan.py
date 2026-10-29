@@ -24,6 +24,7 @@ API_BASE = "https://api.shodan.io"
 VENDOR = "shodan"
 CACHE_TTL = 6 * 3600
 NOT_FOUND_TTL = 3600
+ACCOUNT_TTL = 300          # api-info balance: refresh every 5 minutes
 
 # Shodan tags that suggest the host itself is bad, not just exposed.
 _BAD_TAGS = {"malware", "compromised", "honeypot", "c2"}
@@ -53,6 +54,48 @@ def _summarise(data: dict) -> dict:
     }
     ratio = f"{len(vulns)} known CVE(s)" if vulns else None
     return {"verdict": verdict, "ratio": ratio, "summary": summary}
+
+
+async def account_info() -> dict | None:
+    """
+    Read the live credit balance from Shodan's api-info endpoint.
+
+    Credits are a server-side balance (reset on Shodan's monthly cycle, also
+    spent by the website and any other tool on the same key), so we read the
+    authoritative number rather than count locally. api-info itself costs no
+    credits. Returns None if no key is set, or a dict with the balance (or an
+    `error` key if the call fails). Cached for ACCOUNT_TTL to avoid a call on
+    every page load.
+    """
+    if not settings.shodan_api_key:
+        return None
+
+    hit = cache.get(VENDOR, "api-info")
+    if hit is not None:
+        return hit
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(f"{API_BASE}/api-info",
+                                    params={"key": settings.shodan_api_key})
+    except httpx.HTTPError as exc:
+        return {"error": f"request failed: {exc}"}
+
+    if resp.status_code == 401:
+        return {"error": "Shodan rejected the API key (401)"}
+    if resp.status_code >= 400:
+        return {"error": f"HTTP {resp.status_code} from Shodan"}
+
+    data = resp.json() or {}
+    info = {
+        "plan": data.get("plan"),
+        "query_credits": data.get("query_credits"),
+        "scan_credits": data.get("scan_credits"),
+        "monitored_ips": data.get("monitored_ips"),
+        "unlocked": data.get("unlocked"),
+    }
+    cache.set(VENDOR, "api-info", info, ACCOUNT_TTL)   # cache only on success
+    return info
 
 
 async def lookup(itype: str, value: str) -> VendorResult:

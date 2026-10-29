@@ -38,6 +38,23 @@
   <small>OTX and the abuse.ch suite are uncapped here and not listed.</small>
 </div>
 
+{% if shodan_account %}
+<div class="card">
+  <h3>Shodan account (live balance)</h3>
+  {% if shodan_account.error %}
+    <p class="err">⚠ {{ shodan_account.error }}</p>
+  {% else %}
+    <table>
+      <tr><th>Plan</th><td>{{ shodan_account.plan or "—" }}</td></tr>
+      <tr><th>Query credits left</th><td>{{ shodan_account.query_credits }}</td></tr>
+      <tr><th>Scan credits left</th><td>{{ shodan_account.scan_credits }}</td></tr>
+      <tr><th>Monitored IPs</th><td>{{ shodan_account.monitored_ips }}</td></tr>
+    </table>
+    <small>Read from Shodan's api-info, not counted locally; cached 5 minutes.</small>
+  {% endif %}
+</div>
+{% endif %}
+
 <div class="card">
   <h3>Package versions</h3>
   <table>
