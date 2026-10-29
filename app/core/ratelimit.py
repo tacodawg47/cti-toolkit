@@ -18,9 +18,17 @@ from datetime import datetime, timezone
 
 from .db import connect
 
-# Known vendor limits. More vendors are added as their modules land.
+# Known vendor limits. A vendor may set rpm (requests per minute), rpd
+# (requests per day), both, or neither. A vendor with no entry here is not
+# rate limited by us. Values reflect free-tier caps; adjust as plans change.
 LIMITS: dict[str, dict[str, int]] = {
     "virustotal": {"rpm": 4, "rpd": 500},
+    "abuseipdb": {"rpd": 1000},          # free tier: 1000 checks/day, no per-minute cap
+    "shodan": {"rpm": 60},               # roughly one request per second; also credit-limited (not tracked here)
+    "urlscan": {"rpm": 60, "rpd": 1000},
+    "greynoise": {"rpd": 10},            # community endpoint, approximate and conservative; raise if needed
+    # otx and the abuse.ch suite (threatfox, malwarebazaar, urlhaus) have no
+    # strict free cap, so they are left uncapped (polite, cached use only).
 }
 
 
@@ -67,26 +75,33 @@ class RateLimiter:
         if not limits:
             return  # no configured limit for this vendor
 
+        rpm = limits.get("rpm")
+        rpd = limits.get("rpd")
+
         async with self._locks[vendor]:
-            if self._day_count(vendor) >= limits["rpd"]:
+            if rpd is not None and self._day_count(vendor) >= rpd:
                 raise QuotaExceeded(
-                    f"{vendor} daily quota of {limits['rpd']} reached; try tomorrow"
+                    f"{vendor} daily quota of {rpd} reached; try tomorrow"
                 )
 
-            window = self._minute[vendor]
-            now = time.monotonic()
-            while window and now - window[0] >= 60:
-                window.popleft()
-
-            if len(window) >= limits["rpm"]:
-                wait = 60 - (now - window[0])
-                if wait > 0:
-                    await asyncio.sleep(wait)
+            if rpm is not None:
+                window = self._minute[vendor]
                 now = time.monotonic()
                 while window and now - window[0] >= 60:
                     window.popleft()
 
-            window.append(time.monotonic())
+                if len(window) >= rpm:
+                    wait = 60 - (now - window[0])
+                    if wait > 0:
+                        await asyncio.sleep(wait)
+                    now = time.monotonic()
+                    while window and now - window[0] >= 60:
+                        window.popleft()
+
+                window.append(time.monotonic())
+
+            # Track daily usage for any capped vendor, even one with only an
+            # rpm cap, so the health page can show how many calls ran today.
             self._bump_day(vendor)
 
 

@@ -19,7 +19,7 @@ from .core import db
 from .core.config import settings
 from .core.indicators import detect_type, refang
 from .core.ratelimit import rate_limiter
-from .modules.enrich import virustotal
+from .modules.enrich import registry
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -48,9 +48,7 @@ def index(request: Request):
 async def enrich(request: Request, indicator: str = Form(...)):
     value = refang(indicator)
     itype = detect_type(value)
-    results = []
-    if itype in ("ip", "domain", "hash", "url"):
-        results.append(await virustotal.lookup(itype, value))
+    results = await registry.enrich_all(itype, value)
     return templates.TemplateResponse(
         request, "index.html",
         {"indicator": indicator, "value": value, "itype": itype, "results": results},
@@ -74,8 +72,13 @@ def health(request: Request):
             versions[pkg] = version(pkg)
         except PackageNotFoundError:
             versions[pkg] = "n/a"
+    # Daily usage for the vendors that carry a tracked cap.
+    quotas = {
+        v: rate_limiter.usage(v)
+        for v in ("virustotal", "abuseipdb", "shodan", "urlscan", "greynoise")
+    }
     return templates.TemplateResponse(
         request, "health.html",
         {"keys": keys, "versions": versions,
-         "quota": rate_limiter.usage("virustotal"), "settings": settings},
+         "quotas": quotas, "settings": settings},
     )

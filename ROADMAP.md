@@ -117,6 +117,74 @@ portfolio project.
   - Scheduled daily run against org domains.
   - Manual run over a selectable window (1, 7, 30 days).
   - Ad hoc search: type any domain or keyword plus a timeframe.
+  - Impersonation watch (added 2026-10-29): prioritize lookalikes of IAM and
+    MFA vendors (Okta, Duo, Ping, Microsoft/Entra, Google, Auth0, 1Password,
+    Yubico) and the auth-flow nouns attackers register for vishing landing
+    pages (mfa, otp, 2fa, sso, vpn, passkey, reset, verify, helpdesk, support,
+    login, portal plus the victim org name). Patterns modeled on Scattered
+    Spider / 0ktapus-style IAM phishing kits; refresh the keyword and pattern
+    list from current threat reporting rather than hardcoding once.
+  - Brand-as-subdomain-label pattern (important): actors often put the victim
+    name to the LEFT of their own registered domain, e.g.
+    mycompany.itpasskey.com or mycompany.sso-reset.com. mycompany is just a
+    subdomain label on an attacker-owned apex, so a dnstwist run on
+    mycompany.com will never see it. Catch it by matching the auth-noun /
+    pattern list against the registered name AND against any label in the
+    hostname, wherever the brand token or auth noun appears.
+  - Matching layers: exact keyword/brand in the cert SAN, hostname label, or
+    registered domain; fuzzy match (dnstwist permutation set, Levenshtein
+    distance, homoglyph/IDN and bitsquat detection); combined brand+auth-noun
+    heuristics (e.g. okta + reset). Score and rank candidates; this is a lead
+    generator, operator triages.
+  - Keyword/pattern list is a version-controlled file curated from current
+    security-vendor reporting on IAM-impersonation and vishing campaigns.
+    Curation can be research- or LLM-assisted OFFLINE (a web search to find
+    patterns dnstwist/the base list miss), but the runtime matching stays
+    deterministic. An in-tool LLM refresh of the list is a Phase 11 (optional,
+    "none" default) feature, never in the core matching path.
+    FIRST TASK when this phase begins: generate this keyword/pattern list
+    (brand tokens for IAM/MFA vendors + auth nouns + known vishing patterns)
+    from current reporting, before building the matcher.
+  - Certificate transparency: crt.sh is the primary source and fits the
+    desired cadence (scheduled sweep every 6-24h over the watchlist patterns,
+    plus an ad-hoc "search this domain/keyword" box) because it is a queryable
+    CT database with JSON output. certstream is a LIVE firehose, not a
+    queryable API, so it only catches certs issued while a listener is
+    connected; treat a self-hosted certstream-server-go listener as an
+    OPTIONAL real-time add-on later, not the first build. Wildcard limitation
+    still applies: a *.brand.tld cert in CT reveals only the apex, never the
+    subdomains, so supplement with passive DNS and on-demand enumeration.
+  - Subdomain enumeration (on-demand per investigation, not continuous mass
+    scanning). Chosen set, picked for coverage with low overlap:
+    - Subfinder (passive, fast) as the default aggregator, runs automatically
+      when the module is used. Do NOT give it our VirusTotal key: VT free is
+      500/day shared with IOC lookups, and Subfinder already aggregates many
+      keyless sources (crt.sh and others), so it does not need VT. Feed it the
+      generous keys (OTX, and SecurityTrails free tier if added), withhold the
+      scarce VT one.
+    - VirusTotal passive DNS / subdomains: reached in the pivoting module
+      on-demand per investigation, NOT wired into Subfinder, so it never
+      silently spends the daily VT budget.
+    - Amass (optional "deep" mode, passive+active) and BBOT (aggressive,
+      recursive): both opt-in, OFF by default, operator-triggered only, each
+      behind a prominent warning that it is aggressive and can get the
+      operator rate-limited or blocked, run in the VM. Never automatic.
+    - Findomain dropped: passive like Subfinder, so it adds overlap not reach.
+      Revisit only if coverage proves thin.
+    Results are normalized and de-duplicated into a hostname set so lists do
+    not balloon with duplicates. Subfinder/Amass/BBOT external binaries, not
+    pip wheels, so they get a separate supply-chain path (pinned release,
+    checksum, run in the VM when a mode does active probing). There is no
+    single global DNS zone to query; AXFR is almost always blocked. Realistic
+    sources are CT, passive DNS, ICANN CZDS zone files (second-level
+    registrations, free but per-TLD approval), and active brute/permutation
+    tooling run per-target.
+  - Module UX: one search box, not a wall of separate tools. Type a domain or
+    keyword once; the module fans out to the safe passive tools automatically
+    and shows one merged, de-duplicated, source-attributed result set.
+    Aggressive/quota-spending tools (Amass, BBOT) appear as opt-in toggles
+    with warnings. Mirrors the Phase 7 OSINT "one box, checkboxes for which
+    tools run" pattern so the app stays consistent module to module.
 
 ### Phase 4: News and topic search
 - Feedly developer API (needs Pro+ or Enterprise; verify) or OPML import into feedparser.
@@ -163,6 +231,31 @@ portfolio project.
   - Each pivot carries a confidence and a false-positive note; the graph never
     presents a weak pivot (same registrar, same /24, shared CDN) as strong.
 - Cytoscape.js graph view, hop-by-hop expansion, pivot chain export.
+- Local resolution-history store (added 2026-10-29): a SQLite table
+  (indicator, resolved_to, first_seen, last_seen, source) that records every
+  domain->IP and IP->host resolution the toolkit performs, building a
+  first-party passive-DNS history of the indicators the operator actually
+  looks at. Free, private, no quota. Complements provider pDNS (breadth) with
+  continuity and change detection on our own watchlist. Honest limit: it only
+  knows what we have looked at and has no history before we started.
+- Reviewing and visualizing the stored data (this is a web app, so review
+  happens in the UI, not by reading SQLite by hand):
+  - pDNS / history page: a search box (domain -> its resolution history; IP ->
+    domains seen resolving there) rendering a results table plus a simple
+    first_seen/last_seen timeline.
+  - Changes feed: the scheduler (Phase 5) re-resolves watchlist domains and
+    logs a change event when a watchlisted indicator resolves to something
+    new. Shown as a reverse-chronological feed/in-app inbox.
+  - Pivot graph: Cytoscape.js renders domain<->IP<->domain relationships from
+    this store, so the history feeds the graph directly.
+  - Dashboard home: tiles for watchlist size, changes in the last 24h/7d,
+    recent enrichments, and API quota usage.
+- Change-detection noise control (important, or the changes feed is useless):
+  only alert on WATCHLIST indicators, not every lookup; suppress expected
+  rotation from large CDN/hosting ASNs (Cloudflare, Akamai, Fastly, etc.) via
+  an allowlist; alert on MEANINGFUL change (new ASN, new country, new hosting
+  provider) rather than every IP tick inside the same provider; collapse and
+  de-duplicate. Operator can tune the suppression list.
 - Paid data (bulk historical passive DNS, reverse WHOIS) noted as upgrade path; SecurityTrails and Validin free tiers for light use.
 
 ### Phase 7: OSINT
@@ -211,6 +304,28 @@ portfolio project.
 - Features, each a button beside deterministic results: enrichment summary, article summary, translation of non-English posts, TTP and ATT&CK extraction from reports, feed relevance ranking, report paragraph drafting.
 - Sensitive data routed to local model or excluded.
 - Cost reference: Haiku 5.5 is $0.10 per million input tokens and $0.50 per million output tokens; about 1,000 enrichment summaries per month costs roughly $0.65.
+
+## Parking lot (revisit after the final phase)
+
+Added 2026-10-29. Ideas we were unsure about or deferred on purpose, parked
+here so they do not block progress. Once the core phases are complete, review
+this list and decide what to pull into active work. Keeps the project moving.
+
+- Real-time certstream listener (self-hosted certstream-server-go, bound to
+  127.0.0.1): continuous CT firehose to catch issuance the moment it happens,
+  as an upgrade to the crt.sh scheduled/ad-hoc sweep. Client-only or
+  localhost-bound, so no inbound exposure; store only matches, never the
+  firehose.
+- MISP and/or OpenCTI integration as an optional downstream TIP: push curated
+  finished IOCs out for long-term correlation and sharing. Toolkit core stays
+  on local SQLite and never depends on a TIP server being up. (Also tracked in
+  Phase 9.)
+- Additional dashboards beyond the Phase 6 pivot/pDNS views and the Phase 8
+  health page: a ransomware-victim dashboard, a DNS/passive-DNS dashboard, an
+  enrichment-lookup dashboard, and an overview home. Decide scope and which
+  data each surfaces when we get here.
+- Findomain and any dropped enumeration tools: revisit only if Subfinder
+  coverage proves thin.
 
 ## Data handling policy (breach and leak data)
 

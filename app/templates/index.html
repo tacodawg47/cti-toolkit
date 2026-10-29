@@ -16,12 +16,23 @@
   {% endif %}
 
   {% for r in results %}
+    {% set not_configured = r.error and "configured" in r.error %}
     <div class="card">
       <h3>{{ r.source }}
-        <span class="verdict-{{ r.verdict }}">{{ r.verdict | upper }}</span>
+        {% if r.error and not_configured %}
+          <span class="verdict-error">NOT CONFIGURED</span>
+        {% elif r.error %}
+          <span class="verdict-unavailable">UNAVAILABLE</span>
+        {% else %}
+          <span class="verdict-{{ r.verdict }}">{{ r.verdict | upper }}</span>
+        {% endif %}
         {% if r.cached %}<small>(cached)</small>{% endif %}
       </h3>
-      {% if r.error %}<p class="no">{{ r.error }}</p>{% endif %}
+      {% if r.error and not_configured %}
+        <p class="muted">Not queried: {{ r.error }}. Add the key in <code>.env</code> to enable it.</p>
+      {% elif r.error %}
+        <p class="err">⚠ Lookup failed: {{ r.error }}</p>
+      {% endif %}
       {% if r.detection_ratio %}<p>Detection ratio: <code>{{ r.detection_ratio }}</code></p>{% endif %}
       {% if r.summary %}
         <table>

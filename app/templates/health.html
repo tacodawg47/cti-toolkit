@@ -23,11 +23,19 @@
 </div>
 
 <div class="card">
-  <h3>VirusTotal quota (today, UTC)</h3>
+  <h3>API quota (today, UTC)</h3>
   <table>
-    <tr><th>Used today</th><td>{{ quota.day }} / {{ quota.rpd }}</td></tr>
-    <tr><th>Per-minute limit</th><td>{{ quota.rpm }}</td></tr>
+    <tr><th>Vendor</th><th>Used today</th><th>Daily cap</th><th>Per-minute</th></tr>
+    {% for name, q in quotas.items() %}
+      <tr>
+        <th>{{ name }}</th>
+        <td>{{ q.day }}</td>
+        <td>{{ q.rpd if q.rpd is not none else "—" }}</td>
+        <td>{{ q.rpm if q.rpm is not none else "—" }}</td>
+      </tr>
+    {% endfor %}
   </table>
+  <small>OTX and the abuse.ch suite are uncapped here and not listed.</small>
 </div>
 
 <div class="card">
