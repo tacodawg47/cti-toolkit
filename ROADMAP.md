@@ -326,6 +326,17 @@ this list and decide what to pull into active work. Keeps the project moving.
   data each surfaces when we get here.
 - Findomain and any dropped enumeration tools: revisit only if Subfinder
   coverage proves thin.
+- VirusTotal monthly quota tracking (~15,500/month): deliberately NOT tracked
+  (decided 2026-10-29). VT does not expose a live balance the way Shodan's
+  api-info does, so it would need a local monthly counter. Add only if heavy
+  use makes the monthly cap a real risk. Minute and daily caps are enforced.
+- Phase 1 enrichment expansion (parked 2026-10-29, operator did not want to
+  create accounts yet): wire the additional free IOC sources listed under
+  "Additional free sources to consider" once their free keys exist. Each is a
+  drop-in vendor module. Note: Team Cymru IP-to-ASN adds little over the ASN /
+  AS-owner that VirusTotal and AbuseIPDB already return for an IP, so it is
+  not worth adding for Phase 1; its exact BGP prefix is more useful in Phase 6
+  pivoting (ASN / CIDR-neighbor pivots).
 
 ## Data handling policy (breach and leak data)
 
@@ -390,6 +401,15 @@ Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
 - 2026-10-23: Documentation phase inserted before the AI phase.
 
 ## Additional free sources to consider (by phase)
+
+Phase 1 shipped (2026-10-29) with only the vendors whose keys were already in
+.env (VirusTotal, AbuseIPDB, OTX, Shodan, urlscan, abuse.ch, keyless
+GreyNoise). The sources below were deferred only because each needs a new free
+account/key the operator must create; wiring one is now a drop-in vendor
+module. Planned "Phase 1 enrichment expansion", in rough priority order:
+Team Cymru IP-to-ASN (keyless, can add anytime), ipinfo.io, Pulsedive, Google
+Safe Browsing, Hybrid Analysis, MalShare. PhishTank/OpenPhish are feeds (local
+feed-match module, not the vendor pattern). Malpedia last (vetted account).
 
 - Phase 1: Pulsedive (free key), Google Safe Browsing (free key), PhishTank
   and OpenPhish (free feeds), Hybrid Analysis (free key, sandbox reports),
