@@ -205,7 +205,7 @@ this list and decide what to pull into active work. Keeps the project moving.
   Phase 9.)
 - Additional dashboards beyond the Phase 6 pivot/pDNS views and the Phase 8
   health page: a ransomware-victim dashboard, a DNS/passive-DNS dashboard, an
-  enrichment-lookup dashboard, and an overview home. Decide scope and which
+  enrichment-lookup dashboard, vulnerability dashboards and an overview home. Decide scope and which
   data each surfaces when we get here.
 - Findomain and any dropped enumeration tools: revisit only if Subfinder
   coverage proves thin.
