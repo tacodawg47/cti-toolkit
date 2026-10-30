@@ -39,7 +39,7 @@ git fetch origin
 git reset --hard origin/main
 
 # 6. Move a file in a way git records as a rename
-git mv planning-session-2026-10-22.zip docs/planning-session-2026-10-22.zip
+git mv notes.md docs/notes.md
 ```
 
 The usual way to get a repository onto a new machine is one command instead:

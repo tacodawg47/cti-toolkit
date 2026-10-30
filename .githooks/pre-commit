@@ -1,0 +1,30 @@
+#!/bin/sh
+# Pre-commit guard: refuse to commit AI conversation transcripts / session
+# exports. They can contain pasted API keys and private conversation text, so
+# they must never enter git history.
+#
+# Enabled per clone with:   git config core.hooksPath .githooks
+# Override (only when you are CERTAIN the file is safe): git commit --no-verify
+
+blocked=""
+for f in $(git diff --cached --name-only --diff-filter=AM); do
+  case "$f" in
+    *.jsonl|*session*.zip|*transcript*.zip|*conversation*.zip|*session-export*)
+      blocked="${blocked}${f}
+"
+      ;;
+  esac
+done
+
+if [ -n "$blocked" ]; then
+  echo ""
+  echo "COMMIT BLOCKED - these staged files look like conversation transcripts/exports:"
+  printf '%s' "$blocked" | sed '/^$/d' | sed 's/^/  - /'
+  echo ""
+  echo "They may contain pasted secrets and private conversation text, and must"
+  echo "not enter git history. Move them to a git-ignored location (docs/exports/)."
+  echo "If you are CERTAIN this file is safe and intended, override with:"
+  echo "  git commit --no-verify"
+  exit 1
+fi
+exit 0

@@ -1,0 +1,4 @@
+# Keep shell scripts and git hooks as LF so they run on Linux (primary target)
+# even when edited on Windows. A CRLF shebang line breaks execution under sh.
+.githooks/pre-commit text eol=lf
+*.sh text eol=lf

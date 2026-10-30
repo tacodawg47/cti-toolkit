@@ -32,6 +32,15 @@ questions. Work proceeds phase by phase in the order listed there.
   (free: 4/min, 500/day, 15.5K/month, non-commercial), AbuseIPDB, OTX, Shodan,
   urlscan, abuse.ch Auth-Key (ThreatFox, MalwareBazaar, URLhaus, YARAify).
   GreyNoise: no key, community endpoint only (about 10 lookups/day).
+- **Never commit or upload conversation transcripts.** Claude/AI session
+  exports (e.g. `.jsonl` transcripts and zipped session exports) must never
+  enter the repo or any remote — not
+  through git and not through the GitHub web uploader. They can hold pasted
+  secrets and private conversation text, and belong only in local,
+  git-ignored locations (e.g. `docs/exports/`). A pre-commit hook
+  (`.githooks/pre-commit`) blocks them for git; the web uploader bypasses
+  every local guard, so never drag these into github.com. If one ever lands
+  in history, remove it with docs/runbooks/scrub-file-from-git-history.md.
 - Reuse open source tools by wrapping them. The MIT-licensed cti-skills plugin
   (Liberty91) has stdlib Python vendor clients and dark web scripts worth
   porting with attribution.

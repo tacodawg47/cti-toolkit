@@ -28,8 +28,18 @@ logs/
 *.session
 *.session-journal
 
-# Future Claude session exports contain conversation text, including pasted keys
+# Claude/AI conversation transcripts & session exports: NEVER commit.
+# They can contain pasted API keys and private conversation text. A pre-commit
+# hook (.githooks/pre-commit) blocks these as well. The GitHub *web* uploader
+# bypasses both guards, so never drag a transcript into github.com.
+# (If you ever truly need to track a .jsonl data file: git add -f <path>.)
+# To remove a file already in history, see
+# docs/runbooks/scrub-file-from-git-history.md
 docs/exports/
+*.jsonl
+*session*.zip
+*transcript*.zip
+*conversation*.zip
 
 # Editors and OS
 .vscode/
