@@ -9,17 +9,21 @@ VendorResult / cache / rate-limiter.
 
 import base64
 
-import httpx
-
 from ...core import cache
 from ...core.config import settings
 from ...core.models import VendorResult
 from ...core.ratelimit import QuotaExceeded, rate_limiter
+from . import base
 
 API_BASE = "https://www.virustotal.com/api/v3"
 VENDOR = "virustotal"
 CACHE_TTL = 6 * 3600       # found results: 6 hours
 NOT_FOUND_TTL = 3600       # "not in VT": 1 hour
+
+# The stats that represent an actual engine opinion. VT also reports timeout,
+# type-unsupported, confirmed-timeout and failure; those are not opinions, so
+# they must not inflate the detection-ratio denominator.
+_ENGINE_STATS = ("harmless", "malicious", "suspicious", "undetected")
 
 
 def _url_id(url: str) -> str:
@@ -42,7 +46,7 @@ def _path_for(itype: str, value: str) -> str:
 def _summarise(obj: dict) -> dict:
     attrs = (obj.get("data") or {}).get("attributes") or {}
     stats = attrs.get("last_analysis_stats") or {}
-    total = sum(v for v in stats.values() if isinstance(v, int))
+    total = sum(stats.get(k, 0) for k in _ENGINE_STATS)
     malicious = stats.get("malicious", 0)
     suspicious = stats.get("suspicious", 0)
 
@@ -66,21 +70,17 @@ def _summarise(obj: dict) -> dict:
         "registrar": attrs.get("registrar"),
     }
     ratio = f"{malicious}/{total}" if total else None
-    return {"verdict": verdict, "ratio": ratio, "summary": summary, "attributes": attrs}
-
-
-def _result(value: str, itype: str, **kw) -> VendorResult:
-    return VendorResult(source=VENDOR, indicator=value, indicator_type=itype, **kw)
+    return {"verdict": verdict, "ratio": ratio, "summary": summary}
 
 
 async def lookup(itype: str, value: str) -> VendorResult:
     if not settings.virustotal_api_key:
-        return _result(value, itype, error="no API key configured")
+        return base.not_configured(VENDOR, itype, value, "no API key configured")
 
     try:
         path = _path_for(itype, value)
     except ValueError as exc:
-        return _result(value, itype, error=str(exc))
+        return base.failed(VENDOR, itype, value, str(exc))
 
     cache_key = f"{itype}:{value}"
     hit = cache.get(VENDOR, cache_key)
@@ -90,34 +90,30 @@ async def lookup(itype: str, value: str) -> VendorResult:
     try:
         await rate_limiter.acquire(VENDOR)
     except QuotaExceeded as exc:
-        return _result(value, itype, error=str(exc))
+        return base.quota(VENDOR, itype, value, str(exc))
 
     headers = {"x-apikey": settings.virustotal_api_key, "Accept": "application/json"}
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get(f"{API_BASE}{path}", headers=headers)
-    except httpx.HTTPError as exc:
-        return _result(value, itype, verdict="error", error=f"request failed: {type(exc).__name__}")
+    status, body, err = await base.fetch_json("GET", f"{API_BASE}{path}", headers=headers)
+    if err:
+        return base.failed(VENDOR, itype, value, err)
 
-    if resp.status_code == 404:
-        result = _result(value, itype, summary={"note": "not found in VirusTotal"})
-        cache.set(VENDOR, cache_key, result.model_dump(), NOT_FOUND_TTL)
+    if status == 404:
+        result = base.vendor_result(VENDOR, itype, value, summary={"note": "not found in VirusTotal"})
+        cache.put(VENDOR, cache_key, result.model_dump(), NOT_FOUND_TTL)
         return result
-    if resp.status_code == 429:
-        return _result(value, itype, error="rate limited by VirusTotal (429)")
-    if resp.status_code == 401:
-        return _result(value, itype, error="VirusTotal rejected the API key (401)")
-    if resp.status_code >= 400:
-        return _result(value, itype, verdict="error",
-                       error=f"HTTP {resp.status_code} from VirusTotal")
+    if status == 401:
+        return base.failed(VENDOR, itype, value, "VirusTotal rejected the API key (401)")
+    if status == 429:
+        return base.quota(VENDOR, itype, value, "rate limited by VirusTotal (429)")
+    if status != 200:
+        return base.failed(VENDOR, itype, value, f"HTTP {status} from VirusTotal")
 
-    parsed = _summarise(resp.json())
-    result = _result(
-        value, itype,
+    parsed = _summarise(body or {})
+    result = base.vendor_result(
+        VENDOR, itype, value,
         verdict=parsed["verdict"],
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
-        raw={"attributes": parsed["attributes"]},
     )
-    cache.set(VENDOR, cache_key, result.model_dump(), CACHE_TTL)
+    cache.put(VENDOR, cache_key, result.model_dump(), CACHE_TTL)
     return result

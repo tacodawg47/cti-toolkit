@@ -12,12 +12,11 @@ result. An API key raises the rate limit but is not required.
 Docs: https://urlscan.io/docs/api/
 """
 
-import httpx
-
 from ...core import cache
 from ...core.config import settings
 from ...core.models import VendorResult
 from ...core.ratelimit import QuotaExceeded, rate_limiter
+from . import base
 from .base import vendor_result
 
 API_URL = "https://urlscan.io/api/v1/search/"
@@ -59,7 +58,7 @@ def _summarise(body: dict) -> dict:
 
 async def lookup(itype: str, value: str) -> VendorResult:
     if itype not in ("url", "domain"):
-        return vendor_result(VENDOR, itype, value, error=f"urlscan does not handle type: {itype}")
+        return base.failed(VENDOR, itype, value, f"urlscan does not handle type: {itype}")
 
     cache_key = f"{itype}:{value}"
     hit = cache.get(VENDOR, cache_key)
@@ -69,27 +68,23 @@ async def lookup(itype: str, value: str) -> VendorResult:
     try:
         await rate_limiter.acquire(VENDOR)
     except QuotaExceeded as exc:
-        return vendor_result(VENDOR, itype, value, error=str(exc))
+        return base.quota(VENDOR, itype, value, str(exc))
 
     headers = {"Accept": "application/json"}
     if settings.urlscan_api_key:
         headers["API-Key"] = settings.urlscan_api_key
     params = {"q": _query_for(itype, value), "size": 5}
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get(API_URL, headers=headers, params=params)
-    except httpx.HTTPError as exc:
-        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {type(exc).__name__}")
+    status, body, err = await base.fetch_json("GET", API_URL, headers=headers, params=params)
+    if err:
+        return base.failed(VENDOR, itype, value, err)
+    if status == 401:
+        return base.failed(VENDOR, itype, value, "urlscan rejected the API key (401)")
+    if status == 429:
+        return base.quota(VENDOR, itype, value, "rate limited by urlscan (429)")
+    if status != 200:
+        return base.failed(VENDOR, itype, value, f"HTTP {status} from urlscan")
 
-    if resp.status_code == 401:
-        return vendor_result(VENDOR, itype, value, error="urlscan rejected the API key (401)")
-    if resp.status_code == 429:
-        return vendor_result(VENDOR, itype, value, error="rate limited by urlscan (429)")
-    if resp.status_code >= 400:
-        return vendor_result(VENDOR, itype, value, verdict="error",
-                             error=f"HTTP {resp.status_code} from urlscan")
-
-    parsed = _summarise(resp.json() or {})
+    parsed = _summarise(body or {})
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
@@ -97,5 +92,5 @@ async def lookup(itype: str, value: str) -> VendorResult:
         summary=parsed["summary"],
     )
     ttl = CACHE_TTL if parsed["ratio"] else NOT_FOUND_TTL
-    cache.set(VENDOR, cache_key, result.model_dump(), ttl)
+    cache.put(VENDOR, cache_key, result.model_dump(), ttl)
     return result

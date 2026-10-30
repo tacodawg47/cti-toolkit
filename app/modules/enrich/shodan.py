@@ -13,12 +13,11 @@ toolkit does not track; the rpm cap just paces requests. Docs:
 https://developer.shodan.io/
 """
 
-import httpx
-
 from ...core import cache
 from ...core.config import settings
 from ...core.models import VendorResult
 from ...core.ratelimit import QuotaExceeded, rate_limiter
+from . import base
 from .base import vendor_result
 
 API_BASE = "https://api.shodan.io"
@@ -77,19 +76,17 @@ async def account_info() -> dict | None:
     if hit is not None:
         return hit
 
-    try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.get(f"{API_BASE}/api-info",
-                                    params={"key": settings.shodan_api_key})
-    except httpx.HTTPError as exc:
-        return {"error": f"request failed: {type(exc).__name__}"}
-
-    if resp.status_code == 401:
+    status, body, err = await base.fetch_json(
+        "GET", f"{API_BASE}/api-info", params={"key": settings.shodan_api_key}
+    )
+    if err:
+        return {"error": err}
+    if status == 401:
         return {"error": "Shodan rejected the API key (401)"}
-    if resp.status_code >= 400:
-        return {"error": f"HTTP {resp.status_code} from Shodan"}
+    if status != 200:
+        return {"error": f"HTTP {status} from Shodan"}
 
-    data = resp.json() or {}
+    data = body or {}
     info = {
         "plan": data.get("plan"),
         "query_credits": data.get("query_credits"),
@@ -97,15 +94,15 @@ async def account_info() -> dict | None:
         "monitored_ips": data.get("monitored_ips"),
         "unlocked": data.get("unlocked"),
     }
-    cache.set(VENDOR, "api-info", info, ACCOUNT_TTL)   # cache only on success
+    cache.put(VENDOR, "api-info", info, ACCOUNT_TTL)   # cache only on success
     return info
 
 
 async def lookup(itype: str, value: str) -> VendorResult:
     if itype != "ip":
-        return vendor_result(VENDOR, itype, value, error="Shodan handles IP addresses only")
+        return base.failed(VENDOR, itype, value, "Shodan handles IP addresses only")
     if not settings.shodan_api_key:
-        return vendor_result(VENDOR, itype, value, error="no API key configured")
+        return base.not_configured(VENDOR, itype, value, "no API key configured")
 
     cache_key = f"{itype}:{value}"
     hit = cache.get(VENDOR, cache_key)
@@ -115,37 +112,35 @@ async def lookup(itype: str, value: str) -> VendorResult:
     try:
         await rate_limiter.acquire(VENDOR)
     except QuotaExceeded as exc:
-        return vendor_result(VENDOR, itype, value, error=str(exc))
+        return base.quota(VENDOR, itype, value, str(exc))
 
-    params = {"key": settings.shodan_api_key}
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get(f"{API_BASE}/shodan/host/{value}", params=params)
-    except httpx.HTTPError as exc:
-        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {type(exc).__name__}")
+    status, body, err = await base.fetch_json(
+        "GET", f"{API_BASE}/shodan/host/{value}", params={"key": settings.shodan_api_key}
+    )
+    if err:
+        return base.failed(VENDOR, itype, value, err)
 
-    if resp.status_code == 404:
+    if status == 404:
         result = vendor_result(VENDOR, itype, value,
                                summary={"note": "no information in Shodan"})
-        cache.set(VENDOR, cache_key, result.model_dump(), NOT_FOUND_TTL)
+        cache.put(VENDOR, cache_key, result.model_dump(), NOT_FOUND_TTL)
         return result
-    if resp.status_code == 401:
-        return vendor_result(VENDOR, itype, value, error="Shodan rejected the API key (401)")
-    if resp.status_code == 403:
-        return vendor_result(VENDOR, itype, value, error="Shodan access denied (403): plan may not allow host lookups")
-    if resp.status_code == 429:
-        return vendor_result(VENDOR, itype, value, error="rate limited by Shodan (429)")
-    if resp.status_code >= 400:
-        return vendor_result(VENDOR, itype, value, verdict="error",
-                             error=f"HTTP {resp.status_code} from Shodan")
+    if status == 401:
+        return base.failed(VENDOR, itype, value, "Shodan rejected the API key (401)")
+    if status == 403:
+        return base.failed(VENDOR, itype, value,
+                           "Shodan access denied (403): plan may not allow host lookups")
+    if status == 429:
+        return base.quota(VENDOR, itype, value, "rate limited by Shodan (429)")
+    if status != 200:
+        return base.failed(VENDOR, itype, value, f"HTTP {status} from Shodan")
 
-    parsed = _summarise(resp.json() or {})
+    parsed = _summarise(body or {})
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
-        raw=parsed["summary"],
     )
-    cache.set(VENDOR, cache_key, result.model_dump(), CACHE_TTL)
+    cache.put(VENDOR, cache_key, result.model_dump(), CACHE_TTL)
     return result

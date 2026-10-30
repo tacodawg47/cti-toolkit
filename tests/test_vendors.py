@@ -6,13 +6,20 @@ Run from the project root:
     .venv/Scripts/python.exe -m unittest discover -s tests -t . -v
 """
 
+import shutil
+import tempfile
 import unittest
+from pathlib import Path
 
+import httpx
 from pydantic import ValidationError
 
-from app.core.config import Settings
+from app.core import db, indicators
+from app.core.config import Settings, settings
+from app.core.models import VendorResult
 from app.modules.enrich import (
     abuseipdb,
+    base,
     greynoise,
     malwarebazaar,
     otx,
@@ -21,6 +28,7 @@ from app.modules.enrich import (
     threatfox,
     urlhaus,
     urlscan,
+    virustotal,
 )
 
 
@@ -195,6 +203,155 @@ class RegistryGateTests(unittest.IsolatedAsyncioTestCase):
         res = await registry.enrich_all("ip", "127.0.0.1")
         self.assertEqual(len(res), 1)
         self.assertTrue(res[0].summary["note"].startswith("loopback"))
+
+
+class IndicatorsTests(unittest.TestCase):
+    def test_refang_variants(self):
+        self.assertEqual(indicators.refang("hxxp://evil[.]com"), "http://evil.com")
+        self.assertEqual(indicators.refang("evil[dot]com"), "evil.com")
+        self.assertEqual(indicators.refang("evil(dot)com"), "evil.com")
+        self.assertEqual(indicators.refang("evil dot com"), "evil.com")
+        self.assertEqual(indicators.refang("<evil[.]com>"), "evil.com")
+
+    def test_normalise_ip_port_and_trailing_dot(self):
+        self.assertEqual(indicators.normalise("1.2.3.4:443"), "1.2.3.4")
+        self.assertEqual(indicators.normalise("example.com."), "example.com")
+        self.assertEqual(indicators.normalise("8.8.8.8"), "8.8.8.8")
+
+    def test_canonical_lowercases_hash_and_domain_not_url(self):
+        self.assertEqual(indicators.canonical("hash", "ABCdef"), "abcdef")
+        self.assertEqual(indicators.canonical("domain", "Example.COM"), "example.com")
+        self.assertEqual(indicators.canonical("url", "http://X.com/AbC"), "http://X.com/AbC")
+
+    def test_numeric_label_is_not_a_domain(self):
+        self.assertEqual(indicators.detect_type("1.2.3"), "unknown")
+        self.assertEqual(indicators.detect_type("example.com"), "domain")
+
+    def test_detect_basic_types(self):
+        self.assertEqual(indicators.detect_type("8.8.8.8"), "ip")
+        self.assertEqual(indicators.detect_type("a" * 64), "hash")
+        self.assertEqual(indicators.detect_type("http://x.com"), "url")
+
+
+class VirustotalDenominatorTests(unittest.TestCase):
+    def test_denominator_excludes_non_engine_stats(self):
+        obj = {"data": {"attributes": {"last_analysis_stats": {
+            "harmless": 60, "malicious": 0, "suspicious": 0, "undetected": 10,
+            "timeout": 5, "type-unsupported": 20, "failure": 3}}}}
+        parsed = virustotal._summarise(obj)
+        self.assertEqual(parsed["ratio"], "0/70")      # 60 + 0 + 0 + 10 only
+        self.assertEqual(parsed["verdict"], "clean")
+
+
+class AggregateTests(unittest.TestCase):
+    @staticmethod
+    def _r(source, verdict, status="ok"):
+        return VendorResult(source=source, indicator="x", indicator_type="ip",
+                            verdict=verdict, status=status)
+
+    def test_worst_of_names_its_sources(self):
+        agg = registry.aggregate_verdict([
+            self._r("vt", "malicious"),
+            self._r("otx", "suspicious"),
+            self._r("ab", "unknown"),
+            self._r("gn", "clean", status="error"),     # ignored (not ok)
+        ])
+        self.assertEqual(agg["verdict"], "malicious")
+        self.assertEqual(agg["sources"], ["vt"])
+
+    def test_none_when_nobody_answered(self):
+        self.assertIsNone(registry.aggregate_verdict([
+            self._r("vt", "unknown", status="error"),
+            self._r("otx", "unknown", status="not_configured"),
+        ]))
+
+
+class FetchJsonTests(unittest.IsolatedAsyncioTestCase):
+    def _install(self, handler):
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+
+    async def asyncTearDown(self):
+        await base.aclose()
+
+    async def test_200_json(self):
+        self._install(lambda req: httpx.Response(200, json={"ok": True}))
+        self.assertEqual(await base.fetch_json("GET", "https://x/"), (200, {"ok": True}, None))
+
+    async def test_non_200_passes_code_through(self):
+        self._install(lambda req: httpx.Response(404, json={}))
+        status, body, err = await base.fetch_json("GET", "https://x/")
+        self.assertEqual((status, body, err), (404, None, None))
+
+    async def test_200_non_json_is_clear_error(self):
+        self._install(lambda req: httpx.Response(200, text="<html>maintenance</html>"))
+        status, body, err = await base.fetch_json("GET", "https://x/")
+        self.assertEqual(status, 200)
+        self.assertIsNone(body)
+        self.assertIn("non-JSON", err)
+
+    async def test_transport_error_is_typed(self):
+        def boom(req):
+            raise httpx.ConnectError("down")
+        self._install(boom)
+        status, body, err = await base.fetch_json("GET", "https://x/")
+        self.assertIsNone(status)
+        self.assertTrue(err.startswith("request failed:"))
+
+
+class AbuseIPDBBranchTests(unittest.IsolatedAsyncioTestCase):
+    """End-to-end client paths (get_json + status + cache round-trip), offline."""
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp()
+        self._orig_dir = settings.data_dir
+        self._orig_key = settings.abuseipdb_api_key
+        settings.data_dir = Path(self._tmp)
+        settings.abuseipdb_api_key = "test-key"
+        db.init_db()
+
+    async def asyncTearDown(self):
+        await base.aclose()
+        settings.data_dir = self._orig_dir
+        settings.abuseipdb_api_key = self._orig_key
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    def _install(self, handler):
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+
+    async def test_401_sets_error_status(self):
+        self._install(lambda req: httpx.Response(401, json={}))
+        res = await abuseipdb.lookup("ip", "8.8.8.8")
+        self.assertEqual(res.status, "error")
+        self.assertIn("401", res.error)
+
+    async def test_200_success_then_cache_hit(self):
+        self._install(lambda req: httpx.Response(
+            200, json={"data": {"abuseConfidenceScore": 90, "totalReports": 5}}))
+        res = await abuseipdb.lookup("ip", "9.9.9.9")
+        self.assertEqual(res.status, "ok")
+        self.assertEqual(res.verdict, "malicious")
+        self.assertFalse(res.cached)
+        res2 = await abuseipdb.lookup("ip", "9.9.9.9")
+        self.assertTrue(res2.cached)
+
+    async def test_non_json_body_is_clear_error(self):
+        self._install(lambda req: httpx.Response(200, text="<html>nope</html>"))
+        res = await abuseipdb.lookup("ip", "1.1.1.1")
+        self.assertEqual(res.status, "error")
+        self.assertIn("non-JSON", res.error)
+
+
+class UrlhausPayloadTests(unittest.TestCase):
+    def test_md5_and_sha256_route_to_payload(self):
+        self.assertIsNotNone(urlhaus._request_for("hash", "a" * 32))
+        self.assertIsNotNone(urlhaus._request_for("hash", "a" * 64))
+
+    def test_sha1_is_unsupported(self):
+        self.assertIsNone(urlhaus._request_for("hash", "a" * 40))
+
+    def test_payload_hit_is_malicious(self):
+        parsed = urlhaus._summarise_payload({"query_status": "ok", "signature": "Emotet", "url_count": 3})
+        self.assertEqual(parsed["verdict"], "malicious")
 
 
 if __name__ == "__main__":

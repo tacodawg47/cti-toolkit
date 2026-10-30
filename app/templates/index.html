@@ -7,30 +7,43 @@
   <button type="submit">Enrich</button>
 </form>
 
-{% if itype is defined %}
+{% if too_long %}
+  <div class="card">That input is too long (max 2048 characters). Paste a single indicator.</div>
+{% elif itype is defined %}
   <p>Detected type: <code>{{ itype }}</code>
-     {% if value and value != indicator %}(refanged to <code>{{ value }}</code>){% endif %}</p>
+     {% if value and value != indicator %}(cleaned to <code>{{ value }}</code>){% endif %}</p>
 
   {% if itype == "unknown" %}
     <div class="card">Could not recognise that as a hash, IP, domain, or URL.</div>
   {% endif %}
 
+  {% if aggregate %}
+    <div class="card">
+      <strong>Overall:</strong>
+      <span class="verdict-{{ aggregate.verdict }}">{{ aggregate.verdict | upper }}</span>
+      <small>(worst of {{ aggregate.sources | join(", ") }})</small>
+    </div>
+  {% endif %}
+
   {% for r in results %}
-    {% set not_configured = r.error and "configured" in r.error %}
     <div class="card">
       <h3>{{ r.source }}
-        {% if r.error and not_configured %}
+        {% if r.status == "not_configured" %}
           <span class="verdict-error">NOT CONFIGURED</span>
-        {% elif r.error %}
+        {% elif r.status == "quota" %}
+          <span class="verdict-unavailable">QUOTA</span>
+        {% elif r.status == "error" %}
           <span class="verdict-unavailable">UNAVAILABLE</span>
         {% else %}
           <span class="verdict-{{ r.verdict }}">{{ r.verdict | upper }}</span>
         {% endif %}
-        {% if r.cached %}<small>(cached)</small>{% endif %}
+        {% if r.cached %}<small>(cached {{ r.query_time | ago }})</small>{% endif %}
       </h3>
-      {% if r.error and not_configured %}
+      {% if r.status == "not_configured" %}
         <p class="muted">Not queried: {{ r.error }}. Add the key in <code>.env</code> to enable it.</p>
-      {% elif r.error %}
+      {% elif r.status == "quota" %}
+        <p class="err">{{ r.error }}</p>
+      {% elif r.status == "error" %}
         <p class="err">⚠ Lookup failed: {{ r.error }}</p>
       {% endif %}
       {% if r.detection_ratio %}<p>Detection ratio: <code>{{ r.detection_ratio }}</code></p>{% endif %}
@@ -38,7 +51,7 @@
         <table>
           {% for k, v in r.summary.items() %}
             {% if v is not none and v != [] and v != "" %}
-              <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+              <tr><th>{{ k }}</th><td>{{ v | fmt }}</td></tr>
             {% endif %}
           {% endfor %}
         </table>

@@ -27,8 +27,12 @@ LIMITS: dict[str, dict[str, int]] = {
     "shodan": {"rpm": 60},               # roughly one request per second; also credit-limited (not tracked here)
     "urlscan": {"rpm": 60, "rpd": 1000},
     "greynoise": {"rpd": 10},            # community endpoint, approximate and conservative; raise if needed
-    # otx and the abuse.ch suite (threatfox, malwarebazaar, urlhaus) have no
-    # strict free cap, so they are left uncapped (polite, cached use only).
+    # OTX and the abuse.ch suite have no strict published free cap, but a soft
+    # per-minute limit keeps bulk use polite and lets the health page count them.
+    "otx": {"rpm": 30},
+    "threatfox": {"rpm": 30},
+    "malwarebazaar": {"rpm": 30},
+    "urlhaus": {"rpm": 30},
 }
 
 

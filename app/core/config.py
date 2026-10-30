@@ -60,7 +60,8 @@ class Settings(BaseSettings):
 
     @property
     def db_path(self) -> Path:
-        self.data_dir.mkdir(parents=True, exist_ok=True)
+        # The directory is created once in db.init_db(); don't mkdir on every
+        # access (this property is read on every cache and quota query).
         return self.data_dir / "cti.db"
 
 

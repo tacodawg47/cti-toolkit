@@ -29,12 +29,37 @@ VENDORS_BY_TYPE: dict[str, list] = {
     "ip": [virustotal, abuseipdb, greynoise, otx, threatfox, urlhaus, shodan],
     "domain": [virustotal, otx, threatfox, urlhaus, urlscan],
     "url": [virustotal, otx, threatfox, urlhaus, urlscan],
-    "hash": [virustotal, otx, threatfox, malwarebazaar],
+    "hash": [virustotal, otx, threatfox, malwarebazaar, urlhaus],
 }
+
+# Highest-to-lowest severity, for the aggregate worst-of line.
+_SEVERITY = {"malicious": 3, "suspicious": 2, "clean": 1, "unknown": 0}
 
 
 def vendors_for(itype: str) -> list:
     return VENDORS_BY_TYPE.get(itype, [])
+
+
+def aggregate_verdict(results: list[VendorResult]) -> dict | None:
+    """Worst verdict across vendors that actually answered, and who said it.
+
+    Lets the analyst read one line instead of scanning every card. Vendors that
+    are not configured, quota-limited, or errored are ignored.
+    """
+    best_sev = -1
+    best_verdict = None
+    sources: list[str] = []
+    for r in results:
+        if r.status != "ok":
+            continue
+        sev = _SEVERITY.get(r.verdict, 0)
+        if sev > best_sev:
+            best_sev, best_verdict, sources = sev, r.verdict, [r.source]
+        elif sev == best_sev:
+            sources.append(r.source)
+    if best_verdict is None:
+        return None
+    return {"verdict": best_verdict, "sources": sources}
 
 
 def _non_global_ip_note(value: str) -> VendorResult | None:

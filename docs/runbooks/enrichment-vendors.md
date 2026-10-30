@@ -13,7 +13,7 @@ that type at the same time, then shows each vendor's verdict and summary.
 | IP address | VirusTotal, AbuseIPDB, GreyNoise, OTX, ThreatFox, URLhaus, Shodan |
 | Domain | VirusTotal, OTX, ThreatFox, URLhaus, urlscan |
 | URL | VirusTotal, OTX, ThreatFox, URLhaus, urlscan |
-| File hash | VirusTotal, OTX, ThreatFox, MalwareBazaar |
+| File hash | VirusTotal, OTX, ThreatFox, MalwareBazaar, URLhaus |
 
 GreyNoise uses the keyless community endpoint. The abuse.ch trio (ThreatFox,
 MalwareBazaar, URLhaus) all authenticate with the single `ABUSECH_AUTH_KEY`.
@@ -34,7 +34,15 @@ so no test needs the network or a key.
 
 `registry.py` maps each type to its vendor list and runs them concurrently
 with `asyncio.gather`. If one client were to crash, the registry turns that
-into an error result for that vendor so the others still return.
+into an error result for that vendor so the others still return. It also builds
+the "Overall" worst-of line above the cards and skips private/reserved IPs (no
+point querying `192.168.x.x`).
+
+`base.py` holds the shared pieces: one pooled `httpx.AsyncClient` (opened once
+at startup) and `fetch_json`, which every client uses so a transport error or a
+non-JSON response becomes a clear message instead of a crash. A result card
+shows NOT CONFIGURED, QUOTA, or UNAVAILABLE (from the result's `status`) when a
+vendor could not answer.
 
 ## Verdict meaning per vendor
 
@@ -45,8 +53,9 @@ into an error result for that vendor so the others still return.
   since benign indicators appear in many pulses). OTX's own whitelist /
   false-positive lists override to clean when present.
 - ThreatFox / MalwareBazaar / URLhaus: a hit is malicious (curated lists); a
-  miss is unknown, not clean. URLhaus invalid_url/invalid_host answers surface
-  as an error (a sign of bad input), not "not listed".
+  miss is unknown, not clean. URLhaus also checks file hashes (MD5/SHA256) via
+  its payload endpoint. URLhaus invalid_url/invalid_host answers surface as an
+  error (a sign of bad input), not "not listed".
 - Shodan: recon, not reputation. Unknown unless Shodan's own bad tags
   (malware, c2, ...) push it to suspicious; CVEs are shown for context but do
   not set the verdict. The value is the port/org/CVE summary.
@@ -65,7 +74,7 @@ requests-per-day, both, or neither:
 | Shodan | 60 | — |
 | urlscan | 60 | 1000 |
 | GreyNoise | — | 10 (approx, conservative) |
-| OTX, abuse.ch | — | — (uncapped here) |
+| OTX, ThreatFox, MalwareBazaar, URLhaus | 30 (soft) | — |
 
 Daily usage per capped vendor is shown on the `/health` page. Results are
 cached in SQLite, so repeating a lookup inside its TTL costs no quota.

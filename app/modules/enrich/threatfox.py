@@ -10,12 +10,11 @@ Handles ip, domain, url, and hash via the search_ioc query. Requires the
 abuse.ch Auth-Key. Docs: https://threatfox.abuse.ch/api/
 """
 
-import httpx
-
 from ...core import cache
 from ...core.config import settings
 from ...core.models import VendorResult
 from ...core.ratelimit import QuotaExceeded, rate_limiter
+from . import base
 from .base import vendor_result
 
 API_URL = "https://threatfox-api.abuse.ch/api/v1/"
@@ -50,9 +49,9 @@ def _summarise(body: dict) -> dict:
 
 async def lookup(itype: str, value: str) -> VendorResult:
     if itype not in ("ip", "domain", "url", "hash"):
-        return vendor_result(VENDOR, itype, value, error=f"ThreatFox does not handle type: {itype}")
+        return base.failed(VENDOR, itype, value, f"ThreatFox does not handle type: {itype}")
     if not settings.abusech_auth_key:
-        return vendor_result(VENDOR, itype, value, error="no abuse.ch Auth-Key configured")
+        return base.not_configured(VENDOR, itype, value, "no abuse.ch Auth-Key configured")
 
     cache_key = f"{itype}:{value}"
     hit = cache.get(VENDOR, cache_key)
@@ -62,26 +61,21 @@ async def lookup(itype: str, value: str) -> VendorResult:
     try:
         await rate_limiter.acquire(VENDOR)
     except QuotaExceeded as exc:
-        return vendor_result(VENDOR, itype, value, error=str(exc))
+        return base.quota(VENDOR, itype, value, str(exc))
 
     headers = {"Auth-Key": settings.abusech_auth_key, "Accept": "application/json"}
     payload = {"query": "search_ioc", "search_term": value}
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(API_URL, headers=headers, json=payload)
-    except httpx.HTTPError as exc:
-        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {type(exc).__name__}")
+    status, body, err = await base.fetch_json("POST", API_URL, headers=headers, json=payload)
+    if err:
+        return base.failed(VENDOR, itype, value, err)
+    if status == 401:
+        return base.failed(VENDOR, itype, value, "abuse.ch rejected the Auth-Key (401)")
+    if status != 200:
+        return base.failed(VENDOR, itype, value, f"HTTP {status} from ThreatFox")
 
-    if resp.status_code == 401:
-        return vendor_result(VENDOR, itype, value, error="abuse.ch rejected the Auth-Key (401)")
-    if resp.status_code >= 400:
-        return vendor_result(VENDOR, itype, value, verdict="error",
-                             error=f"HTTP {resp.status_code} from ThreatFox")
-
-    parsed = _summarise(resp.json() or {})
+    parsed = _summarise(body or {})
     if parsed["verdict"] == "error":
-        return vendor_result(VENDOR, itype, value, verdict="error",
-                             error=parsed.get("error") or "ThreatFox search failed")
+        return base.failed(VENDOR, itype, value, parsed.get("error") or "ThreatFox search failed")
 
     result = vendor_result(
         VENDOR, itype, value,
@@ -90,5 +84,5 @@ async def lookup(itype: str, value: str) -> VendorResult:
         summary=parsed["summary"],
     )
     ttl = CACHE_TTL if parsed["verdict"] == "malicious" else NOT_FOUND_TTL
-    cache.set(VENDOR, cache_key, result.model_dump(), ttl)
+    cache.put(VENDOR, cache_key, result.model_dump(), ttl)
     return result

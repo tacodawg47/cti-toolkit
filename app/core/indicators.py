@@ -1,13 +1,17 @@
 """
-Indicator handling: refang untrusted input and detect its type.
+Indicator handling: refang untrusted input, normalise it, and detect its type.
 
 "Defanging" is the analyst habit of writing indicators so they are not
-clickable or auto-linked, e.g. hxxp://evil[.]com. We refang on input (turn it
-back into a real value) before detecting and looking it up.
+clickable or auto-linked, e.g. hxxp://evil[.]com or evil[dot]com. We refang on
+input (turn it back into a real value), normalise it (strip wrappers, drop a
+port, lowercase where case is irrelevant), and then detect the type before
+looking it up.
 """
 
 import ipaddress
 import re
+
+MAX_INDICATOR_LEN = 2048       # reject anything longer with a friendly message
 
 HASH_PATTERNS = {
     "md5": re.compile(r"^[a-fA-F0-9]{32}$"),
@@ -21,15 +25,53 @@ DOMAIN_PATTERN = re.compile(
     r"(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))+$"
 )
 
+# Literal defang substitutions applied after the regex ones below.
+_REPLACEMENTS = (
+    ("[.]", "."), ("(.)", "."), ("{.}", "."), ("\\.", "."),
+    ("[:]", ":"), ("[://]", "://"), ("[/]", "/"),
+    ("[@]", "@"), ("(@)", "@"), ("[at]", "@"),
+)
+
 
 def refang(value: str) -> str:
-    s = value.strip()
-    s = s.replace("[.]", ".").replace("(.)", ".").replace("{.}", ".")
-    s = s.replace("[:]", ":")
-    s = re.sub(r"h(xx|XX)p", "http", s)
-    s = s.replace("[@]", "@").replace("(@)", "@")
-    s = s.replace("[://]", "://")
+    """Turn defanged input back into a real indicator."""
+    s = value.strip().strip("'\"<>`")
+    # Scheme obfuscation: hxxp/hXXp -> http, fxp -> ftp (case-insensitive).
+    s = re.sub(r"h[xX]{2}p", "http", s)
+    s = re.sub(r"f[xX]p", "ftp", s)
+    # Bracketed or spelled-out "dot": [dot] (dot) {dot} and "evil dot com".
+    s = re.sub(r"[\[\(\{]\s*\.?\s*dot\s*\.?\s*[\]\)\}]", ".", s, flags=re.IGNORECASE)
+    s = re.sub(r"(?<=\w)\s+dot\s+(?=\w)", ".", s, flags=re.IGNORECASE)
+    for a, b in _REPLACEMENTS:
+        s = s.replace(a, b)
     return s
+
+
+def normalise(raw: str) -> str:
+    """Refang, then tidy: drop a trailing dot and an IPv4 :port suffix."""
+    s = refang(raw).rstrip(".")
+    # "1.2.3.4:443" -> "1.2.3.4" (a bare host:port, not a URL). The port is not
+    # part of the indicator we look up.
+    if ":" in s and "://" not in s:
+        host, _, port = s.rpartition(":")
+        if port.isdigit():
+            try:
+                ipaddress.ip_address(host)
+                s = host
+            except ValueError:
+                pass
+    return s
+
+
+def canonical(itype: str, value: str) -> str:
+    """Lowercase where case carries no meaning, so the cache stores one entry.
+
+    Hashes (hex) and domains (DNS is case-insensitive) are lowercased; URLs are
+    left as-is because their paths are case-sensitive.
+    """
+    if itype in ("hash", "domain"):
+        return value.lower()
+    return value
 
 
 def hash_kind(value: str) -> str | None:
@@ -50,6 +92,8 @@ def detect_type(value: str) -> str:
         pass
     if value.lower().startswith(("http://", "https://")):
         return "url"
-    if DOMAIN_PATTERN.match(value):
+    # The final label of a domain (the TLD) is never all digits; this keeps
+    # "1.2.3" from being mistaken for a domain.
+    if DOMAIN_PATTERN.match(value) and not value.rsplit(".", 1)[-1].isdigit():
         return "domain"
     return "unknown"

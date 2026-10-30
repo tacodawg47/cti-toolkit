@@ -15,12 +15,11 @@ Docs: https://otx.alienvault.com/api
 import ipaddress
 from urllib.parse import quote
 
-import httpx
-
 from ...core import cache
 from ...core.config import settings
 from ...core.models import VendorResult
 from ...core.ratelimit import QuotaExceeded, rate_limiter
+from . import base
 from .base import vendor_result
 
 API_BASE = "https://otx.alienvault.com/api/v1/indicators"
@@ -76,12 +75,12 @@ def _summarise(obj: dict) -> dict:
 
 async def lookup(itype: str, value: str) -> VendorResult:
     if not settings.otx_api_key:
-        return vendor_result(VENDOR, itype, value, error="no API key configured")
+        return base.not_configured(VENDOR, itype, value, "no API key configured")
 
     try:
         path = _path(itype, value)
     except ValueError as exc:
-        return vendor_result(VENDOR, itype, value, error=str(exc))
+        return base.failed(VENDOR, itype, value, str(exc))
 
     cache_key = f"{itype}:{value}"
     hit = cache.get(VENDOR, cache_key)
@@ -91,35 +90,31 @@ async def lookup(itype: str, value: str) -> VendorResult:
     try:
         await rate_limiter.acquire(VENDOR)
     except QuotaExceeded as exc:
-        return vendor_result(VENDOR, itype, value, error=str(exc))
+        return base.quota(VENDOR, itype, value, str(exc))
 
     headers = {"X-OTX-API-KEY": settings.otx_api_key, "Accept": "application/json"}
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get(f"{API_BASE}{path}", headers=headers)
-    except httpx.HTTPError as exc:
-        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {type(exc).__name__}")
+    status, body, err = await base.fetch_json("GET", f"{API_BASE}{path}", headers=headers)
+    if err:
+        return base.failed(VENDOR, itype, value, err)
 
-    if resp.status_code == 404:
+    if status == 404:
         result = vendor_result(VENDOR, itype, value, summary={"note": "not found in OTX"})
-        cache.set(VENDOR, cache_key, result.model_dump(), NOT_FOUND_TTL)
+        cache.put(VENDOR, cache_key, result.model_dump(), NOT_FOUND_TTL)
         return result
-    if resp.status_code in (401, 403):
-        return vendor_result(VENDOR, itype, value, error="OTX rejected the API key")
-    if resp.status_code == 429:
-        return vendor_result(VENDOR, itype, value, error="rate limited by OTX (429)")
-    if resp.status_code >= 400:
-        return vendor_result(VENDOR, itype, value, verdict="error",
-                             error=f"HTTP {resp.status_code} from OTX")
+    if status in (401, 403):
+        return base.failed(VENDOR, itype, value, "OTX rejected the API key")
+    if status == 429:
+        return base.quota(VENDOR, itype, value, "rate limited by OTX (429)")
+    if status != 200:
+        return base.failed(VENDOR, itype, value, f"HTTP {status} from OTX")
 
-    parsed = _summarise(resp.json() or {})
+    parsed = _summarise(body or {})
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
-        raw=parsed["summary"],
     )
     ttl = CACHE_TTL if parsed["verdict"] != "unknown" else NOT_FOUND_TTL
-    cache.set(VENDOR, cache_key, result.model_dump(), ttl)
+    cache.put(VENDOR, cache_key, result.model_dump(), ttl)
     return result

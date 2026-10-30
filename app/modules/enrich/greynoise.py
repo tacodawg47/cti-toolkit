@@ -10,12 +10,11 @@ If a GreyNoise API key is configured it is sent for a higher limit, but the
 community endpoint works without one.
 """
 
-import httpx
-
 from ...core import cache
 from ...core.config import settings
 from ...core.models import VendorResult
 from ...core.ratelimit import QuotaExceeded, rate_limiter
+from . import base
 from .base import vendor_result
 
 API_BASE = "https://api.greynoise.io/v3/community"
@@ -43,7 +42,7 @@ def _summarise(data: dict) -> dict:
 
 async def lookup(itype: str, value: str) -> VendorResult:
     if itype != "ip":
-        return vendor_result(VENDOR, itype, value, error="GreyNoise handles IP addresses only")
+        return base.failed(VENDOR, itype, value, "GreyNoise handles IP addresses only")
 
     cache_key = f"{itype}:{value}"
     hit = cache.get(VENDOR, cache_key)
@@ -53,36 +52,32 @@ async def lookup(itype: str, value: str) -> VendorResult:
     try:
         await rate_limiter.acquire(VENDOR)
     except QuotaExceeded as exc:
-        return vendor_result(VENDOR, itype, value, error=str(exc))
+        return base.quota(VENDOR, itype, value, str(exc))
 
     headers = {"Accept": "application/json"}
     if settings.greynoise_api_key:
         headers["key"] = settings.greynoise_api_key
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get(f"{API_BASE}/{value}", headers=headers)
-    except httpx.HTTPError as exc:
-        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {type(exc).__name__}")
+    status, body, err = await base.fetch_json("GET", f"{API_BASE}/{value}", headers=headers)
+    if err:
+        return base.failed(VENDOR, itype, value, err)
 
     # 404 means "not observed" — a normal answer, not an error.
-    if resp.status_code == 404:
+    if status == 404:
         result = vendor_result(VENDOR, itype, value,
                                summary={"note": "not observed by GreyNoise"})
-        cache.set(VENDOR, cache_key, result.model_dump(), NOT_FOUND_TTL)
+        cache.put(VENDOR, cache_key, result.model_dump(), NOT_FOUND_TTL)
         return result
-    if resp.status_code == 429:
-        return vendor_result(VENDOR, itype, value, error="rate limited by GreyNoise (429)")
-    if resp.status_code >= 400:
-        return vendor_result(VENDOR, itype, value, verdict="error",
-                             error=f"HTTP {resp.status_code} from GreyNoise")
+    if status == 429:
+        return base.quota(VENDOR, itype, value, "rate limited by GreyNoise (429)")
+    if status != 200:
+        return base.failed(VENDOR, itype, value, f"HTTP {status} from GreyNoise")
 
-    parsed = _summarise(resp.json() or {})
+    parsed = _summarise(body or {})
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
         summary=parsed["summary"],
-        raw=parsed["summary"],
     )
     ttl = CACHE_TTL if parsed["verdict"] != "unknown" else NOT_FOUND_TTL
-    cache.set(VENDOR, cache_key, result.model_dump(), ttl)
+    cache.put(VENDOR, cache_key, result.model_dump(), ttl)
     return result
