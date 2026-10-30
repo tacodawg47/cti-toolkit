@@ -3,9 +3,10 @@ Shodan client (async). IP host information.
 
 Shodan is a recon source, not a reputation source: it reports open ports,
 services, and known CVEs for an IP, not a malicious/clean judgement. So the
-verdict stays "unknown" unless Shodan's own tags or a list of CVEs suggest the
-host is compromised or exposed, in which case it is nudged to "suspicious".
-The real value is the summary (ports, org, vulns).
+verdict stays "unknown" unless Shodan's own tags (malware, c2, ...) flag the
+host as bad, in which case it is nudged to "suspicious". CVEs are shown for
+context but do not set the verdict. The real value is the summary (ports, org,
+vulns).
 
 Note: Shodan host lookups also consume query credits on your plan, which this
 toolkit does not track; the rpm cap just paces requests. Docs:
@@ -34,10 +35,12 @@ def _summarise(data: dict) -> dict:
     tags = data.get("tags") or []
     vulns = list(data.get("vulns") or [])
 
+    # Only Shodan's own "this host is bad" tags move the verdict. CVEs are NOT
+    # a verdict signal: Shodan infers them from banner versions and most
+    # internet hosts carry at least one, so counting them would flag almost
+    # everything as suspicious. The CVE count is shown in the summary instead.
     if any(t in _BAD_TAGS for t in tags):
         verdict = "suspicious"
-    elif vulns:
-        verdict = "suspicious"      # known CVEs present on the host
     else:
         verdict = "unknown"
 
@@ -79,7 +82,7 @@ async def account_info() -> dict | None:
             resp = await client.get(f"{API_BASE}/api-info",
                                     params={"key": settings.shodan_api_key})
     except httpx.HTTPError as exc:
-        return {"error": f"request failed: {exc}"}
+        return {"error": f"request failed: {type(exc).__name__}"}
 
     if resp.status_code == 401:
         return {"error": "Shodan rejected the API key (401)"}
@@ -119,7 +122,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(f"{API_BASE}/shodan/host/{value}", params=params)
     except httpx.HTTPError as exc:
-        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {exc}")
+        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {type(exc).__name__}")
 
     if resp.status_code == 404:
         result = vendor_result(VENDOR, itype, value,

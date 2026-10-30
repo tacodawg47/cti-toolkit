@@ -27,9 +27,12 @@ NOT_FOUND_TTL = 3600
 
 
 def _query_for(itype: str, value: str) -> str:
+    # Escape backslash and double-quote so a value containing either cannot
+    # break out of the quoted term and make urlscan reject the query (400).
+    safe = value.replace("\\", "\\\\").replace('"', '\\"')
     if itype == "domain":
-        return f'domain:"{value}"'
-    return f'page.url:"{value}"'       # url
+        return f'domain:"{safe}"'
+    return f'page.url:"{safe}"'       # url
 
 
 def _summarise(body: dict) -> dict:
@@ -76,7 +79,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(API_URL, headers=headers, params=params)
     except httpx.HTTPError as exc:
-        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {exc}")
+        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {type(exc).__name__}")
 
     if resp.status_code == 401:
         return vendor_result(VENDOR, itype, value, error="urlscan rejected the API key (401)")

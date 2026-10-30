@@ -41,12 +41,15 @@ into an error result for that vendor so the others still return.
 - VirusTotal: malicious/suspicious/clean from engine detections.
 - AbuseIPDB: abuse confidence score (>=75 malicious, >=25 suspicious).
 - GreyNoise: benign -> clean, malicious -> malicious, else unknown.
-- OTX: pulse count. Capped at suspicious (any pulses -> suspicious), never
-  malicious on its own, because benign indicators appear in many pulses.
+- OTX: pulse count caps the verdict at suspicious (never malicious on its own,
+  since benign indicators appear in many pulses). OTX's own whitelist /
+  false-positive lists override to clean when present.
 - ThreatFox / MalwareBazaar / URLhaus: a hit is malicious (curated lists); a
-  miss is unknown, not clean.
-- Shodan: recon, not reputation. Unknown unless bad tags or known CVEs push it
-  to suspicious. The value is the port/org/CVE summary.
+  miss is unknown, not clean. URLhaus invalid_url/invalid_host answers surface
+  as an error (a sign of bad input), not "not listed".
+- Shodan: recon, not reputation. Unknown unless Shodan's own bad tags
+  (malware, c2, ...) push it to suspicious; CVEs are shown for context but do
+  not set the verdict. The value is the port/org/CVE summary.
 - urlscan: informational. Shows how many past scans exist; verdict stays
   unknown.
 

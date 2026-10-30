@@ -97,7 +97,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(f"{API_BASE}{path}", headers=headers)
     except httpx.HTTPError as exc:
-        return _result(value, itype, verdict="error", error=f"request failed: {exc}")
+        return _result(value, itype, verdict="error", error=f"request failed: {type(exc).__name__}")
 
     if resp.status_code == 404:
         result = _result(value, itype, summary={"note": "not found in VirusTotal"})

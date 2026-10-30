@@ -62,7 +62,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(f"{API_BASE}/{value}", headers=headers)
     except httpx.HTTPError as exc:
-        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {exc}")
+        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {type(exc).__name__}")
 
     # 404 means "not observed" — a normal answer, not an error.
     if resp.status_code == 404:

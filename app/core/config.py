@@ -7,8 +7,10 @@ filled from VIRUSTOTAL_API_KEY. Keys default to empty strings, which the
 vendor clients treat as "not configured" rather than crashing.
 """
 
+import ipaddress
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Project root is two levels up from this file (app/core/config.py -> project).
@@ -34,6 +36,24 @@ class Settings(BaseSettings):
     # Server: local only by design.
     host: str = "127.0.0.1"
     port: int = 8000
+
+    @field_validator("host")
+    @classmethod
+    def _host_must_be_loopback(cls, v: str) -> str:
+        # The toolkit binds to localhost only, on purpose. Reject any
+        # non-loopback host (e.g. 0.0.0.0) so a stray .env line or shell
+        # variable cannot expose the app to the network without auth.
+        if v == "localhost":
+            return v
+        try:
+            if ipaddress.ip_address(v).is_loopback:
+                return v
+        except ValueError:
+            pass
+        raise ValueError(
+            f"host must be loopback (127.0.0.1, ::1, or localhost); got {v!r}. "
+            "The app is local-only by design."
+        )
 
     # Where the SQLite database and other local data live (git-ignored).
     data_dir: Path = PROJECT_ROOT / "data"

@@ -5,9 +5,9 @@ OTX is community threat intelligence organised into "pulses". For an
 indicator, the /general section reports how many pulses reference it. Presence
 in pulses is a lead, not proof: plenty of benign indicators (example.com, big
 CDNs) appear in dozens of pulses, so pulse count alone can never separate a
-benign indicator from a malicious one. The verdict is therefore capped at
-"suspicious" (any pulses -> suspicious, none -> unknown). It never asserts
-"malicious" on its own; confirmation comes from the other vendors.
+benign indicator from a malicious one. Pulses therefore cap the verdict at
+"suspicious", never "malicious"; OTX's own whitelist / false-positive lists
+override that to "clean" when present. Confirmation comes from the other vendors.
 
 Docs: https://otx.alienvault.com/api
 """
@@ -48,12 +48,25 @@ def _summarise(obj: dict) -> dict:
     count = pulse_info.get("count") or 0
     names = [p.get("name") for p in (pulse_info.get("pulses") or [])][:5]
 
-    # Capped at suspicious: pulse presence is a lead, never proof on its own.
-    verdict = "suspicious" if count >= 1 else "unknown"
+    # OTX's own validation / false-positive lists are the robust signal. Benign
+    # infrastructure (8.8.8.8, big CDNs) sits in many pulses, so pulse count
+    # alone cries wolf; if OTX has whitelisted the indicator or accepted a
+    # false-positive report, call it clean regardless of pulse count.
+    validation = obj.get("validation") or []
+    false_positive = obj.get("false_positive") or []
+    fp_accepted = any((fp or {}).get("assessment") == "accepted" for fp in false_positive)
+
+    if validation or fp_accepted:
+        verdict = "clean"
+    elif count >= 1:
+        verdict = "suspicious"      # a lead, never proof on its own
+    else:
+        verdict = "unknown"
 
     summary = {
         "pulse_count": count,
         "pulses": names,
+        "validation": [v.get("name") for v in validation] or None,
         "reputation": obj.get("reputation"),
         "country": obj.get("country_name"),
         "asn": obj.get("asn"),
@@ -85,7 +98,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(f"{API_BASE}{path}", headers=headers)
     except httpx.HTTPError as exc:
-        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {exc}")
+        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {type(exc).__name__}")
 
     if resp.status_code == 404:
         result = vendor_result(VENDOR, itype, value, summary={"note": "not found in OTX"})

@@ -8,6 +8,7 @@ client cannot take down the whole response.
 """
 
 import asyncio
+import ipaddress
 
 from ...core.models import VendorResult
 from . import (
@@ -36,11 +37,38 @@ def vendors_for(itype: str) -> list:
     return VENDORS_BY_TYPE.get(itype, [])
 
 
+def _non_global_ip_note(value: str) -> VendorResult | None:
+    """Return one informational result for a private/reserved IP, else None."""
+    try:
+        ip = ipaddress.ip_address(value)
+    except ValueError:
+        return None
+    if ip.is_global:
+        return None
+    kind = ("loopback" if ip.is_loopback else
+            "link-local" if ip.is_link_local else
+            "multicast" if ip.is_multicast else
+            "private" if ip.is_private else
+            "reserved")
+    return VendorResult(
+        source="(local)", indicator=value, indicator_type="ip",
+        verdict="unknown",
+        summary={"note": f"{kind} address — not sent to external vendors"},
+    )
+
+
 async def enrich_all(itype: str, value: str) -> list[VendorResult]:
     """Run every applicable vendor concurrently and collect their results."""
     mods = vendors_for(itype)
     if not mods:
         return []
+
+    # Don't fan private / reserved / loopback IPs out to external vendors: the
+    # answer is meaningless and it wastes quota (GreyNoise is ~10 lookups/day).
+    if itype == "ip":
+        gate = _non_global_ip_note(value)
+        if gate is not None:
+            return [gate]
 
     results = await asyncio.gather(
         *(m.lookup(itype, value) for m in mods),
@@ -52,7 +80,7 @@ async def enrich_all(itype: str, value: str) -> list[VendorResult]:
         if isinstance(res, BaseException):
             out.append(VendorResult(
                 source=mod.VENDOR, indicator=value, indicator_type=itype,
-                verdict="error", error=f"client crashed: {res}",
+                verdict="error", error=f"client crashed: {type(res).__name__}",
             ))
         else:
             out.append(res)

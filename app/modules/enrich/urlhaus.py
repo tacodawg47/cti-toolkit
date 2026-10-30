@@ -22,7 +22,8 @@ NOT_FOUND_TTL = 3600
 
 
 def _summarise_url(body: dict) -> dict:
-    if body.get("query_status") == "ok":
+    status = body.get("query_status")
+    if status == "ok":
         summary = {
             "threat": body.get("threat"),
             "url_status": body.get("url_status"),       # online / offline
@@ -31,11 +32,18 @@ def _summarise_url(body: dict) -> dict:
             "blacklists": body.get("blacklists"),
         }
         return {"verdict": "malicious", "ratio": "listed", "summary": summary}
-    return {"verdict": "unknown", "ratio": None, "summary": {"note": "not listed in URLhaus"}}
+    if status == "no_results":
+        return {"verdict": "unknown", "ratio": None,
+                "summary": {"note": "not listed in URLhaus"}}
+    # invalid_url / invalid_host etc. mean our input or request was malformed,
+    # not that the indicator is clean. Surface it as an error, not "not listed".
+    return {"verdict": "error", "ratio": None, "summary": {},
+            "error": f"URLhaus: {status}"}
 
 
 def _summarise_host(body: dict) -> dict:
-    if body.get("query_status") == "ok":
+    status = body.get("query_status")
+    if status == "ok":
         urls = body.get("urls") or []
         online = sum(1 for u in urls if u.get("url_status") == "online")
         summary = {
@@ -45,7 +53,11 @@ def _summarise_host(body: dict) -> dict:
             "blacklists": body.get("blacklists"),
         }
         return {"verdict": "malicious", "ratio": f"{len(urls)} malware URL(s)", "summary": summary}
-    return {"verdict": "unknown", "ratio": None, "summary": {"note": "not listed in URLhaus"}}
+    if status == "no_results":
+        return {"verdict": "unknown", "ratio": None,
+                "summary": {"note": "not listed in URLhaus"}}
+    return {"verdict": "error", "ratio": None, "summary": {},
+            "error": f"URLhaus: {status}"}
 
 
 async def lookup(itype: str, value: str) -> VendorResult:
@@ -74,7 +86,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(endpoint, headers=headers, data={field: value})
     except httpx.HTTPError as exc:
-        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {exc}")
+        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {type(exc).__name__}")
 
     if resp.status_code == 401:
         return vendor_result(VENDOR, itype, value, error="abuse.ch rejected the Auth-Key (401)")
@@ -89,7 +101,10 @@ async def lookup(itype: str, value: str) -> VendorResult:
         verdict=parsed["verdict"],
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
+        error=parsed.get("error"),
     )
-    ttl = CACHE_TTL if parsed["verdict"] == "malicious" else NOT_FOUND_TTL
-    cache.set(VENDOR, cache_key, result.model_dump(), ttl)
+    # Don't cache error responses (likely transient or an input problem).
+    if parsed["verdict"] != "error":
+        ttl = CACHE_TTL if parsed["verdict"] == "malicious" else NOT_FOUND_TTL
+        cache.set(VENDOR, cache_key, result.model_dump(), ttl)
     return result

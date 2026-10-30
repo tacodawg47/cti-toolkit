@@ -70,7 +70,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(API_URL, headers=headers, json=payload)
     except httpx.HTTPError as exc:
-        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {exc}")
+        return vendor_result(VENDOR, itype, value, verdict="error", error=f"request failed: {type(exc).__name__}")
 
     if resp.status_code == 401:
         return vendor_result(VENDOR, itype, value, error="abuse.ch rejected the Auth-Key (401)")

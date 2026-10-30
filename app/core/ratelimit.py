@@ -90,10 +90,13 @@ class RateLimiter:
                 while window and now - window[0] >= 60:
                     window.popleft()
 
-                if len(window) >= rpm:
+                # Wait until the window has a free slot, re-pruning after each
+                # sleep. A loop (not one sleep) is needed because asyncio.sleep
+                # can return a hair early, leaving the window full; that would
+                # let one extra call through within the minute and trip a 429.
+                while len(window) >= rpm:
                     wait = 60 - (now - window[0])
-                    if wait > 0:
-                        await asyncio.sleep(wait)
+                    await asyncio.sleep(max(0.05, wait))
                     now = time.monotonic()
                     while window and now - window[0] >= 60:
                         window.popleft()
