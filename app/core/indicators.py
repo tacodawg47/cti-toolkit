@@ -36,9 +36,12 @@ _REPLACEMENTS = (
 def refang(value: str) -> str:
     """Turn defanged input back into a real indicator."""
     s = value.strip().strip("'\"<>`")
-    # Scheme obfuscation: hxxp/hXXp -> http, fxp -> ftp (case-insensitive).
-    s = re.sub(r"h[xX]{2}p", "http", s)
-    s = re.sub(r"f[xX]p", "ftp", s)
+    # Scheme obfuscation: hxxp/hXXp -> http, fxp -> ftp. Only at the very
+    # start of the input and only when a scheme separator follows ("://",
+    # "[:]//" or "[://]"), so that legitimate indicators containing those
+    # letters (fxp-trading.com, /fxp/report, shxxp.example.com) are untouched.
+    s = re.sub(r"^h[xX]{2}p(?=s?(://|\[:\]|\[://\]))", "http", s)
+    s = re.sub(r"^f[xX]p(?=(://|\[:\]|\[://\]))", "ftp", s)
     # Bracketed or spelled-out "dot": [dot] (dot) {dot} and "evil dot com".
     s = re.sub(r"[\[\(\{]\s*\.?\s*dot\s*\.?\s*[\]\)\}]", ".", s, flags=re.IGNORECASE)
     s = re.sub(r"(?<=\w)\s+dot\s+(?=\w)", ".", s, flags=re.IGNORECASE)

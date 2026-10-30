@@ -50,7 +50,10 @@ def aggregate_verdict(results: list[VendorResult]) -> dict | None:
     best_verdict = None
     sources: list[str] = []
     for r in results:
-        if r.status != "ok":
+        # Skip anything that is not a real answer. The verdict check is a
+        # second guard: a result that slipped through with verdict "error"
+        # must never become the Overall line.
+        if r.status != "ok" or r.verdict == "error":
             continue
         sev = _SEVERITY.get(r.verdict, 0)
         if sev > best_sev:
@@ -105,7 +108,8 @@ async def enrich_all(itype: str, value: str) -> list[VendorResult]:
         if isinstance(res, BaseException):
             out.append(VendorResult(
                 source=mod.VENDOR, indicator=value, indicator_type=itype,
-                verdict="error", error=f"client crashed: {type(res).__name__}",
+                status="error", verdict="error",
+                error=f"client crashed: {type(res).__name__}",
             ))
         else:
             out.append(res)

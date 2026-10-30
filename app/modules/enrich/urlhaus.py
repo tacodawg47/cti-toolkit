@@ -129,15 +129,17 @@ async def lookup(itype: str, value: str) -> VendorResult:
         return base.failed(VENDOR, itype, value, f"HTTP {status} from URLhaus")
 
     parsed = summarise(body or {})
+    if parsed["verdict"] == "error":
+        # invalid_url / invalid_host etc. Same shape as the other abuse.ch
+        # clients: status "error" so the UI shows the message, and not cached.
+        return base.failed(VENDOR, itype, value, parsed.get("error") or "URLhaus lookup failed")
+
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
-        error=parsed.get("error"),
     )
-    # Don't cache error responses (likely transient or an input problem).
-    if parsed["verdict"] != "error":
-        ttl = CACHE_TTL if parsed["verdict"] == "malicious" else NOT_FOUND_TTL
-        cache.put(VENDOR, cache_key, result.model_dump(), ttl)
+    ttl = CACHE_TTL if parsed["verdict"] == "malicious" else NOT_FOUND_TTL
+    cache.put(VENDOR, cache_key, result.model_dump(), ttl)
     return result

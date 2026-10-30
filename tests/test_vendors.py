@@ -208,10 +208,20 @@ class RegistryGateTests(unittest.IsolatedAsyncioTestCase):
 class IndicatorsTests(unittest.TestCase):
     def test_refang_variants(self):
         self.assertEqual(indicators.refang("hxxp://evil[.]com"), "http://evil.com")
+        self.assertEqual(indicators.refang("hxxps[:]//evil[.]com"), "https://evil.com")
+        self.assertEqual(indicators.refang("hXXp[://]evil[.]com"), "http://evil.com")
+        self.assertEqual(indicators.refang("fxp://evil[.]com"), "ftp://evil.com")
         self.assertEqual(indicators.refang("evil[dot]com"), "evil.com")
         self.assertEqual(indicators.refang("evil(dot)com"), "evil.com")
         self.assertEqual(indicators.refang("evil dot com"), "evil.com")
         self.assertEqual(indicators.refang("<evil[.]com>"), "evil.com")
+
+    def test_scheme_refang_does_not_rewrite_legit_values(self):
+        # "fxp"/"hxxp" only count as a defanged scheme at the start of the
+        # input and when a scheme separator follows (N2 in the verification).
+        for s in ("fxp-trading.com", "http://example.com/fxp/report",
+                  "shxxp.example.com", "hxxp.example.com", "fxp"):
+            self.assertEqual(indicators.refang(s), s)
 
     def test_normalise_ip_port_and_trailing_dot(self):
         self.assertEqual(indicators.normalise("1.2.3.4:443"), "1.2.3.4")
@@ -243,11 +253,66 @@ class VirustotalDenominatorTests(unittest.TestCase):
         self.assertEqual(parsed["verdict"], "clean")
 
 
+class RegistryCrashTests(unittest.IsolatedAsyncioTestCase):
+    """A client that raises must become an error card, not an 'ok' result."""
+
+    class _Boom:
+        VENDOR = "boom"
+
+        @staticmethod
+        async def lookup(itype, value):
+            raise RuntimeError("simulated crash")
+
+    class _Fine:
+        VENDOR = "fine"
+
+        @staticmethod
+        async def lookup(itype, value):
+            return VendorResult(source="fine", indicator=value, indicator_type=itype,
+                                verdict="clean")
+
+    def setUp(self):
+        self._orig = dict(registry.VENDORS_BY_TYPE)
+        registry.VENDORS_BY_TYPE["hash"] = [self._Boom, self._Fine]
+
+    def tearDown(self):
+        registry.VENDORS_BY_TYPE.clear()
+        registry.VENDORS_BY_TYPE.update(self._orig)
+
+    async def test_crash_is_error_status_and_others_survive(self):
+        res = await registry.enrich_all("hash", "a" * 64)
+        self.assertEqual([r.source for r in res], ["boom", "fine"])
+        self.assertEqual(res[0].status, "error")
+        self.assertEqual(res[0].verdict, "error")
+        self.assertIn("RuntimeError", res[0].error)
+        self.assertEqual(res[1].verdict, "clean")
+
+    async def test_crash_never_reaches_aggregate(self):
+        res = await registry.enrich_all("hash", "a" * 64)
+        agg = registry.aggregate_verdict(res)
+        self.assertEqual(agg, {"verdict": "clean", "sources": ["fine"]})
+
+
+class AllowedHostsTests(unittest.TestCase):
+    def test_ipv6_loopback_is_bracketed_and_allowed(self):
+        from app.main import _allowed_hosts
+        self.assertIn("[::1]", _allowed_hosts("127.0.0.1"))
+        self.assertIn("[::1]", _allowed_hosts("::1"))
+        self.assertIn("localhost", _allowed_hosts("localhost"))
+        # No duplicates when the configured host is already a default.
+        self.assertEqual(len(_allowed_hosts("::1")), 3)
+
+
 class AggregateTests(unittest.TestCase):
     @staticmethod
     def _r(source, verdict, status="ok"):
         return VendorResult(source=source, indicator="x", indicator_type="ip",
                             verdict=verdict, status=status)
+
+    def test_error_verdict_with_ok_status_is_ignored(self):
+        # Second guard (N1): even a mislabelled result never becomes "Overall: ERROR".
+        agg = registry.aggregate_verdict([self._r("x", "error"), self._r("vt", "unknown")])
+        self.assertEqual(agg, {"verdict": "unknown", "sources": ["vt"]})
 
     def test_worst_of_names_its_sources(self):
         agg = registry.aggregate_verdict([
@@ -339,6 +404,35 @@ class AbuseIPDBBranchTests(unittest.IsolatedAsyncioTestCase):
         res = await abuseipdb.lookup("ip", "1.1.1.1")
         self.assertEqual(res.status, "error")
         self.assertIn("non-JSON", res.error)
+
+
+class UrlhausBranchTests(unittest.IsolatedAsyncioTestCase):
+    """invalid_url from URLhaus must surface as status 'error' with its message."""
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp()
+        self._orig_dir = settings.data_dir
+        self._orig_key = settings.abusech_auth_key
+        settings.data_dir = Path(self._tmp)
+        settings.abusech_auth_key = "test-key"
+        db.init_db()
+
+    async def asyncTearDown(self):
+        await base.aclose()
+        settings.data_dir = self._orig_dir
+        settings.abusech_auth_key = self._orig_key
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    async def test_invalid_url_is_error_status_and_not_cached(self):
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(
+            lambda req: httpx.Response(200, json={"query_status": "invalid_url"}))))
+        res = await urlhaus.lookup("url", "http://x.com/")
+        self.assertEqual(res.status, "error")
+        self.assertEqual(res.verdict, "error")
+        self.assertIn("invalid_url", res.error)
+        self.assertFalse(res.cached)
+        res2 = await urlhaus.lookup("url", "http://x.com/")
+        self.assertFalse(res2.cached)       # errors are never cached
 
 
 class UrlhausPayloadTests(unittest.TestCase):

@@ -75,7 +75,21 @@ app = FastAPI(title="CTI Toolkit", version=__version__, lifespan=lifespan,
 # Local-only hardening. Only accept requests whose Host header is a loopback
 # name; this defeats DNS-rebinding, where a page you visit points a hostname it
 # controls at 127.0.0.1 to reach this app as if it were same-origin.
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost"])
+def _allowed_hosts(configured_host: str) -> list[str]:
+    """Loopback names the browser may use in the Host header.
+
+    Starlette keeps the square brackets on IPv6 literals, so "::1" must be
+    listed as "[::1]". The configured host is included too (bracketed if it is
+    IPv6), so config.py's validator and this list can never disagree.
+    """
+    hosts = ["127.0.0.1", "localhost", "[::1]"]
+    h = configured_host if ":" not in configured_host else f"[{configured_host}]"
+    if h not in hosts:
+        hosts.append(h)
+    return hosts
+
+
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts(settings.host))
 
 static_dir = BASE_DIR / "static"
 # check_dir=False so a missing (empty, git-ignored) static dir doesn't crash
