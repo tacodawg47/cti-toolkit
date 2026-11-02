@@ -206,6 +206,23 @@ portfolio project.
 - Onion indexer search: Ahmia, dark.fail, IntelligenceX, ported from the plugin's onion_search.py.
 - Forum catalog seeded from the plugin's 35+ forum list (status, mirror, access tier).
 - Selector watchlists using the six families from the plugin: brand, identity, email, domain, network, technical artefacts. Ported keyword_match.py logic.
+- Topical keyword categories (separate from the selector watchlists above):
+  thematic lists that flag a post by its subject, not by a selector you own.
+  Each category is a named list in a version-controlled config file; matching
+  is deterministic word/substring matching at runtime, and the lists are
+  curated offline (same rule as the Phase 4 vishing list — any LLM help with
+  wording happens offline, never in the running app). Adding a category or a
+  keyword is one edit to that file, no code change. Seed categories (to grow
+  over time):
+  - Fraud: deepfake, KYC.
+  - Vulnerability: zero day / 0day, exploit.
+  - Industry targeting: Defense, DIB (Defense Industrial Base).
+  Design notes: a match tags the post with its category (a post can hit
+  several) and is a lead, not a verdict. Very broad terms (e.g. "Defense")
+  will be noisy, so support requiring two terms to co-occur, or scoping a
+  category to certain channels/forums, to cut false positives. Any sensitive
+  entries (your own org, program, or product names) live in the git-ignored
+  config location, the same way the selector watchlist is kept out of source.
 - Optional Tor SOCKS mode for fetching leak-site mirrors.
 - Scheduler and alerting (in-app inbox first; email or webhook later).
 - OPSEC primer shipped as in-app documentation. No automated channel joining. No active engagement. No purchases.
