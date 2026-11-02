@@ -67,13 +67,17 @@ def normalise(raw: str) -> str:
 
 
 def canonical(itype: str, value: str) -> str:
-    """Lowercase where case carries no meaning, so the cache stores one entry.
+    """One spelling per indicator, so the cache stores one entry.
 
-    Hashes (hex) and domains (DNS is case-insensitive) are lowercased; URLs are
-    left as-is because their paths are case-sensitive.
+    Hashes (hex) and domains (DNS is case-insensitive) are lowercased. IPs are
+    rewritten in Python's compressed form, so "2001:DB8::1", "2001:db8:0::1"
+    and "2001:0db8::0001" all become "2001:db8::1" (IPv4 is unchanged). URLs
+    are left as-is because their paths are case-sensitive.
     """
     if itype in ("hash", "domain"):
         return value.lower()
+    if itype == "ip":
+        return str(ipaddress.ip_address(value))
     return value
 
 

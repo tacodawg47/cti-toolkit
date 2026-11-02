@@ -19,9 +19,10 @@ from typing import Any
 
 import httpx
 
+from ... import __version__
 from ...core.models import VendorResult
 
-USER_AGENT = "cti-toolkit/0.1.0"
+USER_AGENT = f"cti-toolkit/{__version__}"
 DEFAULT_TIMEOUT = 20.0          # seconds per request; a hung vendor fails here
 
 _client: httpx.AsyncClient | None = None
@@ -90,16 +91,23 @@ async def fetch_json(
       - transport error -> (None, None, "request failed: <ExceptionType>")
       - non-200         -> (status_code, None, None)   # caller maps the code
       - 200 + bad JSON  -> (200, None, "vendor returned a non-JSON response")
-      - 200 + JSON      -> (200, body, None)
+      - 200 + JSON that is not an object (a list, string, number)
+                        -> (200, None, "vendor returned unexpected JSON")
+      - 200 + JSON obj  -> (200, body, None)
+
+    Every vendor we use answers with a JSON object, and every client calls
+    `.get()` on the body, so anything else is turned into an error here rather
+    than crashing inside the client.
     """
     client = get_client()
     try:
         resp = await client.request(
             method, url, headers=headers, params=params, data=data, json=json
         )
-    except httpx.HTTPError as exc:
-        # Never interpolate the exception itself: an httpx error can carry the
-        # full URL, and some vendors (Shodan) put the API key in the URL.
+    except (httpx.HTTPError, httpx.InvalidURL) as exc:
+        # InvalidURL is not an HTTPError, so it is listed on its own. Never
+        # interpolate the exception itself: an httpx error can carry the full
+        # URL, and some vendors (Shodan) put the API key in the URL.
         return None, None, f"request failed: {type(exc).__name__}"
     if resp.status_code != 200:
         return resp.status_code, None, None
@@ -107,4 +115,6 @@ async def fetch_json(
         body = resp.json()
     except ValueError:
         return 200, None, "vendor returned a non-JSON response"
+    if not isinstance(body, dict):
+        return 200, None, "vendor returned unexpected JSON (not an object)"
     return 200, body, None

@@ -21,7 +21,13 @@ next commit. Nothing new touches security.
 
 Update 2026-10-29 (later): N1, N2 and N3 were fixed in the working tree
 (registry.py, urlhaus.py, indicators.py, main.py) with six new tests
-(82 total, all passing). The "smaller gaps" section below is still open.
+(82 total, all passing).
+
+Update 2026-11-02: the "smaller gaps" below are closed too, except the two
+marked "note for later" (URL trailing dot, domain:port): fetch_json rejects
+non-object JSON and catches InvalidURL; IPv6 is canonicalised; the local
+gate card is excluded from the Overall line; User-Agent reads the package
+version; the limiter loop has a fake-clock test. 87 tests pass.
 
 ### N1 (Medium). Crashed-client and URLhaus-error results carry status "ok"
 Files: app/modules/enrich/registry.py:106-109, app/modules/enrich/urlhaus.py:132-138

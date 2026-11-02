@@ -35,6 +35,11 @@ VENDORS_BY_TYPE: dict[str, list] = {
 # Highest-to-lowest severity, for the aggregate worst-of line.
 _SEVERITY = {"malicious": 3, "suspicious": 2, "clean": 1, "unknown": 0}
 
+# Source name of the informational card we return instead of fanning out
+# (private / reserved IPs). It is not a vendor answer, so the aggregate line
+# ignores it rather than printing "UNKNOWN (worst of (local))".
+LOCAL_SOURCE = "(local)"
+
 
 def vendors_for(itype: str) -> list:
     return VENDORS_BY_TYPE.get(itype, [])
@@ -53,7 +58,7 @@ def aggregate_verdict(results: list[VendorResult]) -> dict | None:
         # Skip anything that is not a real answer. The verdict check is a
         # second guard: a result that slipped through with verdict "error"
         # must never become the Overall line.
-        if r.status != "ok" or r.verdict == "error":
+        if r.status != "ok" or r.verdict == "error" or r.source == LOCAL_SOURCE:
             continue
         sev = _SEVERITY.get(r.verdict, 0)
         if sev > best_sev:
@@ -79,7 +84,7 @@ def _non_global_ip_note(value: str) -> VendorResult | None:
             "private" if ip.is_private else
             "reserved")
     return VendorResult(
-        source="(local)", indicator=value, indicator_type="ip",
+        source=LOCAL_SOURCE, indicator=value, indicator_type="ip",
         verdict="unknown",
         summary={"note": f"{kind} address — not sent to external vendors"},
     )

@@ -10,11 +10,12 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import httpx
 from pydantic import ValidationError
 
-from app.core import db, indicators
+from app.core import db, indicators, ratelimit
 from app.core.config import Settings, settings
 from app.core.models import VendorResult
 from app.modules.enrich import (
@@ -204,6 +205,12 @@ class RegistryGateTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(res), 1)
         self.assertTrue(res[0].summary["note"].startswith("loopback"))
 
+    async def test_gate_card_is_not_aggregated(self):
+        # The "(local)" card is information, not a vendor verdict, so there is
+        # no "Overall: UNKNOWN (worst of (local))" line.
+        res = await registry.enrich_all("ip", "10.0.0.1")
+        self.assertIsNone(registry.aggregate_verdict(res))
+
 
 class IndicatorsTests(unittest.TestCase):
     def test_refang_variants(self):
@@ -232,6 +239,11 @@ class IndicatorsTests(unittest.TestCase):
         self.assertEqual(indicators.canonical("hash", "ABCdef"), "abcdef")
         self.assertEqual(indicators.canonical("domain", "Example.COM"), "example.com")
         self.assertEqual(indicators.canonical("url", "http://X.com/AbC"), "http://X.com/AbC")
+
+    def test_canonical_compresses_ipv6_and_keeps_ipv4(self):
+        for spelling in ("2001:DB8::1", "2001:db8:0::1", "2001:0db8:0000:0000:0000:0000:0000:0001"):
+            self.assertEqual(indicators.canonical("ip", spelling), "2001:db8::1")
+        self.assertEqual(indicators.canonical("ip", "8.8.8.8"), "8.8.8.8")
 
     def test_numeric_label_is_not_a_domain(self):
         self.assertEqual(indicators.detect_type("1.2.3"), "unknown")
@@ -361,6 +373,71 @@ class FetchJsonTests(unittest.IsolatedAsyncioTestCase):
         status, body, err = await base.fetch_json("GET", "https://x/")
         self.assertIsNone(status)
         self.assertTrue(err.startswith("request failed:"))
+
+    async def test_200_non_object_json_is_clear_error(self):
+        # A JSON list/string/number would crash the caller's `.get()`.
+        for payload in ([1, 2], "text", 42):
+            self._install(lambda req, p=payload: httpx.Response(200, json=p))
+            status, body, err = await base.fetch_json("GET", "https://x/")
+            self.assertEqual(status, 200)
+            self.assertIsNone(body)
+            self.assertIn("unexpected JSON", err)
+
+    async def test_invalid_url_is_typed_error_not_crash(self):
+        # httpx.InvalidURL is not an HTTPError; a NUL byte in the URL raises it.
+        self._install(lambda req: httpx.Response(200, json={}))
+        status, body, err = await base.fetch_json("GET", "http://x\x00y/")
+        self.assertIsNone(status)
+        self.assertEqual(err, "request failed: InvalidURL")
+
+
+class RateLimiterLoopTests(unittest.IsolatedAsyncioTestCase):
+    """The per-minute window waits in a loop and re-prunes after each sleep.
+
+    Uses a fake clock and a fake sleep so the test takes no real time. The
+    first fake sleep returns 1 ms early, which is the case that let one extra
+    call through before the loop existed (M3).
+    """
+
+    VENDOR = "_test_rpm2"
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp()
+        self._orig_dir = settings.data_dir
+        settings.data_dir = Path(self._tmp)
+        db.init_db()
+        ratelimit.LIMITS[self.VENDOR] = {"rpm": 2}
+
+    def tearDown(self):
+        del ratelimit.LIMITS[self.VENDOR]
+        settings.data_dir = self._orig_dir
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    async def test_third_call_waits_and_reprunes(self):
+        clock = [1000.0]
+        sleeps: list[float] = []
+
+        async def fake_sleep(seconds):
+            sleeps.append(seconds)
+            # First wake-up is a hair early; later ones are exact.
+            clock[0] += seconds - 0.001 if len(sleeps) == 1 else seconds
+
+        rl = ratelimit.RateLimiter()
+        with patch.object(ratelimit.time, "monotonic", lambda: clock[0]), \
+             patch.object(ratelimit.asyncio, "sleep", fake_sleep):
+            await rl.acquire(self.VENDOR)          # t=1000
+            clock[0] += 1
+            await rl.acquire(self.VENDOR)          # t=1001, window full
+            self.assertEqual(sleeps, [])
+            await rl.acquire(self.VENDOR)          # must wait for t>=1060
+
+        # Slept ~59 s, woke 1 ms early with the window still full, slept the
+        # 50 ms floor, then got the slot. Never more than rpm entries.
+        self.assertEqual(len(sleeps), 2)
+        self.assertAlmostEqual(sleeps[0], 59.0)
+        self.assertEqual(sleeps[1], 0.05)
+        self.assertEqual(len(rl._minute[self.VENDOR]), 2)
+        self.assertEqual(rl.usage(self.VENDOR)["day"], 3)
 
 
 class AbuseIPDBBranchTests(unittest.IsolatedAsyncioTestCase):
