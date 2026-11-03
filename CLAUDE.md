@@ -59,7 +59,12 @@ APScheduler, Cytoscape.js (vendored). pip + venv. Docker in phase 8.
 
 ## Current status
 
-Phase 1 not started. Developing on Windows 11 for now (Python 3.12 installed
+Phase 1 complete (closed 2026-11-02): IOC enrichment across VirusTotal,
+AbuseIPDB, GreyNoise, OTX, abuse.ch (ThreatFox, MalwareBazaar, URLhaus,
+YARAify), Shodan, urlscan, plus keyless InternetDB, RDAP, CIRCL hashlookup
+and crt.sh; Tranco and known-good-file gates; 128 offline tests. Bulk paste
+and the job runner wait for the Phase 5 scheduler (see ROADMAP parking lot).
+Phase 2 is next. Developing on Windows 11 for now (Python 3.12 installed
 at the user level; Git with Credential Manager). Linux dual boot is broken by
 a kernel panic; switch when Linux-only tooling is needed. Repository:
 github.com/tacodawg47/cti-toolkit (private).

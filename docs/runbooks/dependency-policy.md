@@ -54,13 +54,26 @@ refuses source packages, so nothing runs build code on your machine.
 
 ## 3. Audit
 
-`pip-audit` (maintained by the Python Packaging Authority) checks installed
-packages against known-vulnerability databases:
+`pip-audit` (maintained by the Python Packaging Authority) checks the pinned
+packages against known-vulnerability databases. It brings its own
+dependencies (requests, rich, cyclonedx and more), so it lives in a separate
+tools venv rather than the app venv, which stays exactly the locked set.
+Done once (2026-11-02):
 
 ```bash
-.venv/Scripts/python.exe -m pip install pip-audit
-.venv/Scripts/python.exe -m pip_audit -r requirements.txt
+# One-time: a tools venv next to the app venv (git-ignored)
+py -3.12 -m venv .venv-tools
+.venv-tools/Scripts/python.exe -m pip install --only-binary=:all: pip-audit
+
+# Each time, from the project root (Linux: .venv-tools/bin/pip-audit)
+.venv-tools/Scripts/pip-audit.exe -r requirements.txt --require-hashes
 ```
+
+`--require-hashes` makes it audit exactly the versions in the lock file
+(no resolving, since the lock already holds the full tree) and refuse a lock
+file without hashes. Run it before any commit that changes
+`requirements.txt`, and now and then regardless, since advisories appear
+after the fact. Result on 2026-11-02: "No known vulnerabilities found".
 
 On GitHub, enable Dependabot alerts: repository Settings, then Security,
 then "Dependabot alerts". GitHub then emails you when a pinned version gets
