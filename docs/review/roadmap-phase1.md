@@ -213,6 +213,13 @@ this list and decide what to pull into active work. Keeps the project moving.
   (decided 2026-10-29). VT does not expose a live balance the way Shodan's
   api-info does, so it would need a local monthly counter. Add only if heavy
   use makes the monthly cap a real risk. Minute and daily caps are enforced.
+- Censys (parked 2026-11-02): optional in Phase 1 and not built; largely
+  duplicates Shodan InternetDB and the keyed Shodan lookup for single-IP
+  enrichment. Revisit in Phase 6, where its certificate and JARM searches
+  add hosts Shodan misses.
+- Phase 1 items waiting for the Phase 5 scheduler (parked 2026-11-02): bulk
+  paste with background jobs and the job runner. BGPView and ip-api.com were
+  dropped (duplicate ASN/ISP/country data; ip-api is HTTP-only).
 
 ## Data handling policy (omitted from this review copy)
 

@@ -354,6 +354,21 @@ this list and decide what to pull into active work. Keeps the project moving.
   AS-owner that VirusTotal and AbuseIPDB already return for an IP, so it is
   not worth adding for Phase 1; its exact BGP prefix is more useful in Phase 6
   pivoting (ASN / CIDR-neighbor pivots).
+- Censys (parked 2026-11-02): listed as "optional" in Phase 1 and not built.
+  It needs an account and API key, and for single-IP enrichment it largely
+  duplicates what Shodan InternetDB (free, keyless) and the keyed Shodan
+  host lookup already return (ports, services, certificates). Its real value
+  is in Phase 6 pivoting: certificate SHA-256 and JARM searches across hosts,
+  where Censys often covers hosts Shodan misses. Decide then whether to add
+  it; the client is a drop-in vendor module and the cti-skills plugin has a
+  stdlib Censys client to port with attribution.
+- Phase 1 items that wait for the Phase 5 scheduler (parked 2026-11-02): bulk
+  paste of many IOCs with a background job and ETA, and the generic job
+  runner. Everything else in the Phase 1 list is built, except BGPView and
+  ip-api.com, which were dropped (2026-11-02): both only duplicate the ASN,
+  ISP and country data VirusTotal, AbuseIPDB, Shodan and RDAP already return,
+  and ip-api's free tier is HTTP-only, which would send the IP under
+  investigation in cleartext.
 
 ## Data handling policy (breach and leak data)
 
