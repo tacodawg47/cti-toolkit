@@ -7,3 +7,4 @@ pydantic
 pydantic-settings
 jinja2
 python-multipart
+idna            # punycode for internationalised domains; already pulled in by httpx

@@ -15,6 +15,8 @@ vendor shares a connection pool and sends one User-Agent. Tests may inject
 their own client with `set_client` (e.g. an httpx.MockTransport client).
 """
 
+import asyncio
+import json as _json
 from typing import Any
 
 import httpx
@@ -23,7 +25,9 @@ from ... import __version__
 from ...core.models import VendorResult
 
 USER_AGENT = f"cti-toolkit/{__version__}"
-DEFAULT_TIMEOUT = 20.0          # seconds per request; a hung vendor fails here
+DEFAULT_TIMEOUT = 20.0          # httpx per-phase limit: connect, each read, write
+TOTAL_TIMEOUT = 30.0            # wall-clock cap for one whole request, body included
+MAX_BODY_BYTES = 5 * 1024 * 1024    # stop reading a vendor body past 5 MB
 
 _client: httpx.AsyncClient | None = None
 
@@ -99,6 +103,14 @@ async def fetch_json(
     Anything else is turned into an error here rather than crashing inside
     the client when it calls `.get()` on the body.
 
+    Three protections apply to every call, because a slow or oversized answer
+    from a free public service must not hang the page or eat memory:
+      - the body is streamed and abandoned past MAX_BODY_BYTES;
+      - the whole request is capped at TOTAL_TIMEOUT seconds of wall-clock
+        time (httpx's own timeout is per read, so a trickle could run on);
+      - the final URL must be HTTPS, so a redirect can never downgrade the
+        indicator under investigation to cleartext.
+
     Returns (status_code, body, error):
       - transport error -> (None, None, "request failed: <ExceptionType>")
       - non-200         -> (status_code, None, None)   # caller maps the code
@@ -109,19 +121,35 @@ async def fetch_json(
     """
     client = get_client()
     try:
-        resp = await client.request(
-            method, url, headers=headers, params=params, data=data, json=json,
-            follow_redirects=follow_redirects,
-        )
+        async with asyncio.timeout(TOTAL_TIMEOUT):
+            async with client.stream(
+                method, url, headers=headers, params=params, data=data, json=json,
+                follow_redirects=follow_redirects,
+            ) as resp:
+                if resp.url.scheme != "https":
+                    return None, None, "vendor URL is not HTTPS (refused)"
+                if resp.status_code != 200:
+                    return resp.status_code, None, None
+                chunks: list[bytes] = []
+                size = 0
+                async for chunk in resp.aiter_bytes():
+                    size += len(chunk)
+                    if size > MAX_BODY_BYTES:
+                        return 200, None, (
+                            f"vendor response too large (over {MAX_BODY_BYTES // (1024 * 1024)} MB)"
+                        )
+                    chunks.append(chunk)
+                raw = b"".join(chunks)
+    except TimeoutError:
+        return None, None, f"request failed: total time over {TOTAL_TIMEOUT:.0f}s"
     except (httpx.HTTPError, httpx.InvalidURL) as exc:
         # InvalidURL is not an HTTPError, so it is listed on its own. Never
         # interpolate the exception itself: an httpx error can carry the full
         # URL, and some vendors (Shodan) put the API key in the URL.
         return None, None, f"request failed: {type(exc).__name__}"
-    if resp.status_code != 200:
-        return resp.status_code, None, None
+
     try:
-        body = resp.json()
+        body = _json.loads(raw)
     except ValueError:
         return 200, None, "vendor returned a non-JSON response"
     wanted = list if expect == "list" else dict

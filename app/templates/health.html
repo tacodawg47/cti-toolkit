@@ -33,7 +33,9 @@
     </table>
     <small>Domains and URL hosts on this list are not sent to vendors unless "query anyway" is ticked.</small>
   {% else %}
-    <p><span class="no">not loaded</span> <small>— place the Tranco CSV at <code>{{ tranco.path }}</code> and restart
+    <p><span class="no">not loaded</span>
+    {% if tranco.error %}<span class="err">— {{ tranco.error }}</span>{% endif %}
+    <small>— place the Tranco CSV at <code>{{ tranco.path }}</code> and restart
     (see docs/runbooks/tranco-allowlist.md). The gate is off until then.</small></p>
   {% endif %}
 </div>

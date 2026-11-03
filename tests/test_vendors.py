@@ -6,6 +6,7 @@ Run from the project root:
     .venv/Scripts/python.exe -m unittest discover -s tests -t . -v
 """
 
+import asyncio
 import shutil
 import tempfile
 import unittest
@@ -197,8 +198,14 @@ class HashlookupTests(unittest.TestCase):
         self.assertEqual(parsed["summary"]["file_name"], "notepad.exe")
         self.assertEqual(parsed["ratio"], "trust 80/100")
 
-    def test_no_trust_field_is_still_clean(self):
-        self.assertEqual(hashlookup._summarise({"FileName": "x"})["verdict"], "clean")
+    def test_no_trust_field_is_unknown_not_clean(self):
+        # L2: no score means no quality signal, so it must not gate the fan-out.
+        parsed = hashlookup._summarise({"FileName": "x"})
+        self.assertEqual(parsed["verdict"], "unknown")
+        self.assertIn("no trust score", parsed["summary"]["note"])
+
+    def test_non_numeric_trust_is_unknown(self):
+        self.assertEqual(hashlookup._summarise({"hashlookup:trust": "high"})["verdict"], "unknown")
 
     def test_low_trust_is_unknown(self):
         self.assertEqual(hashlookup._summarise({"hashlookup:trust": 10})["verdict"], "unknown")
@@ -311,6 +318,9 @@ class YaraifyTests(unittest.TestCase):
         self.assertEqual(yaraify._summarise({"query_status": "illegal_hash"})["verdict"], "error")
         self.assertEqual(yaraify._summarise({})["verdict"], "error")
 
+    def test_data_of_wrong_shape_is_error_not_crash(self):
+        self.assertEqual(yaraify._summarise({"query_status": "ok", "data": [1]})["verdict"], "error")
+
 
 class CrtshTests(unittest.TestCase):
     ROWS = [
@@ -375,6 +385,16 @@ class AllowlistTests(unittest.TestCase):
         self.assertFalse(al.loaded)
         self.assertIsNone(al.rank("google.com"))
         self.assertFalse(al.status()["loaded"])
+        self.assertIsNone(al.status()["error"])
+
+    def test_unreadable_file_does_not_raise(self):
+        # L3: load() runs at startup, so a bad file must report, not crash.
+        bad = self._tmp / "bad.csv"
+        bad.write_bytes(b"1,caf\xe9.com\n")          # Latin-1 byte, not UTF-8
+        al = allowlist_mod.Allowlist()
+        self.assertEqual(al.load(bad, top_n=10), 0)
+        self.assertFalse(al.loaded)
+        self.assertIn("UnicodeDecodeError", al.status()["error"])
 
 
 class RegistryTrancoGateTests(unittest.IsolatedAsyncioTestCase):
@@ -530,6 +550,21 @@ class IndicatorsTests(unittest.TestCase):
         self.assertEqual(indicators.normalise("[2001:db8::1]:443"), "2001:db8::1")
         self.assertEqual(indicators.detect_type(indicators.normalise("evil.com:8443")), "domain")
 
+    def test_idn_and_homograph_hosts_become_punycode(self):
+        # M1: analysts paste the Unicode form; DNS and every vendor need ASCII.
+        self.assertEqual(indicators.normalise("münchen.de"), "xn--mnchen-3ya.de")
+        homograph = indicators.normalise("gооgle.com")     # Cyrillic o's
+        self.assertTrue(homograph.startswith("xn--"))
+        self.assertEqual(indicators.detect_type(homograph), "domain")
+        self.assertEqual(indicators.normalise("https://münchen.de:8443/pfad?q=ü"),
+                         "https://xn--mnchen-3ya.de:8443/pfad?q=ü")
+        self.assertEqual(indicators.normalise("münchen[.]de"), "xn--mnchen-3ya.de")
+
+    def test_ascii_and_already_punycode_unchanged(self):
+        self.assertEqual(indicators.normalise("xn--mnchen-3ya.de"), "xn--mnchen-3ya.de")
+        self.assertEqual(indicators.normalise("example.com"), "example.com")
+        self.assertEqual(indicators.normalise("https://user@example.com/x"), "https://user@example.com/x")
+
     def test_normalise_leaves_non_host_port_alone(self):
         # Plain IPv6 has colons but is not host:port.
         self.assertEqual(indicators.normalise("2001:db8::1"), "2001:db8::1")
@@ -610,6 +645,17 @@ class RegistryCrashTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(agg, {"verdict": "clean", "sources": ["fine"]})
 
 
+class DisplayPathTests(unittest.TestCase):
+    def test_paths_inside_project_are_relative(self):
+        # L5: the health page must not show the user's home directory.
+        from app.core.config import PROJECT_ROOT
+        from app.main import _display_path
+        self.assertEqual(_display_path(PROJECT_ROOT / "data" / "tranco.csv"), str(Path("data") / "tranco.csv"))
+        self.assertEqual(_display_path(None), "—")
+        outside = Path(tempfile.gettempdir()) / "elsewhere"
+        self.assertEqual(_display_path(outside), str(outside))
+
+
 class AllowedHostsTests(unittest.TestCase):
     def test_ipv6_loopback_is_bracketed_and_allowed(self):
         from app.main import _allowed_hosts
@@ -687,6 +733,40 @@ class FetchJsonTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(status, 200)
             self.assertIsNone(body)
             self.assertIn("unexpected JSON", err)
+
+    async def test_oversized_body_is_abandoned(self):
+        # M2: stop reading past the cap instead of loading it all into memory.
+        big = b"[" + b"1," * (base.MAX_BODY_BYTES // 2) + b"1]"
+        self._install(lambda req: httpx.Response(200, content=big,
+                                                 headers={"content-type": "application/json"}))
+        status, body, err = await base.fetch_json("GET", "https://x/", expect="list")
+        self.assertEqual(status, 200)
+        self.assertIsNone(body)
+        self.assertIn("too large", err)
+
+    async def test_total_timeout_caps_a_slow_trickle(self):
+        # M2: httpx's timeout is per read; a slow stream must still end.
+        async def slow(req):
+            await asyncio.sleep(0.5)
+            return httpx.Response(200, json={})
+        self._install(slow)
+        with patch.object(base, "TOTAL_TIMEOUT", 0.05):
+            status, body, err = await base.fetch_json("GET", "https://x/")
+        self.assertIsNone(status)
+        self.assertIn("total time", err)
+
+    async def test_non_https_final_url_is_refused(self):
+        # L1: a redirect must never downgrade the indicator to cleartext.
+        def handler(req):
+            if req.url.scheme == "https":
+                return httpx.Response(302, headers={"location": "http://registry/record"})
+            return httpx.Response(200, json={"leaked": True})
+        self._install(handler)
+        status, body, err = await base.fetch_json("GET", "https://bootstrap/x", follow_redirects=True)
+        self.assertIsNone(body)
+        self.assertIn("not HTTPS", err)
+        status, body, err = await base.fetch_json("GET", "http://plain/x")
+        self.assertIn("not HTTPS", err)
 
     async def test_expect_list_accepts_arrays_and_rejects_objects(self):
         self._install(lambda req: httpx.Response(200, json=[{"a": 1}]))

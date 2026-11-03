@@ -10,6 +10,9 @@ looking it up.
 
 import ipaddress
 import re
+from urllib.parse import urlsplit, urlunsplit
+
+import idna
 
 MAX_INDICATOR_LEN = 2048       # reject anything longer with a friendly message
 
@@ -78,14 +81,53 @@ def _strip_port(s: str) -> str:
     return host if _is_host(host) else s
 
 
+def _punycode_host(host: str) -> str:
+    """Convert an internationalised host name to its ASCII (punycode) form.
+
+    DNS only carries ASCII, so "münchen.de" is really "xn--mnchen-3ya.de", and
+    a homograph like "gооgle.com" (Cyrillic o's) becomes "xn--ggle-55da.com",
+    which both exposes the trick and lets every vendor look it up. ASCII input
+    is returned unchanged; anything idna cannot encode is returned unchanged
+    too, and detect_type will then call it unknown.
+    """
+    if host.isascii():
+        return host
+    try:
+        return idna.encode(host, uts46=True).decode("ascii")
+    except (idna.IDNAError, UnicodeError):
+        return host
+
+
+def _punycode(s: str) -> str:
+    """Apply _punycode_host to a bare host, or to the host part of a URL."""
+    if s.isascii():
+        return s
+    if "://" not in s:
+        return _punycode_host(s)
+    try:
+        parts = urlsplit(s)
+    except ValueError:
+        return s
+    host = parts.hostname
+    if not host or host.isascii():
+        return s
+    ascii_host = _punycode_host(host)
+    # Rebuild netloc keeping any user:pass@ and :port exactly as they were.
+    userinfo, _, hostport = parts.netloc.rpartition("@")
+    port = f":{parts.port}" if parts.port else ""
+    netloc = (userinfo + "@" if userinfo else "") + ascii_host + port
+    return urlunsplit(parts._replace(netloc=netloc))
+
+
 def normalise(raw: str) -> str:
-    """Refang, then tidy: drop a trailing dot and a :port suffix on a bare host.
+    """Refang, then tidy: drop a trailing dot and a :port suffix on a bare host,
+    and put any non-ASCII host name into punycode.
 
     C2 reports and ThreatFox entries are often written as host:port; the port is
     not part of the indicator we look up, so it is dropped here (the UI shows
     the cleaned value so the analyst can see what was looked up).
     """
-    return _strip_port(refang(raw).rstrip("."))
+    return _punycode(_strip_port(refang(raw).rstrip(".")))
 
 
 def canonical(itype: str, value: str) -> str:

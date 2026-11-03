@@ -24,8 +24,11 @@ VENDOR = "hashlookup"
 CACHE_TTL = 24 * 3600      # catalogue facts are stable; cache a day
 NOT_FOUND_TTL = 6 * 3600
 
-# hashlookup's own 0-100 trust score; 50 is its neutral default. Below this we
-# still report the match but do not call the file clean.
+# hashlookup's own 0-100 trust score; 50 is its neutral default. Only a record
+# that carries a score at or above this is called "clean" (and therefore lets
+# the registry skip the other vendors). A record with a lower score, or with
+# no score at all, is still shown but stays "unknown": the score is the only
+# quality signal we have, and hashlookup's catalogues include dual-use tools.
 MIN_TRUST = 50
 
 
@@ -37,7 +40,7 @@ def _summarise(body: dict) -> dict:
 
     if known_malicious:
         verdict = "malicious"
-    elif trust is None or trust >= MIN_TRUST:
+    elif isinstance(trust, (int, float)) and trust >= MIN_TRUST:
         verdict = "clean"
     else:
         verdict = "unknown"
@@ -51,6 +54,8 @@ def _summarise(body: dict) -> dict:
         "known_malicious": known_malicious,
         "sha256": body.get("SHA-256"),
     }
+    if trust is None:
+        summary["note"] = "catalogued, but no trust score: not treated as known-good"
     ratio = f"trust {trust}/100" if trust is not None else "known file"
     return {"verdict": verdict, "ratio": ratio, "summary": summary}
 

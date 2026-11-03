@@ -40,6 +40,9 @@ def _rule_names(task: dict) -> list[str]:
 def _summarise(body: dict) -> dict:
     status = body.get("query_status")
     data = body.get("data") or {}
+    if not isinstance(data, dict):
+        return {"verdict": "error", "ratio": None, "summary": {},
+                "error": "YARAify: unexpected response shape"}
 
     if status == "ok" and data:
         meta = data.get("metadata") or {}

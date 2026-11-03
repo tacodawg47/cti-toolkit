@@ -20,7 +20,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from . import __version__
 from .core import db
 from .core.allowlist import allowlist
-from .core.config import settings
+from .core.config import PROJECT_ROOT, settings
 from .core.indicators import MAX_INDICATOR_LEN, canonical, detect_type, normalise
 from .core.ratelimit import LIMITS, rate_limiter
 from .modules.enrich import base, registry, shodan
@@ -54,6 +54,18 @@ def _ago(iso: str) -> str:
     if secs < 86400:
         return f"{int(secs // 3600)}h ago"
     return f"{int(secs // 86400)}d ago"
+
+
+def _display_path(p) -> str:
+    """A path for the health page: relative to the project when it is inside
+    it, so the page never shows the user's home directory or username."""
+    if p is None:
+        return "—"
+    p = Path(p)
+    try:
+        return str(p.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(p)
 
 
 templates.env.filters["fmt"] = _fmt
@@ -156,11 +168,13 @@ async def health(request: Request):
     # Derive the quota table straight from the limiter's config, so adding a
     # vendor there is the only edit needed.
     quotas = {v: rate_limiter.usage(v) for v in sorted(LIMITS)}
+    tranco = allowlist.status()
+    tranco["path"] = _display_path(tranco["path"])
     return templates.TemplateResponse(
         request, "health.html",
         {"keys": keys, "versions": versions, "quotas": quotas,
          "shodan_account": await shodan.account_info(),
-         "tranco": allowlist.status(),
+         "tranco": tranco,
          "bind": f"{settings.host}:{settings.port}",
-         "data_dir": str(settings.data_dir)},
+         "data_dir": _display_path(settings.data_dir)},
     )
