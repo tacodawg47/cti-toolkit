@@ -54,8 +54,57 @@ so no test needs the network or a key.
 `registry.py` maps each type to its vendor list and runs them concurrently
 with `asyncio.gather`. If one client were to crash, the registry turns that
 into an error result for that vendor so the others still return. It also builds
-the "Overall" worst-of line above the cards and skips private/reserved IPs (no
-point querying `192.168.x.x`).
+the "Overall" risk score above the cards (next section) and skips
+private/reserved IPs (no point querying `192.168.x.x`).
+
+## The Overall risk score
+
+One line summarises the cards: a label, a risk score from 0 (clean) to 10
+(malicious), and a tally of who voted which way. It is a weighted vote, not
+a "worst of": one weak vote cannot outweigh two strong ones, and cards that
+say "unknown" do not vote at all.
+
+How it is computed (`registry.aggregate_verdict`):
+
+1. Each card with a real opinion votes: malicious +1, suspicious +0.5,
+   clean -1. "unknown", errors, quota and not-configured cards abstain.
+2. Each vote is multiplied by that vendor's `confidence` (0 to 1), which the
+   vendor client sets because it knows how strong its own signal is.
+3. risk = (sum(confidence x vote) / sum(confidence) + 1) x 5, rounded to one
+   decimal. 0 means everyone who voted said clean, 10 means everyone said
+   malicious, 5 means an even split.
+4. Label: 7.5 and up MALICIOUS; 5.5 and up SUSPICIOUS; 3.0 and down CLEAN;
+   in between INCONCLUSIVE (the evidence conflicts, read the cards).
+
+Confidence per vendor (the numbers to argue about if the score feels wrong):
+
+| Vendor | Verdict and confidence |
+|---|---|
+| VirusTotal | malicious (5+ engines) 1.0; suspicious 0.6 with 2+ engines, 0.3 with a single engine; clean (10+ engines, no hits) 0.8 |
+| AbuseIPDB | malicious 0.9; suspicious 0.6; clean 0.9 if AbuseIPDB whitelists it, 0.5 if merely unreported |
+| GreyNoise | malicious 0.8; benign (RIOT) clean 0.9 |
+| OTX | clean 0.9 from its whitelist / accepted false-positive; suspicious 0.3 from pulses |
+| ThreatFox, MalwareBazaar, URLhaus payload | malicious 1.0 (curated catalogues) |
+| URLhaus URL | malicious 1.0 while online, 0.7 once taken down |
+| URLhaus host | malicious 1.0 if any URL is online; suspicious 0.5 if all are offline |
+| YARAify | malicious 1.0 on a ClamAV hit; suspicious 0.5 on YARA-only matches |
+| CIRCL hashlookup | clean 1.0 (trust 50+); malicious 1.0 (KnownMalicious) |
+| Shodan, InternetDB | suspicious 0.4 on a bad tag |
+| RDAP | suspicious 0.4 for a domain under 30 days old |
+| urlscan, crt.sh | never vote (context only) |
+
+Worked examples from the Phase 1 smoke test:
+
+| Indicator | Votes | Score | Label |
+|---|---|---|---|
+| 8.8.8.8 | VT suspicious 0.3; AbuseIPDB clean 0.9; OTX clean 0.9 | 1.1 | CLEAN |
+| example.com (forced) | VT clean 0.8; OTX clean 0.9; URLhaus suspicious 0.5 | 1.7 | CLEAN |
+| EICAR hash | hashlookup, VT, YARAify malicious 1.0; OTX suspicious 0.3 | 9.8 | MALICIOUS |
+| two malicious 1.0, two clean 0.5 / 0.9 | | 5.9 | SUSPICIOUS |
+| one malicious 1.0, one clean 1.0 | | 5.0 | INCONCLUSIVE |
+
+Rows cached before the confidence field existed carry a 0.5 default until
+they expire.
 
 `base.py` holds the shared pieces: one pooled `httpx.AsyncClient` (opened once
 at startup) and `fetch_json`, which every client uses so a transport error or a
@@ -73,8 +122,10 @@ vendor could not answer.
   false-positive lists override to clean when present.
 - ThreatFox / MalwareBazaar / URLhaus: a hit is malicious (curated lists); a
   miss is unknown, not clean. URLhaus also checks file hashes (MD5/SHA256) via
-  its payload endpoint. URLhaus invalid_url/invalid_host answers surface as an
-  error (a sign of bad input), not "not listed".
+  its payload endpoint. A URLhaus HOST whose listed URLs are all offline is
+  only suspicious (one old upload on a big shared site is not a malicious
+  host). URLhaus invalid_url/invalid_host answers surface as an error (a sign
+  of bad input), not "not listed".
 - Shodan: recon, not reputation. Unknown unless Shodan's own bad tags
   (malware, c2, ...) push it to suspicious; CVEs are shown for context but do
   not set the verdict. The value is the port/org/CVE summary.

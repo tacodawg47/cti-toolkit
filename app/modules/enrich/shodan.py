@@ -39,9 +39,9 @@ def _summarise(data: dict) -> dict:
     # internet hosts carry at least one, so counting them would flag almost
     # everything as suspicious. The CVE count is shown in the summary instead.
     if any(t in _BAD_TAGS for t in tags):
-        verdict = "suspicious"
+        verdict, confidence = "suspicious", 0.4     # recon tag, a medium-weak lead
     else:
-        verdict = "unknown"
+        verdict, confidence = "unknown", 0.0
 
     summary = {
         "org": data.get("org"),
@@ -55,7 +55,7 @@ def _summarise(data: dict) -> dict:
         "last_update": data.get("last_update"),
     }
     ratio = f"{len(vulns)} known CVE(s)" if vulns else None
-    return {"verdict": verdict, "ratio": ratio, "summary": summary}
+    return {"verdict": verdict, "confidence": confidence, "ratio": ratio, "summary": summary}
 
 
 async def account_info() -> dict | None:
@@ -139,6 +139,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
+        confidence=parsed["confidence"],
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
     )

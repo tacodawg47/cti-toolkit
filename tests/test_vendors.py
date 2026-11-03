@@ -473,7 +473,8 @@ class RegistryHashGateTests(unittest.IsolatedAsyncioTestCase):
             res = await registry.enrich_all("hash", "a" * 64)
         self.assertEqual([r.source for r in res], ["hashlookup", registry.LOCAL_SOURCE])
         self.assertIn("skipped", res[1].summary["note"])
-        self.assertEqual(registry.aggregate_verdict(res), {"verdict": "clean", "sources": ["hashlookup"]})
+        agg = registry.aggregate_verdict(res)
+        self.assertEqual((agg["label"], agg["clean"]), ("clean", ["hashlookup"]))
 
     async def test_miss_runs_fan_out_with_gate_card_first(self):
         with patch.object(hashlookup, "lookup", self._gate("unknown")):
@@ -642,7 +643,9 @@ class RegistryCrashTests(unittest.IsolatedAsyncioTestCase):
     async def test_crash_never_reaches_aggregate(self):
         res = await registry.enrich_all("url", "http://x.test/")
         agg = registry.aggregate_verdict(res)
-        self.assertEqual(agg, {"verdict": "clean", "sources": ["fine"]})
+        self.assertEqual(agg["label"], "clean")
+        self.assertEqual(agg["clean"], ["fine"])
+        self.assertEqual(agg["abstained"], 1)        # the crashed one
 
 
 class DisplayPathTests(unittest.TestCase):
@@ -667,31 +670,126 @@ class AllowedHostsTests(unittest.TestCase):
 
 
 class AggregateTests(unittest.TestCase):
+    """The Overall line: a confidence-weighted risk score, 0 (clean) to 10."""
+
     @staticmethod
-    def _r(source, verdict, status="ok"):
+    def _r(source, verdict, confidence=0.5, status="ok"):
         return VendorResult(source=source, indicator="x", indicator_type="ip",
-                            verdict=verdict, status=status)
+                            verdict=verdict, confidence=confidence, status=status)
 
-    def test_error_verdict_with_ok_status_is_ignored(self):
-        # Second guard (N1): even a mislabelled result never becomes "Overall: ERROR".
-        agg = registry.aggregate_verdict([self._r("x", "error"), self._r("vt", "unknown")])
-        self.assertEqual(agg, {"verdict": "unknown", "sources": ["vt"]})
-
-    def test_worst_of_names_its_sources(self):
-        agg = registry.aggregate_verdict([
-            self._r("vt", "malicious"),
-            self._r("otx", "suspicious"),
-            self._r("ab", "unknown"),
-            self._r("gn", "clean", status="error"),     # ignored (not ok)
-        ])
-        self.assertEqual(agg["verdict"], "malicious")
-        self.assertEqual(agg["sources"], ["vt"])
+    def test_error_and_unknown_abstain(self):
+        # A mislabelled "error" with ok status and an "unknown" both abstain,
+        # so with nobody else voting there is no Overall line at all.
+        self.assertIsNone(registry.aggregate_verdict([self._r("x", "error"), self._r("vt", "unknown")]))
 
     def test_none_when_nobody_answered(self):
         self.assertIsNone(registry.aggregate_verdict([
             self._r("vt", "unknown", status="error"),
             self._r("otx", "unknown", status="not_configured"),
         ]))
+
+    def test_one_weak_vote_cannot_outweigh_two_strong_clean_ones(self):
+        # 8.8.8.8 as seen in the smoke test: VT 1/92 (0.3), two whitelists (0.9).
+        agg = registry.aggregate_verdict([
+            self._r("virustotal", "suspicious", 0.3),
+            self._r("abuseipdb", "clean", 0.9),
+            self._r("otx", "clean", 0.9),
+            self._r("greynoise", "unknown"),
+            self._r("threatfox", "unknown"),
+        ])
+        self.assertEqual(agg["score"], 1.1)
+        self.assertEqual(agg["label"], "clean")
+        self.assertEqual(agg["suspicious"], ["virustotal"])
+        self.assertEqual(agg["clean"], ["abuseipdb", "otx"])
+        self.assertEqual(agg["abstained"], 2)
+
+    def test_strong_agreement_is_malicious(self):
+        # EICAR: three catalogue/AV hits at 1.0 and one OTX lead at 0.3.
+        agg = registry.aggregate_verdict([
+            self._r("hashlookup", "malicious", 1.0),
+            self._r("virustotal", "malicious", 1.0),
+            self._r("otx", "suspicious", 0.3),
+            self._r("yaraify", "malicious", 1.0),
+        ])
+        self.assertEqual(agg["score"], 9.8)
+        self.assertEqual(agg["label"], "malicious")
+
+    def test_half_and_half_is_suspicious(self):
+        agg = registry.aggregate_verdict([
+            self._r("a", "malicious", 1.0), self._r("b", "malicious", 1.0),
+            self._r("c", "clean", 0.5), self._r("d", "clean", 0.9),
+        ])
+        self.assertEqual(agg["score"], 5.9)
+        self.assertEqual(agg["label"], "suspicious")
+
+    def test_mostly_malicious_with_one_clean_is_malicious(self):
+        agg = registry.aggregate_verdict([
+            self._r("a", "malicious", 1.0), self._r("b", "malicious", 1.0),
+            self._r("c", "malicious", 1.0), self._r("d", "clean", 0.9),
+        ])
+        self.assertEqual(agg["score"], 7.7)
+        self.assertEqual(agg["label"], "malicious")
+
+    def test_conflict_in_the_middle_is_inconclusive(self):
+        agg = registry.aggregate_verdict([
+            self._r("a", "malicious", 1.0), self._r("b", "clean", 1.0),
+        ])
+        self.assertEqual(agg["score"], 5.0)
+        self.assertEqual(agg["label"], "inconclusive")
+
+    def test_zero_confidence_vote_abstains(self):
+        agg = registry.aggregate_verdict([self._r("a", "malicious", 0.0), self._r("b", "clean", 0.8)])
+        self.assertEqual(agg["label"], "clean")
+        self.assertEqual(agg["abstained"], 1)
+
+
+class ConfidenceTests(unittest.TestCase):
+    """Each client rates its own signal; these pin the values the score relies on."""
+
+    def test_virustotal_single_engine_is_weak(self):
+        one = virustotal._summarise({"data": {"attributes": {"last_analysis_stats": {
+            "malicious": 1, "harmless": 91}}}})
+        self.assertEqual((one["verdict"], one["confidence"]), ("suspicious", 0.3))
+        two = virustotal._summarise({"data": {"attributes": {"last_analysis_stats": {
+            "malicious": 2, "harmless": 90}}}})
+        self.assertEqual((two["verdict"], two["confidence"]), ("suspicious", 0.6))
+        clean = virustotal._summarise({"data": {"attributes": {"last_analysis_stats": {"harmless": 90}}}})
+        self.assertEqual((clean["verdict"], clean["confidence"]), ("clean", 0.8))
+        self.assertEqual(virustotal._summarise({})["confidence"], 0.0)
+
+    def test_abuseipdb_whitelist_beats_no_reports(self):
+        self.assertEqual(abuseipdb._summarise({"isWhitelisted": True})["confidence"], 0.9)
+        self.assertEqual(abuseipdb._summarise({"totalReports": 0})["confidence"], 0.5)
+        self.assertEqual(abuseipdb._summarise({"abuseConfidenceScore": 100})["confidence"], 0.9)
+
+    def test_urlhaus_host_with_no_online_urls_is_only_suspicious(self):
+        offline = urlhaus._summarise_host({"query_status": "ok", "urls": [{"url_status": "offline"}]})
+        self.assertEqual((offline["verdict"], offline["confidence"]), ("suspicious", 0.5))
+        online = urlhaus._summarise_host({"query_status": "ok", "urls": [{"url_status": "online"}]})
+        self.assertEqual((online["verdict"], online["confidence"]), ("malicious", 1.0))
+        url_off = urlhaus._summarise_url({"query_status": "ok", "url_status": "offline"})
+        self.assertEqual((url_off["verdict"], url_off["confidence"]), ("malicious", 0.7))
+
+    def test_curated_hits_and_whitelists_are_full_or_strong(self):
+        self.assertEqual(threatfox._summarise({"query_status": "ok", "data": [{}]})["confidence"], 1.0)
+        self.assertEqual(malwarebazaar._summarise({"query_status": "ok", "data": [{}]})["confidence"], 1.0)
+        self.assertEqual(hashlookup._summarise({"hashlookup:trust": 90})["confidence"], 1.0)
+        self.assertEqual(otx._summarise({"validation": [{"name": "w"}]})["confidence"], 0.9)
+        self.assertEqual(otx._summarise({"pulse_info": {"count": 9}})["confidence"], 0.3)
+        self.assertEqual(greynoise._summarise({"classification": "benign"})["confidence"], 0.9)
+
+    def test_recon_tags_and_new_domains_are_weak_leads(self):
+        self.assertEqual(shodan._summarise({"tags": ["c2"]})["confidence"], 0.4)
+        self.assertEqual(internetdb._summarise({"tags": ["malware"]})["confidence"], 0.4)
+        self.assertEqual(internetdb._summarise({"ports": [80]})["confidence"], 0.0)
+        new = rdap._summarise_domain({"events": [{"eventAction": "registration",
+                                                  "eventDate": "2026-11-01T00:00:00Z"}]},
+                                     now=datetime(2026, 11, 2, tzinfo=timezone.utc))
+        self.assertEqual(new["confidence"], 0.4)
+
+    def test_cached_rows_without_the_field_get_the_default(self):
+        old_row = {"source": "virustotal", "indicator": "x", "indicator_type": "ip", "verdict": "clean"}
+        self.assertEqual(VendorResult(**old_row).confidence, 0.5)
 
 
 class FetchJsonTests(unittest.IsolatedAsyncioTestCase):

@@ -29,7 +29,10 @@ NOT_FOUND_TTL = 3600
 def _summarise(data: dict) -> dict:
     tags = data.get("tags") or []
     vulns = list(data.get("vulns") or [])
-    verdict = "suspicious" if any(t in _BAD_TAGS for t in tags) else "unknown"
+    if any(t in _BAD_TAGS for t in tags):
+        verdict, confidence = "suspicious", 0.4     # recon tag, a medium-weak lead
+    else:
+        verdict, confidence = "unknown", 0.0
     summary = {
         "ports": data.get("ports"),
         "hostnames": data.get("hostnames"),
@@ -38,7 +41,7 @@ def _summarise(data: dict) -> dict:
         "vulns": vulns[:10] or None,
     }
     ratio = f"{len(vulns)} known CVE(s)" if vulns else None
-    return {"verdict": verdict, "ratio": ratio, "summary": summary}
+    return {"verdict": verdict, "confidence": confidence, "ratio": ratio, "summary": summary}
 
 
 async def lookup(itype: str, value: str) -> VendorResult:
@@ -76,6 +79,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
+        confidence=parsed["confidence"],
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
     )

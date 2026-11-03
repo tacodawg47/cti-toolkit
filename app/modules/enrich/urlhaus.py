@@ -34,6 +34,7 @@ def _error(status: str) -> dict:
 def _summarise_url(body: dict) -> dict:
     status = body.get("query_status")
     if status == "ok":
+        online = body.get("url_status") == "online"
         summary = {
             "threat": body.get("threat"),
             "url_status": body.get("url_status"),       # online / offline
@@ -41,7 +42,10 @@ def _summarise_url(body: dict) -> dict:
             "tags": body.get("tags"),
             "blacklists": body.get("blacklists"),
         }
-        return {"verdict": "malicious", "ratio": "listed", "summary": summary}
+        # The exact URL was a malware URL. Still serving: full confidence;
+        # taken down: still malicious (it was), a little less certain now.
+        return {"verdict": "malicious", "confidence": 1.0 if online else 0.7,
+                "ratio": "listed", "summary": summary}
     if status == "no_results":
         return _not_listed()
     return _error(status)
@@ -58,7 +62,15 @@ def _summarise_host(body: dict) -> dict:
             "first_seen": body.get("firstseen"),
             "blacklists": body.get("blacklists"),
         }
-        return {"verdict": "malicious", "ratio": f"{len(urls)} malware URL(s)", "summary": summary}
+        # A host that currently serves malware is malicious. A host whose
+        # listed URLs are all offline (often one old upload on a big shared
+        # site) is only suspicious: example.com has such an entry from 2023.
+        if online:
+            verdict, confidence = "malicious", 1.0
+        else:
+            verdict, confidence = "suspicious", 0.5
+        return {"verdict": verdict, "confidence": confidence,
+                "ratio": f"{len(urls)} malware URL(s), {online} online", "summary": summary}
     if status == "no_results":
         return _not_listed()
     return _error(status)
@@ -74,7 +86,7 @@ def _summarise_payload(body: dict) -> dict:
             "first_seen": body.get("firstseen"),
             "sha256": body.get("sha256_hash"),
         }
-        return {"verdict": "malicious", "ratio": "known payload", "summary": summary}
+        return {"verdict": "malicious", "confidence": 1.0, "ratio": "known payload", "summary": summary}
     if status in ("no_results", "ok_without_results"):
         return _not_listed()
     return _error(status)
@@ -137,6 +149,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
+        confidence=parsed.get("confidence", 0.0),
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
     )

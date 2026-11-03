@@ -84,9 +84,9 @@ def _summarise_domain(body: dict, now: datetime | None = None) -> dict:
     registrars = _entities_with_role(body, "registrar")
 
     if age_days is not None and age_days < NEW_DOMAIN_DAYS:
-        verdict = "suspicious"
+        verdict, confidence = "suspicious", 0.4     # a cheap lead, not proof
     else:
-        verdict = "unknown"
+        verdict, confidence = "unknown", 0.0
 
     summary = {
         "registered": registered,
@@ -98,7 +98,7 @@ def _summarise_domain(body: dict, now: datetime | None = None) -> dict:
         "status": body.get("status") or None,
     }
     ratio = f"registered {age_days} day(s) ago" if age_days is not None else None
-    return {"verdict": verdict, "ratio": ratio, "summary": summary}
+    return {"verdict": verdict, "confidence": confidence, "ratio": ratio, "summary": summary}
 
 
 def _summarise_ip(body: dict) -> dict:
@@ -113,7 +113,7 @@ def _summarise_ip(body: dict) -> dict:
         "abuse_contact": _vcard_field(abuse[0], "email") if abuse else None,
         "registry": body.get("port43"),      # the WHOIS host, which names the RIR
     }
-    return {"verdict": "unknown", "ratio": None, "summary": summary}
+    return {"verdict": "unknown", "confidence": 0.0, "ratio": None, "summary": summary}
 
 
 async def lookup(itype: str, value: str) -> VendorResult:
@@ -156,6 +156,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
+        confidence=parsed["confidence"],
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
     )

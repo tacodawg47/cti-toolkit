@@ -55,12 +55,14 @@ def _summarise(obj: dict) -> dict:
     false_positive = obj.get("false_positive") or []
     fp_accepted = any((fp or {}).get("assessment") == "accepted" for fp in false_positive)
 
+    # Confidence feeds the Overall risk score: OTX's own whitelist is strong;
+    # pulse presence is a lead, so it carries little weight.
     if validation or fp_accepted:
-        verdict = "clean"
+        verdict, confidence = "clean", 0.9
     elif count >= 1:
-        verdict = "suspicious"      # a lead, never proof on its own
+        verdict, confidence = "suspicious", 0.3      # a lead, never proof on its own
     else:
-        verdict = "unknown"
+        verdict, confidence = "unknown", 0.0
 
     summary = {
         "pulse_count": count,
@@ -70,7 +72,8 @@ def _summarise(obj: dict) -> dict:
         "country": obj.get("country_name"),
         "asn": obj.get("asn"),
     }
-    return {"verdict": verdict, "ratio": f"{count} pulses", "summary": summary}
+    return {"verdict": verdict, "confidence": confidence,
+            "ratio": f"{count} pulses", "summary": summary}
 
 
 async def lookup(itype: str, value: str) -> VendorResult:
@@ -112,6 +115,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
+        confidence=parsed["confidence"],
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
     )

@@ -55,12 +55,14 @@ def _summarise(body: dict) -> dict:
         clamav = sorted(set(clamav))
         yara = sorted(set(yara))
 
+        # Confidence feeds the Overall risk score: a named AV signature is
+        # strong; YARA-only matches are a medium lead (rules can be generic).
         if clamav:
-            verdict = "malicious"
+            verdict, confidence = "malicious", 1.0
         elif yara:
-            verdict = "suspicious"
+            verdict, confidence = "suspicious", 0.5
         else:
-            verdict = "unknown"
+            verdict, confidence = "unknown", 0.0
 
         summary = {
             "file_name": next((t.get("file_name") for t in tasks if t.get("file_name")), None),
@@ -75,7 +77,7 @@ def _summarise(body: dict) -> dict:
             "sha256": meta.get("sha256_hash"),
         }
         ratio = f"{len(clamav)} AV / {len(yara)} YARA match(es)"
-        return {"verdict": verdict, "ratio": ratio, "summary": summary}
+        return {"verdict": verdict, "confidence": confidence, "ratio": ratio, "summary": summary}
 
     if status in _ERROR_STATUSES:
         return {"verdict": "error", "ratio": None, "summary": {}, "error": f"YARAify: {status}"}
@@ -118,6 +120,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
+        confidence=parsed.get("confidence", 0.0),
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
     )

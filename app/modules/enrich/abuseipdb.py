@@ -25,14 +25,18 @@ def _summarise(data: dict) -> dict:
     score = data.get("abuseConfidenceScore") or 0
     reports = data.get("totalReports") or 0
 
+    # Confidence feeds the Overall risk score: AbuseIPDB's own whitelist is a
+    # strong clean signal; "nobody reported it" is only a weak one.
     if score >= 75:
-        verdict = "malicious"
+        verdict, confidence = "malicious", 0.9
     elif score >= 25:
-        verdict = "suspicious"
-    elif data.get("isWhitelisted") or reports == 0:
-        verdict = "clean"
+        verdict, confidence = "suspicious", 0.6
+    elif data.get("isWhitelisted"):
+        verdict, confidence = "clean", 0.9
+    elif reports == 0:
+        verdict, confidence = "clean", 0.5
     else:
-        verdict = "unknown"
+        verdict, confidence = "unknown", 0.0
 
     summary = {
         "abuse_confidence": f"{score}%",
@@ -45,7 +49,8 @@ def _summarise(data: dict) -> dict:
         "last_reported": data.get("lastReportedAt"),
         "whitelisted": data.get("isWhitelisted"),
     }
-    return {"verdict": verdict, "ratio": f"{score}% confidence", "summary": summary}
+    return {"verdict": verdict, "confidence": confidence,
+            "ratio": f"{score}% confidence", "summary": summary}
 
 
 async def lookup(itype: str, value: str) -> VendorResult:
@@ -81,6 +86,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
+        confidence=parsed["confidence"],
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
     )

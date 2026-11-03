@@ -28,19 +28,19 @@ them VirusTotal), so run it after a change to a vendor client, not daily.
 
 ## What the 2026-11-02 run showed
 
-Everything above matched. Two verdict-tuning observations came out of it,
-recorded here so they are not lost (neither is a bug, both are heuristics
-worth revisiting):
+Everything above matched. Two verdict-tuning observations came out of it and
+were fixed the same day by replacing the "worst of" Overall line with the
+confidence-weighted risk score (see enrichment-vendors.md):
 
-- VirusTotal calls `8.8.8.8` SUSPICIOUS on a 1/92 ratio (one engine's false
-  positive). The "one malicious engine means suspicious" rule, ported from
-  the cti-skills plugin, is noisy on famous infrastructure. Options: require
-  two engines, or let OTX's whitelist / AbuseIPDB's whitelisted flag
-  downgrade it.
-- URLhaus calls `example.com` MALICIOUS from one offline URL first seen in
-  2023, which then becomes the Overall line. A host hit with zero online URLs
-  should probably be SUSPICIOUS, with MALICIOUS reserved for hosts that
-  currently serve malware.
+- VirusTotal's 1/92 on `8.8.8.8` (one engine's false positive) used to make
+  the Overall line SUSPICIOUS. It is now a 0.3-confidence vote, outweighed by
+  the AbuseIPDB and OTX whitelists: Overall CLEAN, risk 1.1/10.
+- URLhaus's one offline URL from 2023 on `example.com` used to make the
+  Overall line MALICIOUS. A host with no online URLs is now only suspicious
+  at 0.5: Overall CLEAN, risk 1.7/10.
+
+Expected Overall lines now: 8.8.8.8 CLEAN about 1/10; the EICAR URL and hash
+MALICIOUS 9+/10; the made-up hash has no Overall line (nobody voted).
 
 crt.sh also returned one transient non-JSON answer during the run; the app
 showed UNAVAILABLE and the retry worked. That is the designed behaviour for

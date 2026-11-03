@@ -47,13 +47,20 @@ VENDORS_BY_TYPE: dict[str, list] = {
 # from the roadmap. A miss just adds the hashlookup card to the normal fan-out.
 HASH_GATE = hashlookup
 
-# Highest-to-lowest severity, for the aggregate worst-of line.
-_SEVERITY = {"malicious": 3, "suspicious": 2, "clean": 1, "unknown": 0}
-
 # Source name of the informational card we return instead of fanning out
 # (private / reserved IPs). It is not a vendor answer, so the aggregate line
-# ignores it rather than printing "UNKNOWN (worst of (local))".
+# ignores it rather than scoring it.
 LOCAL_SOURCE = "(local)"
+
+# A verdict as a number on a -1 (clean) .. +1 (malicious) axis. "unknown" and
+# "error" are not here on purpose: they abstain instead of voting.
+_VOTE = {"malicious": 1.0, "suspicious": 0.5, "clean": -1.0}
+
+# Risk score (0-10) thresholds for the Overall label. Between CLEAN and
+# SUSPICIOUS the evidence genuinely conflicts, and the line says so.
+MALICIOUS_AT = 7.5
+SUSPICIOUS_AT = 5.5
+CLEAN_AT = 3.0
 
 
 def vendors_for(itype: str) -> list:
@@ -61,28 +68,55 @@ def vendors_for(itype: str) -> list:
 
 
 def aggregate_verdict(results: list[VendorResult]) -> dict | None:
-    """Worst verdict across vendors that actually answered, and who said it.
+    """One Overall line from many cards: a confidence-weighted risk score.
 
-    Lets the analyst read one line instead of scanning every card. Vendors that
-    are not configured, quota-limited, or errored are ignored.
+    Each vendor that gave a real opinion votes malicious (+1), suspicious
+    (+0.5) or clean (-1); "unknown", errors, quota and not-configured cards
+    abstain. Each vote is weighted by the vendor's own `confidence`, so one
+    VirusTotal engine out of 92 (0.3) cannot outvote an OTX whitelist entry
+    (0.9), while a ThreatFox C2 hit (1.0) is never diluted by a crowd of
+    "unknown". The weighted mean, -1..+1, is shown as 0..10:
+
+        risk = (sum(confidence * vote) / sum(confidence) + 1) * 5
+
+    Returns None when nobody voted, else a dict with the score, the label,
+    the voters grouped by verdict, and how many cards abstained.
     """
-    best_sev = -1
-    best_verdict = None
-    sources: list[str] = []
+    weighted = 0.0
+    weight = 0.0
+    by_verdict: dict[str, list[str]] = {"malicious": [], "suspicious": [], "clean": []}
+    abstained = 0
     for r in results:
-        # Skip anything that is not a real answer. The verdict check is a
-        # second guard: a result that slipped through with verdict "error"
-        # must never become the Overall line.
-        if r.status != "ok" or r.verdict == "error" or r.source == LOCAL_SOURCE:
+        if r.source == LOCAL_SOURCE:
             continue
-        sev = _SEVERITY.get(r.verdict, 0)
-        if sev > best_sev:
-            best_sev, best_verdict, sources = sev, r.verdict, [r.source]
-        elif sev == best_sev:
-            sources.append(r.source)
-    if best_verdict is None:
+        vote = _VOTE.get(r.verdict)
+        if r.status != "ok" or vote is None or r.confidence <= 0:
+            abstained += 1
+            continue
+        weighted += r.confidence * vote
+        weight += r.confidence
+        by_verdict[r.verdict].append(r.source)
+
+    if weight == 0:
         return None
-    return {"verdict": best_verdict, "sources": sources}
+
+    score = round((weighted / weight + 1) * 5, 1)
+    if score >= MALICIOUS_AT:
+        label = "malicious"
+    elif score >= SUSPICIOUS_AT:
+        label = "suspicious"
+    elif score <= CLEAN_AT:
+        label = "clean"
+    else:
+        label = "inconclusive"
+    return {
+        "score": score,
+        "label": label,
+        "malicious": by_verdict["malicious"],
+        "suspicious": by_verdict["suspicious"],
+        "clean": by_verdict["clean"],
+        "abstained": abstained,
+    }
 
 
 def _local_note(itype: str, value: str, note: str) -> VendorResult:

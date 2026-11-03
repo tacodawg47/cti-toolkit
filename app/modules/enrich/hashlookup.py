@@ -38,12 +38,14 @@ def _summarise(body: dict) -> dict:
     known_malicious = body.get("KnownMalicious")
     source = body.get("source") or body.get("db")
 
+    # Both answers are catalogue facts, so they carry full confidence in the
+    # Overall risk score.
     if known_malicious:
-        verdict = "malicious"
+        verdict, confidence = "malicious", 1.0
     elif isinstance(trust, (int, float)) and trust >= MIN_TRUST:
-        verdict = "clean"
+        verdict, confidence = "clean", 1.0
     else:
-        verdict = "unknown"
+        verdict, confidence = "unknown", 0.0
 
     summary = {
         "file_name": body.get("FileName"),
@@ -57,7 +59,7 @@ def _summarise(body: dict) -> dict:
     if trust is None:
         summary["note"] = "catalogued, but no trust score: not treated as known-good"
     ratio = f"trust {trust}/100" if trust is not None else "known file"
-    return {"verdict": verdict, "ratio": ratio, "summary": summary}
+    return {"verdict": verdict, "confidence": confidence, "ratio": ratio, "summary": summary}
 
 
 async def lookup(itype: str, value: str) -> VendorResult:
@@ -99,6 +101,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
+        confidence=parsed["confidence"],
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
     )

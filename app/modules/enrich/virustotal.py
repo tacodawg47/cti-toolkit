@@ -50,14 +50,17 @@ def _summarise(obj: dict) -> dict:
     malicious = stats.get("malicious", 0)
     suspicious = stats.get("suspicious", 0)
 
+    # Confidence feeds the Overall risk score. One engine out of ninety is a
+    # weak signal (famous infrastructure collects single false positives);
+    # several engines, or a clean sweep of ten or more, is strong.
     if malicious >= 5:
-        verdict = "malicious"
+        verdict, confidence = "malicious", 1.0
     elif malicious >= 1 or suspicious >= 2:
-        verdict = "suspicious"
+        verdict, confidence = "suspicious", (0.6 if malicious >= 2 else 0.3)
     elif total >= 10:
-        verdict = "clean"
+        verdict, confidence = "clean", 0.8
     else:
-        verdict = "unknown"
+        verdict, confidence = "unknown", 0.0
 
     summary = {
         "community_score": attrs.get("reputation"),
@@ -70,7 +73,7 @@ def _summarise(obj: dict) -> dict:
         "registrar": attrs.get("registrar"),
     }
     ratio = f"{malicious}/{total}" if total else None
-    return {"verdict": verdict, "ratio": ratio, "summary": summary}
+    return {"verdict": verdict, "confidence": confidence, "ratio": ratio, "summary": summary}
 
 
 async def lookup(itype: str, value: str) -> VendorResult:
@@ -112,6 +115,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
     result = base.vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
+        confidence=parsed["confidence"],
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
     )

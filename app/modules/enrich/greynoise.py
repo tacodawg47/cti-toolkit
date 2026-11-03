@@ -22,13 +22,14 @@ VENDOR = "greynoise"
 CACHE_TTL = 6 * 3600
 NOT_FOUND_TTL = 3600
 
-# GreyNoise classification -> our verdict vocabulary.
-_CLASS_TO_VERDICT = {"malicious": "malicious", "benign": "clean"}
+# GreyNoise classification -> our verdict vocabulary and confidence. "benign"
+# means a known good service (RIOT), which is a strong clean signal.
+_CLASS_TO_VERDICT = {"malicious": ("malicious", 0.8), "benign": ("clean", 0.9)}
 
 
 def _summarise(data: dict) -> dict:
     classification = data.get("classification")
-    verdict = _CLASS_TO_VERDICT.get(classification, "unknown")
+    verdict, confidence = _CLASS_TO_VERDICT.get(classification, ("unknown", 0.0))
     summary = {
         "classification": classification,
         "noise": data.get("noise"),
@@ -37,7 +38,7 @@ def _summarise(data: dict) -> dict:
         "last_seen": data.get("last_seen"),
         "link": data.get("link"),
     }
-    return {"verdict": verdict, "summary": summary}
+    return {"verdict": verdict, "confidence": confidence, "summary": summary}
 
 
 async def lookup(itype: str, value: str) -> VendorResult:
@@ -76,6 +77,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
+        confidence=parsed["confidence"],
         summary=parsed["summary"],
     )
     ttl = CACHE_TTL if parsed["verdict"] != "unknown" else NOT_FOUND_TTL

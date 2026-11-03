@@ -24,8 +24,16 @@
   {% if aggregate %}
     <div class="card">
       <strong>Overall:</strong>
-      <span class="verdict-{{ aggregate.verdict }}">{{ aggregate.verdict | upper }}</span>
-      <small>(worst of {{ aggregate.sources | join(", ") }})</small>
+      <span class="verdict-{{ aggregate.label }}">{{ aggregate.label | upper }}</span>
+      <strong>risk {{ aggregate.score }}/10</strong>
+      <small>
+        {%- set parts = [] -%}
+        {%- if aggregate.malicious %}{% set _ = parts.append(aggregate.malicious | length ~ " malicious (" ~ aggregate.malicious | join(", ") ~ ")") %}{% endif -%}
+        {%- if aggregate.suspicious %}{% set _ = parts.append(aggregate.suspicious | length ~ " suspicious (" ~ aggregate.suspicious | join(", ") ~ ")") %}{% endif -%}
+        {%- if aggregate.clean %}{% set _ = parts.append(aggregate.clean | length ~ " clean (" ~ aggregate.clean | join(", ") ~ ")") %}{% endif -%}
+        {%- if aggregate.abstained %}{% set _ = parts.append(aggregate.abstained ~ " no opinion") %}{% endif -%}
+        — {{ parts | join("; ") }}. Votes weighted by each vendor's confidence; unknown cards abstain.
+      </small>
     </div>
   {% endif %}
 

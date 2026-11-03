@@ -31,6 +31,11 @@ class VendorResult(BaseModel):
     indicator_type: str                           # ip | domain | hash | url
     verdict: Verdict = "unknown"
     status: Status = "ok"
+    # How sure the vendor's verdict is, 0.0 to 1.0, set by the client that
+    # knows its own signal (a ThreatFox hit is 1.0; one VirusTotal engine out
+    # of 92 is 0.3). The Overall risk score weights each vote by this. Rows
+    # cached before the field existed load with the 0.5 default.
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     detection_ratio: str | None = None            # e.g. "12/89"
     summary: dict[str, Any] = Field(default_factory=dict)
     raw: dict[str, Any] | None = None

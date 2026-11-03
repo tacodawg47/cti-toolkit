@@ -38,7 +38,9 @@ def _summarise(body: dict) -> dict:
             "tags": first.get("tags"),
             "matches": len(rows),
         }
-        return {"verdict": "malicious", "ratio": f"{len(rows)} match(es)", "summary": summary}
+        # A curated C2/botnet database entry: full confidence.
+        return {"verdict": "malicious", "confidence": 1.0,
+                "ratio": f"{len(rows)} match(es)", "summary": summary}
 
     if status in (None, "illegal_search_term", "illegal_search_type"):
         return {"verdict": "error", "ratio": None,
@@ -80,6 +82,7 @@ async def lookup(itype: str, value: str) -> VendorResult:
     result = vendor_result(
         VENDOR, itype, value,
         verdict=parsed["verdict"],
+        confidence=parsed.get("confidence", 0.0),
         detection_ratio=parsed["ratio"],
         summary=parsed["summary"],
     )
