@@ -5,6 +5,10 @@
   <input type="text" name="indicator" value="{{ indicator | default('') }}"
          placeholder="hash, IP, domain, or URL (defanged input is fine)" autofocus>
   <button type="submit">Enrich</button>
+  <label class="muted" style="margin-left: 12px;">
+    <input type="checkbox" name="force" {% if force %}checked{% endif %}>
+    query anyway (skip the Tranco / known-good-file allowlists)
+  </label>
 </form>
 
 {% if too_long %}

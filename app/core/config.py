@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     # Where the SQLite database and other local data live (git-ignored).
     data_dir: Path = PROJECT_ROOT / "data"
 
+    # How many rows of data/tranco.csv count as "popular enough to skip".
+    # The full list is one million; the top 100k is the usual false-positive
+    # suppression range. Raise or lower in .env as TRANCO_TOP_N.
+    tranco_top_n: int = 100_000
+
     @property
     def db_path(self) -> Path:
         # The directory is created once in db.init_db(); don't mkdir on every

@@ -19,6 +19,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import __version__
 from .core import db
+from .core.allowlist import allowlist
 from .core.config import settings
 from .core.indicators import MAX_INDICATOR_LEN, canonical, detect_type, normalise
 from .core.ratelimit import LIMITS, rate_limiter
@@ -62,6 +63,7 @@ templates.env.filters["ago"] = _ago
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db.init_db()
+    allowlist.load()                 # Tranco top list, if data/tranco.csv exists
     base.set_client(base.new_client())
     try:
         yield
@@ -112,7 +114,9 @@ def index(request: Request):
 
 
 @app.post("/enrich", response_class=HTMLResponse)
-async def enrich(request: Request, indicator: str = Form(...)):
+async def enrich(request: Request, indicator: str = Form(...), force: bool = Form(False)):
+    # `force` is the "query anyway" checkbox: a browser sends "on" when it is
+    # ticked and nothing at all when it is not, which FastAPI turns into a bool.
     _reject_cross_site(request)
     raw = indicator.strip()
     if len(raw) > MAX_INDICATOR_LEN:
@@ -123,11 +127,11 @@ async def enrich(request: Request, indicator: str = Form(...)):
     value = normalise(raw)
     itype = detect_type(value)
     value = canonical(itype, value)
-    results = await registry.enrich_all(itype, value)
+    results = await registry.enrich_all(itype, value, force=force)
     aggregate = registry.aggregate_verdict(results)
     return templates.TemplateResponse(
         request, "index.html",
-        {"indicator": indicator, "value": value, "itype": itype,
+        {"indicator": indicator, "value": value, "itype": itype, "force": force,
          "results": results, "aggregate": aggregate},
     )
 
@@ -156,6 +160,7 @@ async def health(request: Request):
         request, "health.html",
         {"keys": keys, "versions": versions, "quotas": quotas,
          "shodan_account": await shodan.account_info(),
+         "tranco": allowlist.status(),
          "bind": f"{settings.host}:{settings.port}",
          "data_dir": str(settings.data_dir)},
     )

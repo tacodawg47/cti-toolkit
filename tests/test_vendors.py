@@ -16,12 +16,14 @@ from unittest.mock import patch
 import httpx
 from pydantic import ValidationError
 
+from app.core import allowlist as allowlist_mod
 from app.core import db, indicators, ratelimit
 from app.core.config import Settings, settings
 from app.core.models import VendorResult
 from app.modules.enrich import (
     abuseipdb,
     base,
+    crtsh,
     greynoise,
     hashlookup,
     internetdb,
@@ -34,6 +36,7 @@ from app.modules.enrich import (
     urlhaus,
     urlscan,
     virustotal,
+    yaraify,
 )
 
 
@@ -274,6 +277,151 @@ class RdapTests(unittest.TestCase):
         self.assertEqual(parsed["summary"]["registry"], "whois.arin.net")
 
 
+class YaraifyTests(unittest.TestCase):
+    @staticmethod
+    def _hit(clamav=(), static=(), unpacked=()):
+        return {"query_status": "ok", "data": {
+            "metadata": {"file_size": 1234, "file_type_mime": "application/x-dosexec",
+                         "first_seen": "2026-01-01", "sightings": 3, "sha256_hash": "ab"},
+            "tasks": [{
+                "file_name": "dropper.exe",
+                "clamav_results": list(clamav),
+                "static_results": [{"rule_name": r} for r in static],
+                "unpack_results": [{"unpacked_yara_matches": [{"rule_name": r} for r in unpacked]}],
+            }],
+        }}
+
+    def test_clamav_hit_is_malicious(self):
+        parsed = yaraify._summarise(self._hit(clamav=["Win.Trojan.Agent-123"], static=["x"]))
+        self.assertEqual(parsed["verdict"], "malicious")
+        self.assertEqual(parsed["summary"]["clamav"], ["Win.Trojan.Agent-123"])
+        self.assertEqual(parsed["summary"]["file_name"], "dropper.exe")
+        self.assertEqual(parsed["ratio"], "1 AV / 1 YARA match(es)")
+
+    def test_yara_only_is_suspicious_and_includes_unpacked_matches(self):
+        parsed = yaraify._summarise(self._hit(static=["pe_overlay"], unpacked=["cobalt_strike"]))
+        self.assertEqual(parsed["verdict"], "suspicious")
+        self.assertEqual(parsed["summary"]["yara_rules"], ["cobalt_strike", "pe_overlay"])
+
+    def test_scanned_with_no_matches_is_unknown(self):
+        self.assertEqual(yaraify._summarise(self._hit())["verdict"], "unknown")
+
+    def test_no_results_is_unknown_and_illegal_is_error(self):
+        self.assertEqual(yaraify._summarise({"query_status": "no_results"})["verdict"], "unknown")
+        self.assertEqual(yaraify._summarise({"query_status": "illegal_hash"})["verdict"], "error")
+        self.assertEqual(yaraify._summarise({})["verdict"], "error")
+
+
+class CrtshTests(unittest.TestCase):
+    ROWS = [
+        {"issuer_name": "C=US, O=Let's Encrypt, CN=R11", "name_value": "example.com\nwww.example.com",
+         "not_before": "2026-09-01T00:00:00", "not_after": "2026-12-01T00:00:00"},
+        {"issuer_name": "C=US, O=Let's Encrypt, CN=R11", "name_value": "mail.example.com",
+         "not_before": "2026-10-15T00:00:00", "not_after": "2027-01-15T00:00:00"},
+        {"issuer_name": "C=US, O=DigiCert Inc, CN=DigiCert TLS RSA SHA256 2020 CA1",
+         "name_value": "WWW.EXAMPLE.COM", "not_before": "2025-03-01T00:00:00"},
+    ]
+
+    def test_names_issuers_and_dates(self):
+        parsed = crtsh._summarise(self.ROWS)
+        self.assertEqual(parsed["verdict"], "unknown")
+        self.assertEqual(parsed["ratio"], "3 cert(s)")
+        s = parsed["summary"]
+        self.assertEqual(s["names"], ["example.com", "www.example.com", "mail.example.com"])
+        self.assertEqual(s["names_total"], 3)
+        self.assertEqual(len(s["issuers"]), 2)
+        self.assertEqual(s["oldest_not_before"], "2025-03-01T00:00:00")
+        self.assertEqual(s["newest_not_before"], "2026-10-15T00:00:00")
+
+    def test_empty_list_is_unknown_with_note(self):
+        parsed = crtsh._summarise([])
+        self.assertIsNone(parsed["ratio"])
+        self.assertIn("no unexpired certificates", parsed["summary"]["note"])
+
+    def test_params_request_json_without_expired(self):
+        p = crtsh._params("example.com")
+        self.assertEqual(p["q"], "example.com")
+        self.assertEqual(p["output"], "json")
+        self.assertEqual(p["exclude"], "expired")
+
+
+class AllowlistTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = Path(tempfile.mkdtemp())
+        self.csv = self._tmp / "tranco.csv"
+        self.csv.write_text("1,google.com\n2,youtube.com\n3,github.io\n4,example.com\n", encoding="utf-8")
+
+    def tearDown(self):
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    def test_load_respects_top_n_and_matches_exact_or_www(self):
+        al = allowlist_mod.Allowlist()
+        self.assertEqual(al.load(self.csv, top_n=3), 3)
+        self.assertTrue(al.loaded)
+        self.assertEqual(al.rank("google.com"), 1)
+        self.assertEqual(al.rank("WWW.Google.com."), 1)
+        self.assertIsNone(al.rank("example.com"))          # row 4, beyond top_n
+
+    def test_subdomains_of_popular_hosts_are_not_allowlisted(self):
+        al = allowlist_mod.Allowlist()
+        al.load(self.csv, top_n=10)
+        self.assertEqual(al.rank("github.io"), 3)
+        self.assertIsNone(al.rank("evil.github.io"))
+        self.assertIsNone(al.rank("accounts.google.com"))
+
+    def test_missing_file_means_gate_off(self):
+        al = allowlist_mod.Allowlist()
+        self.assertEqual(al.load(self._tmp / "nope.csv", top_n=10), 0)
+        self.assertFalse(al.loaded)
+        self.assertIsNone(al.rank("google.com"))
+        self.assertFalse(al.status()["loaded"])
+
+
+class RegistryTrancoGateTests(unittest.IsolatedAsyncioTestCase):
+    class _Fine:
+        VENDOR = "fine"
+
+        @staticmethod
+        async def lookup(itype, value):
+            return VendorResult(source="fine", indicator=value, indicator_type=itype,
+                                verdict="clean")
+
+    def setUp(self):
+        self._orig = dict(registry.VENDORS_BY_TYPE)
+        registry.VENDORS_BY_TYPE["domain"] = [self._Fine]
+        registry.VENDORS_BY_TYPE["url"] = [self._Fine]
+        self._tmp = Path(tempfile.mkdtemp())
+        csv_path = self._tmp / "tranco.csv"
+        csv_path.write_text("1,google.com\n", encoding="utf-8")
+        allowlist_mod.allowlist.load(csv_path, top_n=10)
+
+    def tearDown(self):
+        registry.VENDORS_BY_TYPE.clear()
+        registry.VENDORS_BY_TYPE.update(self._orig)
+        allowlist_mod.allowlist.load(self._tmp / "nope.csv", top_n=10)   # unload
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    async def test_popular_domain_is_gated(self):
+        res = await registry.enrich_all("domain", "google.com")
+        self.assertEqual([r.source for r in res], [registry.LOCAL_SOURCE])
+        self.assertIn("#1", res[0].summary["note"])
+        self.assertIsNone(registry.aggregate_verdict(res))
+
+    async def test_url_on_popular_host_is_gated_but_subdomain_is_not(self):
+        res = await registry.enrich_all("url", "https://www.google.com/search?q=x")
+        self.assertEqual([r.source for r in res], [registry.LOCAL_SOURCE])
+        res = await registry.enrich_all("url", "https://sites.google.com/view/phish")
+        self.assertEqual([r.source for r in res], ["fine"])
+
+    async def test_force_bypasses_the_gate(self):
+        res = await registry.enrich_all("domain", "google.com", force=True)
+        self.assertEqual([r.source for r in res], ["fine"])
+
+    async def test_unpopular_domain_runs_normally(self):
+        res = await registry.enrich_all("domain", "evil.test")
+        self.assertEqual([r.source for r in res], ["fine"])
+
+
 class RegistryHashGateTests(unittest.IsolatedAsyncioTestCase):
     """A CIRCL hashlookup hit must stop the fan-out; a miss must not."""
 
@@ -315,6 +463,11 @@ class RegistryHashGateTests(unittest.IsolatedAsyncioTestCase):
     async def test_gate_error_does_not_skip_fan_out(self):
         with patch.object(hashlookup, "lookup", self._gate("error", status="error")):
             res = await registry.enrich_all("hash", "a" * 64)
+        self.assertEqual([r.source for r in res], ["hashlookup", "fine"])
+
+    async def test_force_runs_fan_out_even_for_known_good(self):
+        with patch.object(hashlookup, "lookup", self._gate("clean")):
+            res = await registry.enrich_all("hash", "a" * 64, force=True)
         self.assertEqual([r.source for r in res], ["hashlookup", "fine"])
 
 
@@ -534,6 +687,15 @@ class FetchJsonTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(status, 200)
             self.assertIsNone(body)
             self.assertIn("unexpected JSON", err)
+
+    async def test_expect_list_accepts_arrays_and_rejects_objects(self):
+        self._install(lambda req: httpx.Response(200, json=[{"a": 1}]))
+        status, body, err = await base.fetch_json("GET", "https://x/", expect="list")
+        self.assertEqual((status, body, err), (200, [{"a": 1}], None))
+        self._install(lambda req: httpx.Response(200, json={"a": 1}))
+        status, body, err = await base.fetch_json("GET", "https://x/", expect="list")
+        self.assertIsNone(body)
+        self.assertIn("not a JSON list", err)
 
     async def test_redirects_followed_only_when_asked(self):
         def handler(req):

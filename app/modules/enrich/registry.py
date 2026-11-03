@@ -9,10 +9,13 @@ client cannot take down the whole response.
 
 import asyncio
 import ipaddress
+from urllib.parse import urlsplit
 
+from ...core.allowlist import allowlist
 from ...core.models import VendorResult
 from . import (
     abuseipdb,
+    crtsh,
     greynoise,
     hashlookup,
     internetdb,
@@ -24,16 +27,18 @@ from . import (
     urlhaus,
     urlscan,
     virustotal,
+    yaraify,
 )
 
 # Which vendor modules apply to each indicator type. Order here is the order
 # results are shown. Each module exposes VENDOR and async lookup(itype, value).
-# Keyless sources (internetdb, rdap, hashlookup) sit alongside the keyed ones.
+# Keyless sources (internetdb, rdap, hashlookup, crtsh) sit alongside the
+# keyed ones.
 VENDORS_BY_TYPE: dict[str, list] = {
     "ip": [virustotal, abuseipdb, greynoise, otx, threatfox, urlhaus, internetdb, shodan, rdap],
-    "domain": [virustotal, otx, threatfox, urlhaus, urlscan, rdap],
+    "domain": [virustotal, otx, threatfox, urlhaus, urlscan, rdap, crtsh],
     "url": [virustotal, otx, threatfox, urlhaus, urlscan],
-    "hash": [virustotal, otx, threatfox, malwarebazaar, urlhaus],
+    "hash": [virustotal, otx, threatfox, malwarebazaar, urlhaus, yaraify],
 }
 
 # Runs BEFORE the hash fan-out. If CIRCL hashlookup says the file is a known
@@ -104,8 +109,41 @@ def _non_global_ip_note(value: str) -> VendorResult | None:
     return _local_note("ip", value, f"{kind} address — not sent to external vendors")
 
 
-async def enrich_all(itype: str, value: str) -> list[VendorResult]:
-    """Run every applicable vendor concurrently and collect their results."""
+def _host_of(itype: str, value: str) -> str | None:
+    """The hostname an allowlist check applies to: the domain itself, or the
+    host part of a URL. None for other types."""
+    if itype == "domain":
+        return value
+    if itype == "url":
+        try:
+            return urlsplit(value).hostname
+        except ValueError:
+            return None
+    return None
+
+
+def _tranco_note(itype: str, value: str) -> VendorResult | None:
+    """One informational result if the host is in the loaded Tranco top list."""
+    host = _host_of(itype, value)
+    if not host:
+        return None
+    rank = allowlist.rank(host)
+    if rank is None:
+        return None
+    return _local_note(
+        itype, value,
+        f"{host} is #{rank} in the Tranco top {allowlist.top_n:,} — vendors skipped "
+        "to save quota (tick \"query anyway\" to override)",
+    )
+
+
+async def enrich_all(itype: str, value: str, force: bool = False) -> list[VendorResult]:
+    """Run every applicable vendor concurrently and collect their results.
+
+    `force=True` bypasses the two allowlist gates (Tranco, CIRCL hashlookup)
+    and queries every vendor anyway. The private-IP gate is never bypassed:
+    nobody outside can say anything useful about 192.168.1.1.
+    """
     mods = vendors_for(itype)
     if not mods:
         return []
@@ -114,6 +152,12 @@ async def enrich_all(itype: str, value: str) -> list[VendorResult]:
     # answer is meaningless and it wastes quota (GreyNoise is ~10 lookups/day).
     if itype == "ip":
         gate = _non_global_ip_note(value)
+        if gate is not None:
+            return [gate]
+
+    # Popular-site gate for domains and URLs (Tranco, if the list is loaded).
+    if not force:
+        gate = _tranco_note(itype, value)
         if gate is not None:
             return [gate]
 
@@ -130,10 +174,11 @@ async def enrich_all(itype: str, value: str) -> list[VendorResult]:
                 error=f"client crashed: {type(exc).__name__}",
             )
         lead.append(known)
-        if known.status == "ok" and known.verdict == "clean":
+        if known.status == "ok" and known.verdict == "clean" and not force:
             lead.append(_local_note(
                 itype, value,
-                "known-good file per CIRCL hashlookup — other vendors skipped to save quota",
+                "known-good file per CIRCL hashlookup — other vendors skipped to save "
+                "quota (tick \"query anyway\" to override)",
             ))
             return lead
 

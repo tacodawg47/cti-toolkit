@@ -84,6 +84,7 @@ async def fetch_json(
     data: dict | None = None,
     json: dict | None = None,
     follow_redirects: bool = False,
+    expect: str = "object",
 ) -> tuple[int | None, Any | None, str | None]:
     """
     Make one request on the shared client.
@@ -93,17 +94,18 @@ async def fetch_json(
     rdap.org bootstrap answers with a redirect to the right registry, so that
     client passes follow_redirects=True.
 
+    `expect` is the JSON shape the caller can handle: "object" (a dict, which
+    is what every vendor API returns) or "list" (crt.sh returns a JSON array).
+    Anything else is turned into an error here rather than crashing inside
+    the client when it calls `.get()` on the body.
+
     Returns (status_code, body, error):
       - transport error -> (None, None, "request failed: <ExceptionType>")
       - non-200         -> (status_code, None, None)   # caller maps the code
       - 200 + bad JSON  -> (200, None, "vendor returned a non-JSON response")
-      - 200 + JSON that is not an object (a list, string, number)
+      - 200 + JSON of the wrong shape
                         -> (200, None, "vendor returned unexpected JSON")
-      - 200 + JSON obj  -> (200, body, None)
-
-    Every vendor we use answers with a JSON object, and every client calls
-    `.get()` on the body, so anything else is turned into an error here rather
-    than crashing inside the client.
+      - 200 + JSON      -> (200, body, None)
     """
     client = get_client()
     try:
@@ -122,6 +124,7 @@ async def fetch_json(
         body = resp.json()
     except ValueError:
         return 200, None, "vendor returned a non-JSON response"
-    if not isinstance(body, dict):
-        return 200, None, "vendor returned unexpected JSON (not an object)"
+    wanted = list if expect == "list" else dict
+    if not isinstance(body, wanted):
+        return 200, None, f"vendor returned unexpected JSON (not a JSON {expect})"
     return 200, body, None

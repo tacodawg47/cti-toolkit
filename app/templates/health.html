@@ -23,6 +23,22 @@
 </div>
 
 <div class="card">
+  <h3>Tranco allowlist</h3>
+  {% if tranco.loaded %}
+    <table>
+      <tr><th>Status</th><td><span class="ok">loaded</span></td></tr>
+      <tr><th>Entries</th><td>{{ "{:,}".format(tranco.entries) }} (top {{ "{:,}".format(tranco.top_n) }} requested)</td></tr>
+      <tr><th>File</th><td><code>{{ tranco.path }}</code></td></tr>
+      <tr><th>File date</th><td>{{ tranco.file_modified }}</td></tr>
+    </table>
+    <small>Domains and URL hosts on this list are not sent to vendors unless "query anyway" is ticked.</small>
+  {% else %}
+    <p><span class="no">not loaded</span> <small>— place the Tranco CSV at <code>{{ tranco.path }}</code> and restart
+    (see docs/runbooks/tranco-allowlist.md). The gate is off until then.</small></p>
+  {% endif %}
+</div>
+
+<div class="card">
   <h3>API quota (today, UTC)</h3>
   <table>
     <tr><th>Vendor</th><th>Used today</th><th>Daily cap</th><th>Per-minute</th></tr>

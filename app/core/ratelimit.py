@@ -38,6 +38,8 @@ LIMITS: dict[str, dict[str, int]] = {
     "internetdb": {"rpm": 60},
     "hashlookup": {"rpm": 60},
     "rdap": {"rpm": 30},
+    "yaraify": {"rpm": 30},              # abuse.ch, same soft limit as the rest of the suite
+    "crtsh": {"rpm": 10},                # crt.sh is a slow shared service; go easy on it
 }
 
 

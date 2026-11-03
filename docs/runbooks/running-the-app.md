@@ -47,7 +47,8 @@ with Ctrl+C.
 
 ## Use it
 
-- Enrichment page (`/`): paste an indicator, click Enrich.
+- Enrichment page (`/`): paste an indicator, click Enrich. Tick "query
+  anyway" to bypass the Tranco and known-good-file allowlists for that lookup.
 - Health page (`/health`): keys configured, per-vendor quota used today,
   Shodan credit balance, package versions.
 
@@ -79,6 +80,9 @@ and the docs page would load scripts from a CDN, which a local-only tool avoids.
 - When a per-minute cap is full the limiter waits for a slot; when a per-day
   cap is reached that vendor's card shows QUOTA instead of calling the API.
 - Private, reserved, and loopback IPs are not sent to any vendor.
+- Domains on the Tranco top list (if `data/tranco.csv` is present, see
+  tranco-allowlist.md) and files that CIRCL hashlookup knows as good are not
+  sent to the quota-costing vendors unless "query anyway" is ticked.
 
 ## Quick self-test without the browser
 
