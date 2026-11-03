@@ -14,8 +14,11 @@ from ...core.models import VendorResult
 from . import (
     abuseipdb,
     greynoise,
+    hashlookup,
+    internetdb,
     malwarebazaar,
     otx,
+    rdap,
     shodan,
     threatfox,
     urlhaus,
@@ -25,12 +28,19 @@ from . import (
 
 # Which vendor modules apply to each indicator type. Order here is the order
 # results are shown. Each module exposes VENDOR and async lookup(itype, value).
+# Keyless sources (internetdb, rdap, hashlookup) sit alongside the keyed ones.
 VENDORS_BY_TYPE: dict[str, list] = {
-    "ip": [virustotal, abuseipdb, greynoise, otx, threatfox, urlhaus, shodan],
-    "domain": [virustotal, otx, threatfox, urlhaus, urlscan],
+    "ip": [virustotal, abuseipdb, greynoise, otx, threatfox, urlhaus, internetdb, shodan, rdap],
+    "domain": [virustotal, otx, threatfox, urlhaus, urlscan, rdap],
     "url": [virustotal, otx, threatfox, urlhaus, urlscan],
     "hash": [virustotal, otx, threatfox, malwarebazaar, urlhaus],
 }
+
+# Runs BEFORE the hash fan-out. If CIRCL hashlookup says the file is a known
+# catalogued good file (an OS or vendor binary), the quota-costing vendors are
+# skipped: the answer would be "clean" anyway, and this is the allowlist gate
+# from the roadmap. A miss just adds the hashlookup card to the normal fan-out.
+HASH_GATE = hashlookup
 
 # Highest-to-lowest severity, for the aggregate worst-of line.
 _SEVERITY = {"malicious": 3, "suspicious": 2, "clean": 1, "unknown": 0}
@@ -70,6 +80,14 @@ def aggregate_verdict(results: list[VendorResult]) -> dict | None:
     return {"verdict": best_verdict, "sources": sources}
 
 
+def _local_note(itype: str, value: str, note: str) -> VendorResult:
+    """An informational card from the toolkit itself (not a vendor answer)."""
+    return VendorResult(
+        source=LOCAL_SOURCE, indicator=value, indicator_type=itype,
+        verdict="unknown", summary={"note": note},
+    )
+
+
 def _non_global_ip_note(value: str) -> VendorResult | None:
     """Return one informational result for a private/reserved IP, else None."""
     try:
@@ -83,11 +101,7 @@ def _non_global_ip_note(value: str) -> VendorResult | None:
             "multicast" if ip.is_multicast else
             "private" if ip.is_private else
             "reserved")
-    return VendorResult(
-        source=LOCAL_SOURCE, indicator=value, indicator_type="ip",
-        verdict="unknown",
-        summary={"note": f"{kind} address — not sent to external vendors"},
-    )
+    return _local_note("ip", value, f"{kind} address — not sent to external vendors")
 
 
 async def enrich_all(itype: str, value: str) -> list[VendorResult]:
@@ -103,12 +117,32 @@ async def enrich_all(itype: str, value: str) -> list[VendorResult]:
         if gate is not None:
             return [gate]
 
+    # Known-good file gate for hashes (see HASH_GATE above). Its card is shown
+    # first either way.
+    lead: list[VendorResult] = []
+    if itype == "hash":
+        try:
+            known = await HASH_GATE.lookup(itype, value)
+        except Exception as exc:          # same guard as the fan-out below
+            known = VendorResult(
+                source=HASH_GATE.VENDOR, indicator=value, indicator_type=itype,
+                status="error", verdict="error",
+                error=f"client crashed: {type(exc).__name__}",
+            )
+        lead.append(known)
+        if known.status == "ok" and known.verdict == "clean":
+            lead.append(_local_note(
+                itype, value,
+                "known-good file per CIRCL hashlookup — other vendors skipped to save quota",
+            ))
+            return lead
+
     results = await asyncio.gather(
         *(m.lookup(itype, value) for m in mods),
         return_exceptions=True,
     )
 
-    out: list[VendorResult] = []
+    out: list[VendorResult] = list(lead)
     for mod, res in zip(mods, results):
         if isinstance(res, BaseException):
             out.append(VendorResult(

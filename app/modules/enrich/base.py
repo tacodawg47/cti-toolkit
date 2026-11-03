@@ -83,9 +83,15 @@ async def fetch_json(
     params: dict | None = None,
     data: dict | None = None,
     json: dict | None = None,
+    follow_redirects: bool = False,
 ) -> tuple[int | None, Any | None, str | None]:
     """
     Make one request on the shared client.
+
+    `follow_redirects` is off by default: a redirect from a vendor API is
+    unexpected and is reported as its 3xx code. RDAP is the exception: the
+    rdap.org bootstrap answers with a redirect to the right registry, so that
+    client passes follow_redirects=True.
 
     Returns (status_code, body, error):
       - transport error -> (None, None, "request failed: <ExceptionType>")
@@ -102,7 +108,8 @@ async def fetch_json(
     client = get_client()
     try:
         resp = await client.request(
-            method, url, headers=headers, params=params, data=data, json=json
+            method, url, headers=headers, params=params, data=data, json=json,
+            follow_redirects=follow_redirects,
         )
     except (httpx.HTTPError, httpx.InvalidURL) as exc:
         # InvalidURL is not an HTTPError, so it is listed on its own. Never

@@ -50,20 +50,42 @@ def refang(value: str) -> str:
     return s
 
 
+def _is_host(value: str) -> bool:
+    """True if value is an IP address or a domain name (no port, no scheme)."""
+    try:
+        ipaddress.ip_address(value)
+        return True
+    except ValueError:
+        return bool(DOMAIN_PATTERN.match(value)) and not value.rsplit(".", 1)[-1].isdigit()
+
+
+def _strip_port(s: str) -> str:
+    """Drop a :port suffix from a bare host, leaving URLs and plain IPv6 alone.
+
+    "1.2.3.4:443" -> "1.2.3.4", "evil.com:8443" -> "evil.com", and the
+    bracketed IPv6 form "[2001:db8::1]:443" -> "2001:db8::1". A plain IPv6
+    address like "2001:db8::1" also contains colons but is not host:port, so it
+    is only changed if what is left after the last colon is a valid port and
+    what is before it is a valid host (which a truncated IPv6 never is).
+    """
+    if "://" in s or ":" not in s:
+        return s
+    host, _, port = s.rpartition(":")
+    if not (port.isdigit() and 0 < int(port) <= 65535):
+        return s
+    if host.startswith("[") and host.endswith("]"):
+        host = host[1:-1]
+    return host if _is_host(host) else s
+
+
 def normalise(raw: str) -> str:
-    """Refang, then tidy: drop a trailing dot and an IPv4 :port suffix."""
-    s = refang(raw).rstrip(".")
-    # "1.2.3.4:443" -> "1.2.3.4" (a bare host:port, not a URL). The port is not
-    # part of the indicator we look up.
-    if ":" in s and "://" not in s:
-        host, _, port = s.rpartition(":")
-        if port.isdigit():
-            try:
-                ipaddress.ip_address(host)
-                s = host
-            except ValueError:
-                pass
-    return s
+    """Refang, then tidy: drop a trailing dot and a :port suffix on a bare host.
+
+    C2 reports and ThreatFox entries are often written as host:port; the port is
+    not part of the indicator we look up, so it is dropped here (the UI shows
+    the cleaned value so the analyst can see what was looked up).
+    """
+    return _strip_port(refang(raw).rstrip("."))
 
 
 def canonical(itype: str, value: str) -> str:
@@ -99,8 +121,8 @@ def detect_type(value: str) -> str:
         pass
     if value.lower().startswith(("http://", "https://")):
         return "url"
-    # The final label of a domain (the TLD) is never all digits; this keeps
-    # "1.2.3" from being mistaken for a domain.
-    if DOMAIN_PATTERN.match(value) and not value.rsplit(".", 1)[-1].isdigit():
+    # _is_host also rejects an all-digit final label (the TLD is never all
+    # digits), which keeps "1.2.3" from being mistaken for a domain.
+    if _is_host(value):
         return "domain"
     return "unknown"

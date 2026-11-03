@@ -33,6 +33,11 @@ LIMITS: dict[str, dict[str, int]] = {
     "threatfox": {"rpm": 30},
     "malwarebazaar": {"rpm": 30},
     "urlhaus": {"rpm": 30},
+    # Keyless sources. No published hard caps; these are courtesy limits
+    # (InternetDB asks for about one request per second).
+    "internetdb": {"rpm": 60},
+    "hashlookup": {"rpm": 60},
+    "rdap": {"rpm": 30},
 }
 
 

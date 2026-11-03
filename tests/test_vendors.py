@@ -9,6 +9,7 @@ Run from the project root:
 import shutil
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -22,8 +23,11 @@ from app.modules.enrich import (
     abuseipdb,
     base,
     greynoise,
+    hashlookup,
+    internetdb,
     malwarebazaar,
     otx,
+    rdap,
     registry,
     shodan,
     threatfox,
@@ -182,6 +186,138 @@ class UrlscanTests(unittest.TestCase):
         self.assertIn('\\"', q)
 
 
+class HashlookupTests(unittest.TestCase):
+    def test_known_file_is_clean(self):
+        body = {"FileName": "notepad.exe", "source": "NSRL", "hashlookup:trust": 80}
+        parsed = hashlookup._summarise(body)
+        self.assertEqual(parsed["verdict"], "clean")
+        self.assertEqual(parsed["summary"]["file_name"], "notepad.exe")
+        self.assertEqual(parsed["ratio"], "trust 80/100")
+
+    def test_no_trust_field_is_still_clean(self):
+        self.assertEqual(hashlookup._summarise({"FileName": "x"})["verdict"], "clean")
+
+    def test_low_trust_is_unknown(self):
+        self.assertEqual(hashlookup._summarise({"hashlookup:trust": 10})["verdict"], "unknown")
+
+    def test_known_malicious_flag_wins(self):
+        body = {"hashlookup:trust": 90, "KnownMalicious": "some-source"}
+        self.assertEqual(hashlookup._summarise(body)["verdict"], "malicious")
+
+
+class InternetDBTests(unittest.TestCase):
+    def test_bad_tag_is_suspicious(self):
+        self.assertEqual(internetdb._summarise({"tags": ["c2"]})["verdict"], "suspicious")
+
+    def test_ports_and_vulns_are_informational(self):
+        parsed = internetdb._summarise({"ports": [22, 443], "vulns": ["CVE-2024-1"], "tags": ["cloud"]})
+        self.assertEqual(parsed["verdict"], "unknown")
+        self.assertEqual(parsed["ratio"], "1 known CVE(s)")
+        self.assertEqual(parsed["summary"]["ports"], [22, 443])
+
+
+class RdapTests(unittest.TestCase):
+    NOW = datetime(2026, 11, 2, tzinfo=timezone.utc)
+
+    @staticmethod
+    def _domain(registered: str) -> dict:
+        return {
+            "events": [
+                {"eventAction": "registration", "eventDate": registered},
+                {"eventAction": "expiration", "eventDate": "2027-01-01T00:00:00Z"},
+            ],
+            "status": ["client transfer prohibited"],
+            "nameservers": [{"ldhName": "NS1.EXAMPLE.NET"}, {"ldhName": "NS2.EXAMPLE.NET"}],
+            "entities": [{
+                "roles": ["registrar"],
+                "vcardArray": ["vcard", [["version", {}, "text", "4.0"],
+                                         ["fn", {}, "text", "Example Registrar, Inc."]]],
+            }],
+        }
+
+    def test_new_domain_is_suspicious(self):
+        parsed = rdap._summarise_domain(self._domain("2026-10-28T12:00:00Z"), now=self.NOW)
+        self.assertEqual(parsed["verdict"], "suspicious")
+        self.assertEqual(parsed["summary"]["age_days"], 4)
+        self.assertEqual(parsed["ratio"], "registered 4 day(s) ago")
+
+    def test_old_domain_is_unknown_with_details(self):
+        parsed = rdap._summarise_domain(self._domain("1995-08-14T04:00:00Z"), now=self.NOW)
+        self.assertEqual(parsed["verdict"], "unknown")
+        self.assertEqual(parsed["summary"]["registrar"], "Example Registrar, Inc.")
+        self.assertEqual(parsed["summary"]["nameservers"], ["NS1.EXAMPLE.NET", "NS2.EXAMPLE.NET"])
+        self.assertEqual(parsed["summary"]["expires"], "2027-01-01T00:00:00Z")
+
+    def test_missing_events_is_unknown(self):
+        parsed = rdap._summarise_domain({}, now=self.NOW)
+        self.assertEqual(parsed["verdict"], "unknown")
+        self.assertIsNone(parsed["summary"]["age_days"])
+
+    def test_ip_abuse_contact_found_when_nested(self):
+        body = {
+            "startAddress": "8.8.8.0", "endAddress": "8.8.8.255", "name": "GOGL",
+            "handle": "NET-8-8-8-0-1", "type": "DIRECT ALLOCATION", "country": "US",
+            "port43": "whois.arin.net",
+            "entities": [{
+                "roles": ["registrant"],
+                "entities": [{
+                    "roles": ["abuse"],
+                    "vcardArray": ["vcard", [["fn", {}, "text", "Abuse"],
+                                             ["email", {}, "text", "abuse@example.net"]]],
+                }],
+            }],
+        }
+        parsed = rdap._summarise_ip(body)
+        self.assertEqual(parsed["verdict"], "unknown")
+        self.assertEqual(parsed["summary"]["abuse_contact"], "abuse@example.net")
+        self.assertEqual(parsed["summary"]["netblock"], "8.8.8.0 - 8.8.8.255")
+        self.assertEqual(parsed["summary"]["registry"], "whois.arin.net")
+
+
+class RegistryHashGateTests(unittest.IsolatedAsyncioTestCase):
+    """A CIRCL hashlookup hit must stop the fan-out; a miss must not."""
+
+    class _Fine:
+        VENDOR = "fine"
+
+        @staticmethod
+        async def lookup(itype, value):
+            return VendorResult(source="fine", indicator=value, indicator_type=itype,
+                                verdict="clean")
+
+    def setUp(self):
+        self._orig = dict(registry.VENDORS_BY_TYPE)
+        registry.VENDORS_BY_TYPE["hash"] = [self._Fine]
+
+    def tearDown(self):
+        registry.VENDORS_BY_TYPE.clear()
+        registry.VENDORS_BY_TYPE.update(self._orig)
+
+    @staticmethod
+    def _gate(verdict, status="ok"):
+        async def fake(itype, value):
+            return VendorResult(source="hashlookup", indicator=value, indicator_type=itype,
+                                verdict=verdict, status=status)
+        return fake
+
+    async def test_known_good_skips_other_vendors(self):
+        with patch.object(hashlookup, "lookup", self._gate("clean")):
+            res = await registry.enrich_all("hash", "a" * 64)
+        self.assertEqual([r.source for r in res], ["hashlookup", registry.LOCAL_SOURCE])
+        self.assertIn("skipped", res[1].summary["note"])
+        self.assertEqual(registry.aggregate_verdict(res), {"verdict": "clean", "sources": ["hashlookup"]})
+
+    async def test_miss_runs_fan_out_with_gate_card_first(self):
+        with patch.object(hashlookup, "lookup", self._gate("unknown")):
+            res = await registry.enrich_all("hash", "a" * 64)
+        self.assertEqual([r.source for r in res], ["hashlookup", "fine"])
+
+    async def test_gate_error_does_not_skip_fan_out(self):
+        with patch.object(hashlookup, "lookup", self._gate("error", status="error")):
+            res = await registry.enrich_all("hash", "a" * 64)
+        self.assertEqual([r.source for r in res], ["hashlookup", "fine"])
+
+
 class ConfigHostTests(unittest.TestCase):
     def test_loopback_allowed(self):
         self.assertEqual(Settings(host="127.0.0.1").host, "127.0.0.1")
@@ -235,6 +371,21 @@ class IndicatorsTests(unittest.TestCase):
         self.assertEqual(indicators.normalise("example.com."), "example.com")
         self.assertEqual(indicators.normalise("8.8.8.8"), "8.8.8.8")
 
+    def test_normalise_domain_port_and_bracketed_ipv6(self):
+        self.assertEqual(indicators.normalise("evil.com:8443"), "evil.com")
+        self.assertEqual(indicators.normalise("c2.evil[.]com[:]4444"), "c2.evil.com")
+        self.assertEqual(indicators.normalise("[2001:db8::1]:443"), "2001:db8::1")
+        self.assertEqual(indicators.detect_type(indicators.normalise("evil.com:8443")), "domain")
+
+    def test_normalise_leaves_non_host_port_alone(self):
+        # Plain IPv6 has colons but is not host:port.
+        self.assertEqual(indicators.normalise("2001:db8::1"), "2001:db8::1")
+        # URLs keep their port.
+        self.assertEqual(indicators.normalise("http://evil.com:8080/x"), "http://evil.com:8080/x")
+        # Out-of-range or non-numeric "port" is not a port.
+        self.assertEqual(indicators.normalise("evil.com:99999"), "evil.com:99999")
+        self.assertEqual(indicators.normalise("evil.com:abc"), "evil.com:abc")
+
     def test_canonical_lowercases_hash_and_domain_not_url(self):
         self.assertEqual(indicators.canonical("hash", "ABCdef"), "abcdef")
         self.assertEqual(indicators.canonical("domain", "Example.COM"), "example.com")
@@ -283,16 +434,17 @@ class RegistryCrashTests(unittest.IsolatedAsyncioTestCase):
             return VendorResult(source="fine", indicator=value, indicator_type=itype,
                                 verdict="clean")
 
+    # "url" type: no gate runs before the fan-out, so only the fakes are called.
     def setUp(self):
         self._orig = dict(registry.VENDORS_BY_TYPE)
-        registry.VENDORS_BY_TYPE["hash"] = [self._Boom, self._Fine]
+        registry.VENDORS_BY_TYPE["url"] = [self._Boom, self._Fine]
 
     def tearDown(self):
         registry.VENDORS_BY_TYPE.clear()
         registry.VENDORS_BY_TYPE.update(self._orig)
 
     async def test_crash_is_error_status_and_others_survive(self):
-        res = await registry.enrich_all("hash", "a" * 64)
+        res = await registry.enrich_all("url", "http://x.test/")
         self.assertEqual([r.source for r in res], ["boom", "fine"])
         self.assertEqual(res[0].status, "error")
         self.assertEqual(res[0].verdict, "error")
@@ -300,7 +452,7 @@ class RegistryCrashTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(res[1].verdict, "clean")
 
     async def test_crash_never_reaches_aggregate(self):
-        res = await registry.enrich_all("hash", "a" * 64)
+        res = await registry.enrich_all("url", "http://x.test/")
         agg = registry.aggregate_verdict(res)
         self.assertEqual(agg, {"verdict": "clean", "sources": ["fine"]})
 
@@ -382,6 +534,17 @@ class FetchJsonTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(status, 200)
             self.assertIsNone(body)
             self.assertIn("unexpected JSON", err)
+
+    async def test_redirects_followed_only_when_asked(self):
+        def handler(req):
+            if req.url.host == "bootstrap":
+                return httpx.Response(302, headers={"location": "https://registry/record"})
+            return httpx.Response(200, json={"from": "registry"})
+        self._install(handler)
+        status, body, _ = await base.fetch_json("GET", "https://bootstrap/x", follow_redirects=True)
+        self.assertEqual((status, body), (200, {"from": "registry"}))
+        status, body, _ = await base.fetch_json("GET", "https://bootstrap/x")
+        self.assertEqual((status, body), (302, None))
 
     async def test_invalid_url_is_typed_error_not_crash(self):
         # httpx.InvalidURL is not an HTTPError; a NUL byte in the URL raises it.
