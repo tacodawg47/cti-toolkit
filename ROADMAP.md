@@ -218,20 +218,21 @@ Nothing here needs a key. Record also that GHSA/OSV add little as a CVE
 feed for the other tabs: nearly every entry that matters there already
 has a CVE in NVD.
 
-Open gaps noted 2026-11-04 from the live dashboard:
-- Many CVEs show no vendor, product or CVSS: those fields come from KEV,
-  EUVD or NVD, and NVD is fetched per CVE only when a page is opened. Fix:
-  an NVD recent-changes feed (lastModStartDate over the last 7 days, pages
-  of 2,000) run with the other feeds, so every recently published or
-  modified CVE has its NVD record locally; the free NVD key makes it ten
-  times faster. Also fills "Your stack" with new CVEs not yet in KEV.
-- Charts: the module is tables only. Add small inline SVG charts rendered
-  server-side (no JavaScript library needed): KEV additions per month with
-  the ransomware share, most-exploited vendors over 12 months, heat bars
-  in the hottest table, and a sparkline of sightings per day on the detail
-  page. Senserva and cve.feedly.com use this to make the page readable at a
-  glance. Belongs with the dashboards parking-lot item; do a first pass
-  before Phase 2 closes.
+Built 2026-11-04 after the live dashboard review:
+- NVD recent-changes feed (everything modified since the last run, pages
+  of 2,000, bulk-saved), so recent CVEs carry vendor, product and CVSS
+  without being opened, and "Your stack" shows CVEs published for watched
+  products before they reach KEV. The free NVD key makes it ten times
+  faster; the operator is fetching one.
+- Charts, server-rendered inline SVG, no JavaScript library: known-exploited
+  CVEs per month with the ransomware share, most-exploited vendors over 12
+  months, heat bars in the hottest table, a sightings-per-day sparkline on
+  the detail page. First pass; more belongs with the dashboards parking-lot
+  item.
+- A "ransomware groups and the CVEs they exploit" table on the Dashboard:
+  this year's CVEs and the top 15 groups by default, all years on request.
+  The data lives in data/cti.db (ransomware_cves, ransomware_groups) and is
+  never re-served.
 - Ingest everything, surface selectively (decided): KEV ignores CVSS and
   many exploited CVEs are medium severity, EPSS is needed for every CVE a
   page can open, and the exploit indexes are small. Filtering happens on

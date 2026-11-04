@@ -45,6 +45,15 @@
   {% if poc_rows | length >= 25 %}<p><small>Newest 25 shown. The <a href="{{ prefix }}/exploits{% if poc_stack %}?poc=stack{% endif %}">Exploits</a> tab lists the last 30 days.</small></p>{% endif %}
 </div>
 
+{% if chart_monthly or chart_vendors %}
+<div class="card">
+  <h3>Exploitation over the last 12 months <small>(CVEs first listed by CISA KEV or ENISA EUVD per month; ransomware-linked share in red)</small></h3>
+  {{ chart_monthly | safe }}
+  <h3 style="margin-top: 14px;">Most-exploited vendors <small>(same window)</small></h3>
+  {{ chart_vendors | safe }}
+</div>
+{% endif %}
+
 <div class="card">
   <h3>Hottest right now
     <small>(ranked by heat: exploited +40, ransomware +10, EPSS ×30, CVSS ×1, listed this week +25 down to −15 over a year, Metasploit +5, PoC +3, sightings up to +10 —
@@ -60,7 +69,7 @@
           <td>{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}</td>
           <td>{% if r.vendor or r.product %}{{ r.vendor or "" }} {{ r.product or "" }}{% else %}<span class="muted">—</span>{% endif %}</td>
           <td>{{ r.kev_added or "—" }}</td>
-          <td><strong>{{ r.heat }}</strong></td>
+          <td><strong>{{ r.heat }}</strong><span class="barwrap"><span class="bar" style="width: {{ (r.heat / 133 * 100) | round | int }}%"></span></span></td>
           <td>{{ r.cvss if r.cvss is not none else "—" }}</td>
           <td>{{ "%.2f" | format(r.epss) if r.epss is not none else "—" }}</td>
           <td><small>{{ r.parts | join(", ") }}</small></td>
@@ -101,6 +110,49 @@
         </tr>
       {% endfor %}
     </table>
+  {% endif %}
+  {% if watchlist_count %}
+    <h3 style="margin-top: 14px;">New CVEs for your stack <small>(published in NVD in the last 7 days, exploited or not)</small></h3>
+    {% if not stack_new %}
+      <p class="muted">None{% if not feeds.get("nvd_recent") or not feeds.get("nvd_recent").fetched_at %} (the NVD recent-changes feed has not run yet){% endif %}.</p>
+    {% else %}
+      <table>
+        <tr><th>CVE</th><th>Published</th><th>CVSS</th><th>Product</th><th>Matched</th></tr>
+        {% for r in stack_new %}
+          <tr>
+            <td>{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}
+                {% if r.kev %}<span class="badge badge-kev">exploited</span>{% endif %}</td>
+            <td>{{ r.published | day }}</td>
+            <td>{{ r.cvss_score if r.cvss_score is not none else "—" }} <small>{{ r.cvss_severity or "" }}</small></td>
+            <td><small>{{ r.products | join(", ") }}</small></td>
+            <td><small>{{ r.matched | join(", ") }}</small></td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>Ransomware groups and the CVEs they exploit
+    <small>(ransomware.live group profiles —
+      {% if groups_all %}<a href="{{ prefix }}">CVE-{{ this_year }} only, top 15</a>{% else %}CVE-{{ this_year }}-* only, top 15 · <a href="{{ prefix }}?groups=all">all years, all groups</a>{% endif %})</small></h3>
+  {% if not groups_table %}
+    <p class="muted">Nothing yet{% if counts.ransomware == 0 %}: click Refresh ransomware groups above (needs the PRO key){% else %} for this year's CVEs; try all years{% endif %}.</p>
+  {% else %}
+    <table>
+      <tr><th>Group</th><th>Victims</th><th>CVEs exploited</th></tr>
+      {% for g in groups_table %}
+        <tr>
+          <td><strong>{{ g.grp }}</strong></td>
+          <td>{{ g.victims if g.victims is not none else "—" }}</td>
+          <td>{% for c in g.cves %}
+                <span style="white-space: nowrap;">{% with id = c.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}{% if c.vendor %} <small class="muted">{{ c.vendor }} {{ c.product }}</small>{% endif %}</span>{% if not loop.last %}, {% endif %}
+              {% endfor %}</td>
+        </tr>
+      {% endfor %}
+    </table>
+    <p class="muted"><small>Vendor and product from CISA KEV when the CVE is listed there. The Phase 3 ransomware tracker will join these groups to their victims.</small></p>
   {% endif %}
 </div>
 

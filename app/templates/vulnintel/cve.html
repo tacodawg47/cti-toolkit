@@ -123,6 +123,7 @@
             <td><small>{{ rep.sightings.sources.get(t, []) | join(", ") }}</small></td></tr>
       {% endfor %}
     </table>
+    {% if sightings_spark %}<p><small class="muted">last 30 days, per day:</small> {{ sightings_spark | safe }}</p>{% endif %}
     <p class="muted"><small>{{ rep.sightings.total }} sightings in total{% if rep.sightings.cached %} (cached){% endif %}.
       "exploited" entries are mostly honeypot observations (Shadowserver) and reported exploitation; "seen" is discussion.
       <a href="https://vulnerability.circl.lu/vuln/{{ rep.cve_id }}" rel="noopener noreferrer" target="_blank">Open on Vulnerability-Lookup</a>.</small></p>

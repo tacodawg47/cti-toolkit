@@ -20,8 +20,9 @@ import httpx
 from app.core import db
 from app.core.config import settings
 from app.modules.enrich import base
-from app.modules.vulnerability_intelligence import brief, hotness, priority, routes, service, store
+from app.modules.vulnerability_intelligence import brief, charts, hotness, priority, routes, service, store
 from app.modules.vulnerability_intelligence.feeds import chatter as chatter_feed
+from app.modules.vulnerability_intelligence.feeds import nvd_recent
 from app.modules.vulnerability_intelligence.feeds import epss as epss_feed
 from app.modules.vulnerability_intelligence.feeds import euvd as euvd_feed
 from app.modules.vulnerability_intelligence.feeds import kev as kev_feed
@@ -406,6 +407,8 @@ class ServiceTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
                 return httpx.Response(200, json={"items": EUVD_ITEMS})
             if req.url.host == "vulnerability.circl.lu":
                 return httpx.Response(200, json={"metadata": {"count": 0}, "data": []})
+            if req.url.host == "services.nvd.nist.gov":
+                return httpx.Response(200, json={**NVD_DOC, "totalResults": 1})
             raise AssertionError(req.url.host)
         base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
         from app.modules.vulnerability_intelligence import feeds
@@ -416,6 +419,8 @@ class ServiceTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
         self.assertEqual(store.epss_count(), 1)
         self.assertEqual(store.feed_status()["cisa_kev"]["version"], "2026.11.03")
         self.assertEqual(store.exploit_counts(), {"exploitdb": 1, "metasploit": 1, "nuclei": 1})
+        self.assertEqual(store.get_cve("CVE-2023-4966")["cvss_score"], 7.5)     # via the NVD recent feed
+        self.assertTrue(store.feed_status()["nvd_recent"]["version"].startswith("1 CVEs modified since"))
 
 
 class RouteTests(TempDbMixin, unittest.TestCase):
@@ -998,6 +1003,122 @@ class EuvdAndChatterFeedTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
         self.assertEqual(rep["priority"].level, "P1")
 
 
+class NvdRecentTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
+    async def asyncTearDown(self):
+        await base.aclose()
+
+    def test_window(self):
+        from datetime import datetime, timezone
+        now = datetime(2026, 11, 4, 12, 0, tzinfo=timezone.utc)
+        start, end = nvd_recent.window(None, now)
+        self.assertEqual((end - start).days, 7)
+        start, _ = nvd_recent.window({"fetched_at": "2026-11-03T10:00:00+00:00", "error": None}, now)
+        self.assertEqual(start.isoformat(), "2026-11-03T09:00:00+00:00")         # one hour of overlap
+        start, _ = nvd_recent.window({"fetched_at": "2026-11-03T10:00:00+00:00", "error": "boom"}, now)
+        self.assertEqual((end - start).days, 7)                                    # a failed run does not move it
+        start, _ = nvd_recent.window({"fetched_at": "2025-01-01T00:00:00+00:00", "error": None}, now)
+        self.assertEqual((end - start).days, 120)                                  # NVD's cap
+
+    def test_parse_page(self):
+        items, total = nvd_recent.parse_page({**NVD_DOC, "totalResults": 42})
+        self.assertEqual((len(items), total, items[0]["cve_id"]), (1, 42, "CVE-2023-4966"))
+
+    async def test_refresh_pages_and_saves(self):
+        pages = []
+
+        def handler(req):
+            idx = int(req.url.params.get("startIndex", "0"))
+            pages.append(idx)
+            self.assertIn("lastModStartDate", dict(req.url.params))
+            doc = {"resultsPerPage": 2000, "totalResults": 2001, "vulnerabilities": NVD_DOC["vulnerabilities"]}
+            if idx == 2000:
+                doc["vulnerabilities"] = [{"cve": {**NVD_DOC["vulnerabilities"][0]["cve"], "id": "CVE-2026-999999"}}]
+            return httpx.Response(200, json=doc)
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        res = await nvd_recent.refresh()
+        self.assertTrue(res["ok"], res)
+        self.assertEqual((res["entries"], pages), (2, [0, 2000]))
+        self.assertIsNotNone(store.get_cve("CVE-2026-999999"))
+        self.assertEqual(len(store.get_cve("CVE-2026-999999")["products"]), 2)
+
+    async def test_refresh_error_keeps_status(self):
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(403))))
+        res = await nvd_recent.refresh()
+        self.assertFalse(res["ok"])
+        self.assertIn("403", store.feed_status()["nvd_recent"]["error"])
+
+
+class DashboardDataTests(TempDbMixin, unittest.TestCase):
+    def test_bulk_save_and_stack_new(self):
+        cve = nvd.summarise(NVD_DOC)
+        from datetime import datetime, timezone
+        cve["published"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT00:00:00")
+        other = {**cve, "cve_id": "CVE-2026-424242", "products": [{"vendor": "fortinet", "product": "fortios"}]}
+        self.assertEqual(store.save_cves_bulk([cve, other]), 2)
+        self.assertEqual(store.stack_new_cves(), [])                              # empty watchlist
+        store.add_watchlist("Citrix")
+        rows = store.stack_new_cves(7)
+        self.assertEqual([r["cve_id"] for r in rows], ["CVE-2023-4966"])
+        self.assertEqual(rows[0]["matched"], ["Citrix"])
+        self.assertFalse(rows[0]["kev"])
+        self.assertIn("citrix netscaler gateway", rows[0]["products"])
+
+    def test_kev_monthly_and_vendors(self):
+        from datetime import datetime, timezone
+        ym = datetime.now(timezone.utc).strftime("%Y-%m")
+        rows, _ = kev_feed.parse(json.dumps(KEV_DOC).encode())
+        rows[0]["date_added"] = f"{ym}-02"                     # Citrix, ransomware, this month
+        rows[1]["date_added"] = f"{ym}-03"                     # Ivanti, this month
+        store.upsert_kev(rows, "cisa")
+        monthly = store.kev_monthly(12)
+        self.assertEqual(len(monthly), 12)
+        self.assertEqual(monthly[-1], {"month": ym, "total": 2, "ransomware": 1})
+        self.assertEqual(monthly[0]["total"], 0)
+        vendors = store.kev_top_vendors(12, 10)
+        self.assertEqual([(v["vendor"], v["total"], v["ransomware"]) for v in vendors],
+                         [("Citrix", 1, 1), ("Ivanti", 1, 0)])
+
+    def test_ransomware_group_table(self):
+        rows, _ = kev_feed.parse(json.dumps(KEV_DOC).encode())
+        store.upsert_kev(rows, "cisa")
+        store.upsert_ransomware_cves([("CVE-2023-4966", "lockbit"), ("CVE-2026-118527", "lockbit"),
+                                      ("CVE-2026-118527", "clop")])
+        store.mark_ransomware_group("lockbit", 1200)
+        table = store.ransomware_group_table()
+        self.assertEqual([(g["grp"], len(g["cves"]), g["victims"]) for g in table], [("lockbit", 2, 1200), ("clop", 1, None)])
+        self.assertEqual(table[0]["cves"][0]["vendor"], "Ivanti")
+        this_year = store.ransomware_group_table(year=2026)
+        # same CVE count, so the group with more victims comes first
+        self.assertEqual([(g["grp"], [c["cve_id"] for c in g["cves"]]) for g in this_year],
+                         [("lockbit", ["CVE-2026-118527"]), ("clop", ["CVE-2026-118527"])])
+        self.assertEqual(len(store.ransomware_group_table(year=2026, limit=1)), 1)
+
+
+class ChartTests(unittest.TestCase):
+    def test_monthly_bars(self):
+        svg = charts.monthly_bars([{"month": "2026-10", "total": 10, "ransomware": 4},
+                                   {"month": "2026-11", "total": 0, "ransomware": 0}])
+        self.assertTrue(svg.startswith("<svg"))
+        self.assertIn('fill="#f87171"', svg)                       # ransomware share drawn
+        self.assertIn("2026-10: 10 listed, 4 ransomware", svg)
+        self.assertEqual(charts.monthly_bars([]), "")
+
+    def test_hbars_escape(self):
+        svg = charts.hbars([{"vendor": "A <b>&", "total": 3, "ransomware": 1}])
+        self.assertIn("A &lt;b&gt;&amp;", svg)
+        self.assertNotIn("<b>", svg)
+
+    def test_sparkline(self):
+        self.assertEqual(charts.sparkline([0, 0, 0]), "")
+        svg = charts.sparkline([1, 3, 2], ["d1", "d2", "d3"])
+        self.assertIn("<polyline", svg)
+        self.assertIn("6 over 3 days, peak 3, d1 to d3", svg)
+        from datetime import datetime, timezone
+        today = datetime.now(timezone.utc).date().isoformat()
+        values, labels = vulnlookup.daily_series({today: 4}, 5)
+        self.assertEqual((values[-1], len(labels), labels[-1]), (4, 5, today))
+
+
 class PocRouteTests(TempDbMixin, unittest.TestCase):
     def setUp(self):
         super().setUp()
@@ -1020,6 +1141,7 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
         self.assertIn("Hottest right now", r.text)
         self.assertIn("text brief", r.text)
         self.assertIn("- CVE-2024-3400 |", r.text)          # the brief lists it (PoC this week)
+        self.assertIn("Ransomware groups and the CVEs they exploit", r.text)
         r = self.client.get("/vulnerability-intelligence?hot=100")
         self.assertIn("show 10", r.text)
         r = self.client.get("/vulnerability-intelligence?poc=stack")
@@ -1027,6 +1149,22 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
         r = self.client.get("/vulnerability-intelligence/exploits")
         self.assertIn("Recently published exploit code", r.text)
         self.assertIn("/cve/CVE-2024-3400", r.text)
+
+    def test_dashboard_charts_and_groups(self):
+        from datetime import datetime, timezone
+        rows, _ = kev_feed.parse(json.dumps(KEV_DOC).encode())
+        rows[0]["date_added"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        store.upsert_kev(rows, "cisa")
+        store.upsert_ransomware_cves([("CVE-2026-118527", "clop")])
+        r = self.client.get("/vulnerability-intelligence")
+        self.assertIn("Exploitation over the last 12 months", r.text)
+        self.assertIn("<svg", r.text)
+        self.assertIn("Citrix", r.text)                        # vendor chart label
+        self.assertIn("clop", r.text)
+        self.assertIn("CVE-2026-118527", r.text)
+        r = self.client.get("/vulnerability-intelligence?groups=all")
+        self.assertIn("CVE-2026-118527", r.text)
+        self.assertIn("CVE-2026 only, top 15", r.text)        # the link back to the default view
 
     def test_cve_page_shows_ransomware_groups(self):
         store.upsert_ransomware_cves([("CVE-2023-4966", "lockbit3")])
