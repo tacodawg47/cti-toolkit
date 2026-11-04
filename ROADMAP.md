@@ -1,6 +1,6 @@
 # CTI Toolkit Roadmap
 
-Last updated: 2026-10-22
+Last updated: 2026-11-02
 
 A local-only cyber threat intelligence toolkit that puts multiple analyst
 tools under one web interface. Built as a daily-use workflow aid and as a
@@ -60,10 +60,55 @@ portfolio project.
   false positives before quota is spent.
 
 ### Phase 2: IOC extraction and vulnerability intelligence
-- Paste text, a URL, or upload a PDF; extract defanged and plain IOCs with iocextract; one click sends them to enrichment.
-- CVE lookup: NVD, CISA KEV, VulnCheck KEV, EPSS, inthewild.io, GreyNoise CVE tags, GitHub proof-of-concept search, ransomware.live group exploited-CVE lists, OTX pulses by CVE.
-- Priority score P1 to P5 using the plugin's prioritisation matrix.
-- CVE alias table (nickname to CVE, e.g. CitrixBleed to CVE-2023-4966), editable in the UI, seeded from KEV and advisories.
+
+Design settled 2026-11-02: one phase, two packages. They share only the
+CVE indicator type (added to app/core/indicators.py) and the "send to"
+buttons between them. Extraction is pure text processing with no keys, no
+cache and no database; vulnerability intelligence is vendor clients plus a
+local store, built on the Phase 1 HTTP client, cache and rate limiter.
+
+**IOC extraction** (`app/modules/extract/`)
+- Paste text, give a URL, or upload a PDF; extract defanged and plain IOCs
+  (IPv4/IPv6, domains, URLs, MD5/SHA-1/SHA-256, email addresses, CVE IDs),
+  de-duplicated with counts, each marked defanged or plain and flagged when it
+  is a private IP or in the Tranco top list. One click sends an IOC to
+  enrichment and a CVE to vulnerability intelligence.
+- Written in-house on top of app/core/indicators.py. iocextract (named here
+  originally) is GPL-2.0, last released in 2023, and pulls in the `regex`
+  package; shipping it would push the whole project toward GPL-2.0. ioc-finder
+  is LGPL-3.0 but adds pyparsing for the same result. Our own patterns keep
+  the dependency count at zero for text and one for PDFs (pypdf, BSD-3,
+  pure Python, no required dependencies).
+- URL fetching is for vendor reports and advisories: HTTPS only, public
+  hosts only, body capped. It is not a sandbox; a suspected malicious URL
+  goes to urlscan through enrichment, never here.
+
+**Vulnerability intelligence** (`app/modules/vulnerability_intelligence/`)
+- Two views over one local store (a `vulnerabilities` table in SQLite):
+  - Search: paste a CVE ID or a nickname. Alias resolution, then NVD, CISA
+    KEV, EPSS, inthewild.io, GreyNoise CVE tags, GitHub proof-of-concept
+    search, ransomware.live group exploited-CVE lists and OTX pulses, shown as
+    one detail page with a P1 to P5 priority (the plugin's prioritisation
+    matrix) and the reasons behind it.
+  - Feed (dashboard): CISA KEV, EPSS and inthewild.io each publish their whole
+    dataset as one bulk file (JSON or CSV), so the feed downloads those files
+    into the table and the dashboard is a set of queries over it: added to
+    KEV in the last 7 or 30 days, flagged for ransomware use, EPSS risers
+    since the last refresh, newly exploited per inthewild. Every row links to
+    the detail page. A manual "Refresh feeds" button in Phase 2; scheduled
+    refresh waits for the Phase 5 scheduler (same parking-lot pattern as
+    bulk paste).
+- Technology watchlist: vendor and product names matched case-insensitively
+  against KEV vendorProject/product and NVD CPE strings. It is a filter and a
+  highlight on the feed, not a gate: the full feed stays one click away.
+  Editable in the UI and stored in the git-ignored data folder, because it
+  may describe the operator's own stack.
+- CVE alias table (nickname to CVE, e.g. CitrixBleed to CVE-2023-4966),
+  editable in the UI, seeded from KEV and advisories.
+- GitHub proof-of-concept search runs on demand when a detail page opens
+  (keyless limit is 10 searches a minute), cached with a TTL, and never across
+  the whole feed. VulnCheck KEV and an NVD API key are drop-in slots once the
+  operator creates those free accounts.
 
 ### Phase 3: Ransomware and breach tracking, credential exposure, domain monitoring
 - Ransomware and leak tracker: ransomware.live (free PRO tier), breach.house (paid API, account TBD), RansomLook (open source, also covers markets, forums, Telegram).
@@ -187,10 +232,62 @@ portfolio project.
     tools run" pattern so the app stays consistent module to module.
 
 ### Phase 4: News and topic search
-- Feedly developer API (needs Pro+ or Enterprise; verify) or OPML import into feedparser.
-- GDELT and Google Custom Search (date restricted) for time-bounded topic searches.
+- Own RSS/report aggregator instead of Feedly (dropped 2026-11-03 — operator
+  unhappy with it). Build on open-source libraries (feedparser for RSS/Atom,
+  trafilatura or readability for article text), or wrap an existing
+  open-source reader. No paid service, no vendor lock-in, runs local.
+- Sources: a curated list of vendor / research / CERT feeds. Use the site's
+  RSS/Atom where it publishes one; fall back to an HTML scrape with a
+  per-source extractor where it does not.
+- Google dorking / Custom Search (date-restricted) and GDELT for keyword and
+  time-bounded topic monitoring beyond the fixed feed list, to catch reporting
+  that is not in a subscribed feed.
+- Keyword monitoring and highlighting (the one Feedly feature worth keeping):
+  match a keyword list against every collected article and flag/boost the ones
+  that hit, so relevant reporting surfaces instead of scrolling the whole feed.
+  Deterministic matching; the keyword list is config-driven and can reuse the
+  Phase 5 topical-category lists where it makes sense.
+- Preselectable keyword chips at the top of the feed: a row of preset keyword
+  filters so a reader jumps straight to the topic they care about, plus a
+  free-text search box over already-collected articles (search the local
+  store, no live fetch per query). This is the piece that makes the feed
+  usable as a public "shop window" if it is ever opened up (see the
+  public-deployment parking-lot item) — it is read-only and spends no keys.
+- Newsletter ingestion (the other Feedly feature worth copying): generate a
+  random alias on our own domain, subscribe to vendor newsletters/report
+  mailers with it, and ingest the received mail as feed items — no real
+  contact address handed out. Receiving does NOT need a self-run mail server:
+  point the domain's MX at a free inbound router (Cloudflare Email Routing, or
+  the open-source ForwardEmail.net) with a catch-all that forwards or webhooks
+  into the app. Cost is basically just the domain (~$10-15/yr); inbound routing
+  is free. Keep it INBOUND-ONLY (we never send), which sidesteps the
+  open-relay / outbound-spam liability, and keep alias generation behind auth /
+  personal — not a public "make me an email" button, which invites abuse.
+  Treat every received message as untrusted (no auto-opening attachments/links).
 - Topic watchlists: industry verticals, technologies, CVE identifiers and nicknames from the phase 2 alias table.
 - Vulnerability enrichment from news: link articles to CVEs.
+- AI threat landscape tracking (added 2026-11-03). Not a standalone module —
+  there is no deterministic indicator to look up, so it is a curated
+  tracking/reading concern that reuses this phase's keyword mechanism. Two
+  framings, both as keyword categories (same config-driven, deterministic
+  matching as the Phase 5 topical categories):
+  - AI as weapon: threat actors USING AI to augment operations — LLM-assisted
+    phishing/BEC, deepfake fraud (ties to the Phase 5 "deepfake/KYC" category),
+    malware/exploit code generation, influence operations.
+  - AI as target: attacks AGAINST AI systems — prompt injection, jailbreaks,
+    model and AI-supply-chain exploitation, data/secret exfiltration via agents
+    and tools.
+  - Presentation: a dedicated "AI Threat Landscape" tab that is a saved
+    filtered VIEW over the existing article corpus, not a new data pipeline —
+    cheap to build, strong portfolio signal.
+  - Curated seed sources (frameworks/trackers, not blind scrape targets): MITRE
+    ATLAS (adversarial threat landscape for AI systems — the ATT&CK analogue),
+    OWASP Top 10 for LLM Applications, the AI Incident Database, and vendor
+    threat reports on malicious AI use (OpenAI / Anthropic / Google /
+    Microsoft). ATLAS + OWASP feed the "AI as target" angle; vendor reports
+    feed "AI as weapon".
+  - Note: this also tracks the attack surface of our own future "assist" phase
+    — dogfooding awareness of a capability we will add.
 
 ### Phase 5: Telegram and dark web monitoring
 - Telegram: Telethon read-only monitor, channel catalog seeded from the plugin's 30+ channel list, snowball discovery queue (new links found in collected messages, joined manually per OPSEC), local full-text search over everything collected.
@@ -223,6 +320,16 @@ portfolio project.
   category to certain channels/forums, to cut false positives. Any sensitive
   entries (your own org, program, or product names) live in the git-ignored
   config location, the same way the selector watchlist is kept out of source.
+- On-demand search/scrape, not just the static corpus (operator wants this):
+  type a term (domain, email, CVE, handle) and scrape the configured
+  Telegram/onion sources live for it, returning fresh hits. Built for
+  authenticated/self use. A PUBLIC version is a liability trap: returning
+  darkweb/breach hits for an arbitrary third party's email or domain discloses
+  personal data about someone who did not consent — the same reason the
+  Telegram "lookup bots" are excluded above and the data policy keeps the
+  corpus local. If a public self-check is ever wanted, gate it behind proof of
+  ownership (verify the domain/email belongs to the requester, HIBP-style),
+  never an open arbitrary-term lookup. Pinned for the public-deployment brainstorm.
 - Optional Tor SOCKS mode for fetching leak-site mirrors.
 - Scheduler and alerting (in-app inbox first; email or webhook later).
 - OPSEC primer shipped as in-app documentation. No automated channel joining. No active engagement. No purchases.
@@ -281,6 +388,45 @@ portfolio project.
 - Wrapped tools: theHarvester, dnstwist, crt.sh, holehe, Maigret, GitHub code search, Shodan org dorks.
 - SpiderFoot as the optional deep scan (runs as a server, triggered by API).
 - Deterministic identity correlation: username reuse, email and PGP key reuse, crypto wallet reuse, avatar image hashes. No stylometry, no AI.
+- Username-search integration approach (decided 2026-11-03, applies to the
+  Maigret / WhatsMyName references here and in Phase 3). The value of these
+  tools is the TECHNIQUE and the SITE LIST (per-site "does this username
+  exist" rules: profile URL pattern + a match/no-match test), not the package.
+  Decision: build our OWN async checker and our OWN curated site list from
+  scratch. A list of sites and existence-detection rules is largely factual,
+  so we seed our list with the sites we actually care about and look at
+  Maigret / WhatsMyName / Sherlock only for ideas, crediting them as
+  inspiration. This sidesteps the licensing of any one project's data file:
+  - Preferred: own checker (httpx, already pooled), own list, deterministic,
+    matches the "few, pinned, wheels-only" policy.
+  - Escape hatch if full breadth is ever wanted fast: wrap the installed CLI
+    as an optional subprocess tool (own venv per the isolation ladder) and
+    parse its JSON report — its heavy async tree stays out of our import graph.
+  License note: do NOT take Maigret as a `pip` dependency, and do not copy any
+  specific project's data file verbatim without first checking that file's
+  license (MIT/BSD/Apache = fine with attribution; GPL/AGPL = avoid). Building
+  our own list avoids the question.
+  OPSEC (refined 2026-11-03): username enumeration fires requests at many
+  third-party sites from the host IP, so:
+  - Keep these OSINT/OPSEC tools behind auth (see the public-deployment
+    parking-lot item).
+  - Reduce blocks by behaving like a polite client, NOT by evading controls:
+    cap concurrency per host and add small delays (bursting is the main
+    block-trigger, and it is a knob we control); send an honest, normal
+    User-Agent rather than a scraper default; honor each site's own signals
+    (back off on HTTP 429 per Retry-After, prefer a site's real
+    existence-check endpoint over scraping its HTML); cache and dedup (already
+    done); and prune sites that block every time — a curated ~200-site list
+    that works beats 3,000 where half challenge you.
+  - When a CAPTCHA or WAF blocks a lookup, mark that site blocked/unknown, log
+    it, and surface it in the results so the operator sees what was skipped.
+  - This is exactly what the mainstream tools (Maigret, Sherlock, holehe) do:
+    they handle a block by skipping it, they do NOT defeat it. So we get full
+    parity without any bypass. The one excluded bucket is ACTIVE evasion
+    (CAPTCHA-solving services, residential-proxy rotation to dodge rate
+    limits, humanization to beat detection) — the line between "a lookup tool"
+    and "abuse infrastructure", and where the "no bypassing anti-bot
+    protections" rule bites. Handling a block is fine; breaking one is not.
 - Use cases: own attack surface, vendor footprinting, M&A due diligence, executive exposure, threat actor persona research, leaked secrets, attacker infrastructure attribution.
 
 ### Phase 8: Exports, detection templating, packaging
@@ -341,6 +487,16 @@ this list and decide what to pull into active work. Keeps the project moving.
   health page: a ransomware-victim dashboard, a DNS/passive-DNS dashboard, an
   enrichment-lookup dashboard, and an overview home. Decide scope and which
   data each surfaces when we get here.
+- AI threat landscape dashboard (added 2026-11-03). A visual dashboard over
+  the Phase 4 "AI threat landscape" corpus (the two framings: AI as weapon /
+  AI as target), not just the filtered list view — e.g. volume-over-time of
+  AI-abuse reporting, breakdown by technique (MITRE ATLAS tactic, OWASP LLM
+  Top 10 category), top targeted AI tools/vendors, and a recent-incidents
+  feed. Good public "shop window" candidate since it is read-only and
+  aggregate. Look for existing trackers/visualizations to pull inspiration and
+  possibly data from, beyond the seed sources already listed in Phase 4 (MITRE
+  ATLAS, OWASP LLM Top 10, AI Incident Database, vendor reports) — operator to
+  research specific dashboards later.
 - Findomain and any dropped enumeration tools: revisit only if Subfinder
   coverage proves thin.
 - VirusTotal monthly quota tracking (~15,500/month): deliberately NOT tracked
@@ -369,6 +525,99 @@ this list and decide what to pull into active work. Keeps the project moving.
   ISP and country data VirusTotal, AbuseIPDB, Shodan and RDAP already return,
   and ip-api's free tier is HTTP-only, which would send the IP under
   investigation in cleartext.
+- Public deployment / hosting (parked 2026-11-03): if this is ever turned from
+  a local-only tool into a reachable website, design the security posture
+  before exposing it. Open questions to work through then, with first-cut
+  notes so future-me has a starting point:
+  - Login-only vs fully public: default to authenticated (even a single
+    account, or basic auth at a reverse proxy). The app spends metered API
+    keys and exposes `/health` (key presence, versions), so an open instance
+    lets anyone burn your quota and fingerprint the stack.
+  - "Not storing sensitive data" is not the whole risk. Even with nothing
+    sensitive stored, an exposed instance still risks: quota/credit theft
+    (every open lookup spends your keys), being used as an SSRF/proxy to fetch
+    attacker-chosen URLs through your host, resource exhaustion / DoS, and info
+    leak via `/health` and error pages. And the `.env` keys themselves ARE
+    sensitive and sit on the host.
+  - Is the host PC at risk? It is one process, but a code-exec bug in the app
+    or a dependency runs as your user on your machine. Shrink the blast radius:
+    run it in a container / VM / dedicated low-privilege user, never as admin,
+    and keep it off the machine that holds the breach corpus and other keys.
+  - Protection to design: authentication + per-account rate limits; only drop
+    the 127.0.0.1 bind behind a TLS reverse proxy (Caddy/nginx) with
+    TrustedHost kept strict; gate or trim `/health`; keep an egress allowlist
+    so the fetcher can only reach known vendor APIs (anti-SSRF); keep the
+    existing Sec-Fetch-Site / TrustedHost guards and add a CSP; secrets from
+    the environment, never baked into an image.
+  - Detection: structured access + audit logging (who looked up what, when),
+    alerts on quota spikes and auth failures, proxy-level blocking
+    (fail2ban-style) for abusive IPs, and a way to see it (the health page or a
+    small access-log view). Decide up front what "someone is abusing this"
+    looks like and how you would notice.
+  - Which modules public vs gated (auth is per route, not all-or-nothing):
+    leave the no-key, read-only pieces open as a shop window — the news/RSS
+    feed with its keyword search (Phase 4), the IOC extraction page (pure local
+    parsing), and a landing/architecture page. Gate everything that spends
+    keys, hits metered APIs, or reveals what you are investigating: enrichment,
+    infrastructure pivoting, the OSINT module, and any dashboard built on that
+    data. Keeping only the no-quota parts open does gut the enrichment demo (it
+    is hollow without the keyed vendors), so the gated parts get a demo path
+    instead of public exposure (next point).
+  - Demoing the gated parts to employers: a read-only GUEST account (tight rate
+    limits, a throwaway/low-quota key or canned sample responses, no access to
+    the Telegram/dark-web corpus) is a normal, non-suspicious way to show a
+    gated app — and demonstrating auth/RBAC is itself a plus for a security
+    role. Pair it with short screen-recordings / GIFs in the README for parts
+    you would rather not run live. A live screenshare is also fine and exposes
+    nothing.
+  - Telegram / dark-web monitoring stays private, full stop: the data-handling
+    policy says the collected corpus never leaves the machine (it can hold
+    breach-derived and personal data and it exposes your selectors). Do NOT put
+    a public search box over the real corpus. To show this module, use
+    synthetic/sample data or screenshare only.
+  - SIEM / WAF if it is ever hosted: put a free WAF in front — Coraza or
+    ModSecurity with the OWASP Core Rule Set at the reverse proxy, or
+    Cloudflare's free-tier WAF if fronted by Cloudflare — to block common web
+    attacks and rate-limit. Ship the app's access/audit logs to a SIEM such as
+    Wazuh (free, open source; its agent can also watch the host for
+    file-integrity and process anomalies) and alert on auth failures, quota
+    spikes, and WAF blocks. WAF is the "prevent" half, Wazuh the "detect" half.
+  - Open-vs-gated brainstorm (revisit once the core project is done — several
+    gated modules might safely open with the right design):
+    - OSINT: possibly public, but your host becomes the ORIGIN of the recon
+      (theHarvester / dnstwist / holehe / Maigret hit third parties from your
+      IP), so rate-limit hard, prefer passive lookups, and weigh the
+      open-recon-proxy abuse/liability. (Operator has specific public OSINT
+      sites in mind to compare against.)
+    - Dashboards: aggregate / non-sensitive ones likely public; anything over
+      investigation or corpus data stays gated.
+    - Enrichment without enterprise quotas: a public tier served only from the
+      free/keyless sources (GreyNoise community, InternetDB, RDAP, crt.sh,
+      CIRCL, abuse.ch) with aggressive caching; for the metered vendors (VT,
+      AbuseIPDB, Shodan) require the visitor's OWN key (BYO-key). Still
+      rate-limited, and may still be abuse-prone — decide then.
+  - Accounts for a demo: BYO-key in user settings (per-account, encrypted) is
+    the clean, ethical path — their keys, their quota. Minting extra free-tier
+    vendor accounts to hand shared keys to visitors likely breaks those
+    vendors' ToS (no multi-account / no third-party use), so avoid it; any
+    single demo key must serve cached-only results with tiny limits. Don't name
+    the demo account "guest" (obvious target) — use a non-descriptive name. Add
+    MFA (TOTP, e.g. pyotp) on all real accounts. Record a short GIF/Loom
+    walkthrough in the README for the parts not run live.
+  Revisit as its own hardening phase before any non-localhost deployment;
+  deliberately out of scope while the tool stays local-only (127.0.0.1).
+- Security testing of the app itself (part of the ops/hardening collection; run
+  in CI or against a staging instance, never inside the app), parked 2026-11-03:
+  - Dependencies: pip-audit (already in the dependency policy) plus GitHub
+    Dependabot alerts for vulnerable/compromised packages — formalise in CI.
+  - SAST (scan our own code): Bandit (Python, free) and/or Semgrep (free tier).
+  - DAST (scan the running app): OWASP ZAP (free, the right tool for a web app)
+    or Nuclei templates. For this project ZAP beats Qualys Community Edition,
+    which is more host/infra-oriented and heavier.
+  - Host/network (only if hosted): OpenVAS/Greenbone Community or Nessus
+    Essentials; pairs with the Wazuh agent on the host.
+  Not overkill for a security portfolio — security-testing your own tool is a
+  selling point. Keep it out of the app runtime.
 
 ## Data handling policy (breach and leak data)
 
@@ -431,6 +680,21 @@ Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
   GreyNoise demoted to a best-effort source because free keys are no longer
   issued to consumer email domains.
 - 2026-10-23: Documentation phase inserted before the AI phase.
+- 2026-11-02: Phase 2 stays one phase but is built as two packages,
+  `extract` and `vulnerability_intelligence`, because the code shares almost
+  nothing (text processing versus vendor clients and a local store) while
+  the analyst workflow joins them (paste an advisory, enrich the IOCs, look
+  up the CVEs). CVE lookups get their own registry and card rather than
+  being bolted onto the enrichment verdict: "is it malicious?" and "how
+  urgently do we patch?" are different questions with different outputs.
+- 2026-11-02: The IOC extractor is written in-house; no GPL dependency
+  (iocextract is GPL-2.0). The project itself has no LICENSE file yet; one
+  must be chosen before the repository goes public (MIT would match the
+  cti-skills code ported with attribution).
+- 2026-11-02: Vulnerability intelligence is search plus feed over one local
+  table, with a technology watchlist as a filter, not a gate. Bulk feed files
+  (KEV, EPSS, inthewild) are downloaded whole; per-CVE APIs (NVD, GitHub,
+  OTX, GreyNoise) are queried on demand from the detail page.
 
 ## Additional free sources to consider (by phase)
 
@@ -456,7 +720,9 @@ feed-match module, not the vendor pattern). Malpedia last (vetted account).
 ## Open questions
 
 - breach.house: does the user have an advanced or enterprise account? API needs one.
-- Feedly: does the user's plan include the developer token? Fallback is OPML export.
+- Feedly: RESOLVED 2026-11-03 — dropped (operator unhappy with it). Phase 4
+  builds its own open-source RSS/report aggregator with keyword highlighting
+  and dorking instead.
 - Is the Linux machine always on? If so it hosts the monitoring instance.
 - Resolved 2026-10-22: GitHub repository created (private).
 - GreyNoise: live with the 10/day community endpoint, or obtain a key later
