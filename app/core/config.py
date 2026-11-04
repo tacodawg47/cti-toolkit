@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     urlscan_api_key: str = ""
     abusech_auth_key: str = ""
     greynoise_api_key: str = ""
+    # Phase 2, both optional: NVD works without a key at a lower rate, and
+    # GitHub search works without a token at 10 searches a minute.
+    nvd_api_key: str = ""
+    github_token: str = ""
 
     # Server: local only by design.
     host: str = "127.0.0.1"

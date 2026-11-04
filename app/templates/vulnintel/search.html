@@ -1,0 +1,30 @@
+{% extends "vulnintel/layout.html" %}
+{% block tab %}
+<form method="get" action="{{ prefix }}/search">
+  <input type="text" name="q" value="{{ q | default('') }}" placeholder="CVE-2023-4966, or a nickname like CitrixBleed or Log4Shell" autofocus>
+  <button type="submit">Look up</button>
+</form>
+
+{% if error %}
+  <div class="card"><p class="err">⚠ {{ error }}</p></div>
+{% elif searched %}
+  {% if matches | length > 1 %}
+    <div class="card">
+      <p><strong>{{ q }}</strong> refers to {{ matches | length }} CVEs:</p>
+      <ul>
+        {% for id in matches %}<li>{% include "vulnintel/_cve_link.html" %}</li>{% endfor %}
+      </ul>
+    </div>
+  {% elif not matches %}
+    <div class="card">
+      <p>No CVE ID and no known nickname in <strong>{{ q }}</strong>.</p>
+      <p class="muted">Nicknames come from the alias table on the <a href="{{ prefix }}/watchlist">Watchlist</a> tab;
+        add one there if you know the CVE it stands for.</p>
+    </div>
+  {% endif %}
+{% else %}
+  <p class="muted">Opens one page per CVE: NVD facts, CVSS, EPSS, known-exploited status, affected
+    products, references by type, public proof-of-concept repositories, and a P1 to P5 priority with
+    the reasons behind it.</p>
+{% endif %}
+{% endblock %}

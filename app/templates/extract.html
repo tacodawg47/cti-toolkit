@@ -63,7 +63,7 @@
                     <button class="small" type="submit">Enrich</button>
                   </form>
                 {% elif t == "cve" %}
-                  <span class="muted" title="Vulnerability Intelligence module: Phase 2, in progress">vuln intel (soon)</span>
+                  <a href="/vulnerability-intelligence/cve/{{ i.value }}"><button class="small" type="button">Look up</button></a>
                 {% endif %}
               </td>
             </tr>

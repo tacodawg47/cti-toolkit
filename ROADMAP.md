@@ -152,6 +152,14 @@ accounts the operator creates when wanted; an NVD key only raises the rate
 limit. Previdian was considered as a third KEV source and dropped
 (2026-11-03): it is a paid product.
 
+Progress 2026-11-03: first build committed with the four tabs, the CISA KEV
+and EPSS feeds, NVD and GitHub lookups, the priority matrix, the watchlist
+and the alias table (docs/runbooks/vulnerability-intelligence.md). Still to
+wire: VulnCheck KEV and XDB, inthewild.io (its API refused connections that
+day), OTX pulses by CVE, ransomware.live (PRO key), AttackerKB, the Nuclei
+template index, and an NVD recent-changes feed so "Your stack" also shows
+new CVEs not yet in KEV.
+
 Three cheap signals to add once the detail page exists (agreed 2026-11-03):
 - Patch available: NVD tags references as "Patch" or "Vendor Advisory";
   show a badge and the link, so "exploited and unpatched" stands out.

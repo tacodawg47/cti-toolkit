@@ -1,0 +1,104 @@
+{% extends "vulnintel/layout.html" %}
+{% block title %}{{ rep.cve_id }} — CTI Toolkit{% endblock %}
+{% block tab %}
+{% set cve = rep.cve %}
+{% set pri = rep.priority %}
+
+<div class="card">
+  <h2 style="margin: 0 0 6px;">{{ rep.cve_id }}
+    <span class="pri pri-{{ pri.level }}">{{ pri.level }} {{ pri.label }}</span>
+    {% for k in rep.kev %}<span class="badge badge-kev">{{ kev_names.get(k.source, k.source) }}</span>{% endfor %}
+    {% if rep.kev and rep.kev | selectattr("ransomware") | list %}<span class="badge badge-ransom">ransomware</span>{% endif %}
+    {% if rep.watchlist_hits %}<span class="badge badge-stack">your stack</span>{% endif %}
+  </h2>
+  {% if rep.aliases %}<p class="muted">Also known as: {{ rep.aliases | join(", ") }}</p>{% endif %}
+  <p><strong>{{ pri.action }}.</strong> Based on:</p>
+  <ul>
+    {% for r in pri.reasons %}<li>{{ r }}</li>{% endfor %}
+  </ul>
+  <p class="muted"><small>The matrix cannot see your exposure. An internet-facing instance moves a P3 up;
+    a well-isolated one with compensating controls can move a P2 down. Your call, this is the evidence.</small></p>
+  <p>
+    <a href="{{ prefix }}/cve/{{ rep.cve_id }}?refresh=1">refetch NVD and GitHub</a>
+    · <a href="https://nvd.nist.gov/vuln/detail/{{ rep.cve_id }}" rel="noopener noreferrer" target="_blank">NVD</a>
+    · <a href="https://www.cve.org/CVERecord?id={{ rep.cve_id }}" rel="noopener noreferrer" target="_blank">cve.org</a>
+    {% if rep.kev %}· <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?field_cve={{ rep.cve_id }}" rel="noopener noreferrer" target="_blank">CISA KEV</a>{% endif %}
+  </p>
+</div>
+
+<div class="card">
+  <h3>Facts
+    {% if rep.nvd.status == "ok" %}<small>(NVD{% if rep.nvd.cached %}, stored {{ cve.fetched_at | ago }}{% endif %})</small>
+    {% elif rep.nvd.status == "quota" %}<span class="verdict-unavailable">NVD QUOTA</span>
+    {% elif rep.nvd.status == "not_found" %}<span class="verdict-unknown">NOT IN NVD</span>
+    {% else %}<span class="verdict-unavailable">NVD UNAVAILABLE</span>{% endif %}
+  </h3>
+  {% if rep.nvd.error %}<p class="err">⚠ {{ rep.nvd.error }}{% if rep.nvd.stale %} — showing the stored copy from {{ cve.fetched_at | ago }}{% endif %}</p>{% endif %}
+  {% if cve %}
+    <p>{{ cve.description }}</p>
+    <table>
+      <tr><th>Published</th><td>{{ cve.published | day }}</td><th>Last modified</th><td>{{ cve.last_modified | day }} <small>({{ cve.status }})</small></td></tr>
+      <tr><th>CVSS</th><td>{% if cve.cvss_score is not none %}<strong>{{ cve.cvss_score }}</strong> {{ cve.cvss_severity or "" }} <small>v{{ cve.cvss_version }}</small><br><code>{{ cve.cvss_vector }}</code>{% else %}not scored{% endif %}</td>
+          <th>CWE</th><td>{{ cve.cwe or "—" }}</td></tr>
+      <tr><th>EPSS</th><td>{% if rep.epss %}<strong>{{ "%.4f" | format(rep.epss.epss) }}</strong> <small>({{ "%.0f" | format(rep.epss.percentile * 100) }}th percentile, {{ rep.epss.score_date | day }}{% if rep.epss.prev_epss is not none %}, was {{ "%.4f" | format(rep.epss.prev_epss) }}{% endif %})</small>{% else %}<span class="muted">no score in the local EPSS table{% if not rep.feeds.get("epss") %} (feed not loaded){% endif %}</span>{% endif %}</td>
+          <th>Fix reference</th><td>{% if rep.fix_status == "patch" %}<span class="ok">patch tagged in NVD</span>{% elif rep.fix_status == "advisory" %}<span class="ok">vendor advisory</span> <small>(see References)</small>{% else %}<span class="no">none tagged in NVD</span>{% endif %}</td></tr>
+    </table>
+  {% elif rep.nvd.status == "not_found" %}
+    <p class="muted">NVD has no record for this ID. It may be reserved but not yet published, or rejected.</p>
+  {% endif %}
+</div>
+
+{% for k in rep.kev %}
+<div class="card">
+  <h3>Known exploited <small>({{ kev_names.get(k.source, k.source) }})</small></h3>
+  <table>
+    <tr><th>Name</th><td>{{ k.name }}</td></tr>
+    <tr><th>Vendor / product</th><td>{{ k.vendor }} {{ k.product }}</td></tr>
+    <tr><th>Added</th><td>{{ k.date_added }}</td></tr>
+    <tr><th>Due date</th><td>{{ k.due_date or "—" }} <small>(US federal remediation deadline; a useful urgency proxy)</small></td></tr>
+    <tr><th>Ransomware use</th><td>{% if k.ransomware %}<span class="verdict-malicious">known</span>{% else %}unknown{% endif %}</td></tr>
+    <tr><th>Required action</th><td>{{ k.required_action }}</td></tr>
+    {% if k.cwes %}<tr><th>CWEs</th><td>{{ k.cwes | join(", ") }}</td></tr>{% endif %}
+    {% if k.notes %}<tr><th>Notes</th><td><small>{{ k.notes }}</small></td></tr>{% endif %}
+  </table>
+</div>
+{% endfor %}
+
+{% if products %}
+<div class="card">
+  <h3>Affected products <small>({{ products | length }} CPE ranges from NVD)</small></h3>
+  <table>
+    <tr><th>Vendor</th><th>Product</th><th>Versions</th></tr>
+    {% for p in products[:40] %}
+      <tr><td>{{ p.vendor }}</td><td>{{ p.product | replace("_", " ") }}</td><td>{{ p.range }}</td></tr>
+    {% endfor %}
+  </table>
+  {% if products | length > 40 %}<small>First 40 shown.</small>{% endif %}
+</div>
+{% endif %}
+
+{% if references %}
+<div class="card">
+  <h3>References</h3>
+  {% for name, items in references %}
+    <p><strong>{{ name }}</strong></p>
+    <ul>
+      {% for r in items %}
+        <li><a href="{{ r.url }}" rel="noopener noreferrer nofollow" target="_blank">{{ r.url }}</a>
+          {% for t in r.tags if t not in ("Vendor Advisory", "Patch", "Exploit", "Third Party Advisory") %}<span class="badge">{{ t }}</span>{% endfor %}</li>
+      {% endfor %}
+    </ul>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card" id="exploits">
+  <h3>Public proof-of-concept code <small>(GitHub)</small></h3>
+  {% with github = rep.github, cve = rep.cve_id %}{% include "vulnintel/_github_table.html" %}{% endwith %}
+</div>
+
+<details class="card">
+  <summary class="muted">raw data (KEV, EPSS, NVD as stored)</summary>
+  <pre style="white-space: pre-wrap; font-size: 12px;">{{ {"kev": rep.kev, "epss": rep.epss, "nvd": cve} | tojson(indent=2) }}</pre>
+</details>
+{% endblock %}

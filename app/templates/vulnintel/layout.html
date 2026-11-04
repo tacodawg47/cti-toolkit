@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Vulnerability Intelligence — CTI Toolkit{% endblock %}
+{% block content %}
+<h1>Vulnerability Intelligence</h1>
+<nav class="tabs">
+  <a href="{{ prefix }}" {% if active == "dashboard" %}class="active"{% endif %}>Dashboard</a>
+  <a href="{{ prefix }}/search" {% if active == "search" %}class="active"{% endif %}>Search</a>
+  <a href="{{ prefix }}/exploits" {% if active == "exploits" %}class="active"{% endif %}>Exploits</a>
+  <a href="{{ prefix }}/watchlist" {% if active == "watchlist" %}class="active"{% endif %}>Watchlist</a>
+</nav>
+{% block tab %}{% endblock %}
+{% endblock %}

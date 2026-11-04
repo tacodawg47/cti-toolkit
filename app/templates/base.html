@@ -22,6 +22,22 @@
     .inline-form { display: inline; }
     button.small { padding: 3px 10px; font-size: 13px; margin: 0; }
     .dim td { color: #9ca3af; }
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid #2a3a4a; margin-bottom: 16px; }
+    .tabs a { color: #9ca3af; text-decoration: none; padding: 8px 14px; border: 1px solid transparent;
+      border-bottom: 0; border-radius: 6px 6px 0 0; }
+    .tabs a:hover { color: #e6e6e6; }
+    .tabs a.active { color: #e6e6e6; background: #1a2332; border-color: #2a3a4a; }
+    .pri { display: inline-block; font-size: 14px; padding: 2px 10px; border-radius: 6px; margin-left: 8px; vertical-align: middle; }
+    .pri-P1 { background: #7f1d1d; color: #fecaca; }
+    .pri-P2 { background: #7c2d12; color: #fed7aa; }
+    .pri-P3 { background: #713f12; color: #fde68a; }
+    .pri-P4 { background: #1e3a5f; color: #bfdbfe; }
+    .pri-P5 { background: #374151; color: #d1d5db; }
+    .badge-kev { background: #7f1d1d; color: #fecaca; }
+    .badge-ransom { background: #4c0519; color: #fecdd3; }
+    .badge-stack { background: #14532d; color: #bbf7d0; }
+    .card h2 { font-size: 20px; }
+    a { color: #6db3f2; }
     button { padding: 10px 18px; font-size: 16px; background: #2563eb; color: #fff;
       border: 0; border-radius: 6px; cursor: pointer; margin-top: 10px; }
     .card { background: #1a2332; border: 1px solid #2a3a4a; border-radius: 8px; padding: 16px; margin: 16px 0; }
@@ -44,6 +60,7 @@
   <header>
     <a href="/">Enrichment</a>
     <a href="/extract">Extract IOCs</a>
+    <a href="/vulnerability-intelligence">Vulnerability Intelligence</a>
     <a href="/health">Health</a>
   </header>
   <main>{% block content %}{% endblock %}</main>

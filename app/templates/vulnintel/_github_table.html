@@ -1,0 +1,36 @@
+{# Expects `github` (the sources.github result) and `cve` (the ID). #}
+{% if github.status == "quota" %}
+  <p class="err">⚠ {{ github.error }}</p>
+{% elif github.status == "error" %}
+  <p class="err">⚠ GitHub search failed: {{ github.error }}</p>
+{% else %}
+  <p>
+    <strong>{{ github.total }}</strong> repositor{{ "y" if github.total == 1 else "ies" }} mention
+    <code>{{ cve }}</code> in their name or description.
+    {%- if github.cached %} <small>(cached)</small>{% endif %}
+    {%- if github.incomplete %} <small>(GitHub returned a partial result)</small>{% endif %}
+  </p>
+  {% if github.repos %}
+    <table>
+      <tr><th>Repository</th><th>Stars</th><th>Created</th><th>Last push</th><th>Description</th></tr>
+      {% for r in github.repos %}
+        <tr{% if r.archived %} class="dim"{% endif %}>
+          <td><a href="{{ r.url }}" rel="noopener noreferrer nofollow" target="_blank">{{ r.full_name }}</a>
+              {% if r.fork %}<span class="badge">fork</span>{% endif %}
+              {% if r.archived %}<span class="badge">archived</span>{% endif %}</td>
+          <td>{{ r.stars }}</td>
+          <td>{{ r.created }}</td>
+          <td>{{ r.pushed }}</td>
+          <td>{{ r.description }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+    {% if github.total > github.repos | length %}
+      <small>Showing the {{ github.repos | length }} most recently updated.</small>
+    {% endif %}
+  {% endif %}
+  <p class="muted"><small>Links only, nothing is downloaded. A repository that claims to be a proof of
+    concept can be a working exploit, a scanner, a write-up, an empty placeholder, or malware aimed at
+    researchers. A brand-new account, no stars and a single commit is the usual shape of the last one.
+    Read before you run anything, and only in a VM.</small></p>
+{% endif %}

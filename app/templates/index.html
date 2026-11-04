@@ -22,8 +22,8 @@
   {% elif itype == "cve" %}
     <div class="card">
       <code>{{ value }}</code> is a vulnerability identifier, not an indicator of
-      compromise. It is handled by the Vulnerability Intelligence module
-      (Phase 2, in progress), not by the enrichment vendors.
+      compromise, so the enrichment vendors are not queried.
+      <a href="/vulnerability-intelligence/cve/{{ value }}">Open it in Vulnerability Intelligence</a>.
     </div>
   {% endif %}
 

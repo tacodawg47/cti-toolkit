@@ -7,14 +7,12 @@ reuses; on shutdown it closes that client.
 """
 
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import __version__
@@ -23,43 +21,20 @@ from .core.allowlist import allowlist
 from .core.config import PROJECT_ROOT, settings
 from .core.indicators import MAX_INDICATOR_LEN, canonical, detect_type, normalise
 from .core.ratelimit import LIMITS, rate_limiter
+from .core.templating import templates
+from .core.web import reject_cross_site
 from .modules.enrich import base, registry, shodan
 from .modules.extract import extractor
 from .modules.extract import fetch as extract_fetch
 from .modules.extract import pdf as extract_pdf
+from .modules.vulnerability_intelligence import routes as vulnintel_routes
+from .modules.vulnerability_intelligence import service as vulnintel_service
+from .modules.vulnerability_intelligence import store as vulnintel_store
 
 BASE_DIR = Path(__file__).resolve().parent
 
 # An uploaded file larger than this is refused before it is read in full.
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
-
-
-def _fmt(v):
-    """Render a summary value: lists as 'a, b', dicts as 'k: v, ...', else as-is."""
-    if isinstance(v, dict):
-        return ", ".join(f"{k}: {val}" for k, val in v.items())
-    if isinstance(v, (list, tuple)):
-        return ", ".join(str(x) for x in v)
-    return v
-
-
-def _ago(iso: str) -> str:
-    """Turn an ISO timestamp into a short relative age like '2h ago'."""
-    try:
-        t = datetime.fromisoformat(iso)
-    except (TypeError, ValueError):
-        return ""
-    if t.tzinfo is None:
-        t = t.replace(tzinfo=timezone.utc)
-    secs = (datetime.now(timezone.utc) - t).total_seconds()
-    if secs < 60:
-        return "just now"
-    if secs < 3600:
-        return f"{int(secs // 60)}m ago"
-    if secs < 86400:
-        return f"{int(secs // 3600)}h ago"
-    return f"{int(secs // 86400)}d ago"
 
 
 def _display_path(p) -> str:
@@ -74,13 +49,11 @@ def _display_path(p) -> str:
         return str(p)
 
 
-templates.env.filters["fmt"] = _fmt
-templates.env.filters["ago"] = _ago
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db.init_db()
+    vulnintel_store.init_schema()    # module tables live beside the core ones
+    vulnintel_service.seed_aliases()  # shipped nicknames, added once, never overwritten
     allowlist.load()                 # Tranco top list, if data/tranco.csv exists
     base.set_client(base.new_client())
     try:
@@ -115,15 +88,7 @@ static_dir = BASE_DIR / "static"
 # check_dir=False so a missing (empty, git-ignored) static dir doesn't crash
 # startup; it just 404s static requests until there is something to serve.
 app.mount("/static", StaticFiles(directory=str(static_dir), check_dir=False), name="static")
-
-
-def _reject_cross_site(request: Request) -> None:
-    # Modern browsers tag every request with Sec-Fetch-Site. A form on another
-    # website posting here arrives as "cross-site"; reject it so a page you
-    # happen to have open cannot spend your API quota on indicators it chooses.
-    # Requests without the header (curl, older clients, our tests) are allowed.
-    if request.headers.get("sec-fetch-site") == "cross-site":
-        raise HTTPException(status_code=403, detail="cross-site requests are not allowed")
+app.include_router(vulnintel_routes.router)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -135,7 +100,7 @@ def index(request: Request):
 async def enrich(request: Request, indicator: str = Form(...), force: bool = Form(False)):
     # `force` is the "query anyway" checkbox: a browser sends "on" when it is
     # ticked and nothing at all when it is not, which FastAPI turns into a bool.
-    _reject_cross_site(request)
+    reject_cross_site(request)
     raw = indicator.strip()
     if len(raw) > MAX_INDICATOR_LEN:
         return templates.TemplateResponse(
@@ -171,7 +136,7 @@ async def extract(
     The three inputs are checked in that order so a form with a stale
     textarea and a freshly chosen file does what the analyst meant.
     """
-    _reject_cross_site(request)
+    reject_cross_site(request)
     ctx: dict = {"text": text, "url": url}
     body: str | None = None
 
@@ -217,9 +182,11 @@ async def health(request: Request):
         "urlscan": bool(settings.urlscan_api_key),
         "abusech": bool(settings.abusech_auth_key),
         "greynoise": bool(settings.greynoise_api_key),
+        "nvd (optional)": bool(settings.nvd_api_key),
+        "github (optional)": bool(settings.github_token),
     }
     versions = {}
-    for pkg in ("fastapi", "httpx", "pydantic", "uvicorn", "jinja2"):
+    for pkg in ("fastapi", "httpx", "pydantic", "uvicorn", "jinja2", "pypdf"):
         try:
             versions[pkg] = version(pkg)
         except PackageNotFoundError:

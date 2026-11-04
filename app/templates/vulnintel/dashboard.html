@@ -1,0 +1,96 @@
+{% extends "vulnintel/layout.html" %}
+{% block tab %}
+
+<div class="card">
+  <h3>Feeds</h3>
+  <table>
+    <tr><th>Feed</th><th>Last fetched</th><th>Entries</th><th>Version</th><th>Status</th></tr>
+    {% for key, label in [("cisa_kev", "CISA KEV"), ("epss", "EPSS")] %}
+      {% set f = feeds.get(key) %}
+      <tr>
+        <th>{{ label }}</th>
+        <td>{% if f and f.fetched_at %}{{ f.fetched_at | ago }}{% else %}never{% endif %}</td>
+        <td>{% if f and f.entries %}{{ "{:,}".format(f.entries) }}{% else %}—{% endif %}</td>
+        <td>{{ f.version if f and f.version else "—" }}</td>
+        <td>{% if f and f.error %}<span class="err">⚠ {{ f.error }}</span>{% elif f and f.fetched_at %}<span class="ok">ok</span>{% else %}<span class="no">not loaded</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+  </table>
+  <form method="post" action="{{ prefix }}/refresh" style="margin-top: 10px;">
+    <button type="submit" class="small">Refresh feeds</button>
+    <small>Downloads the CISA KEV catalog (about 2 MB) and the EPSS scores (about 3 MB) and reloads
+      the local tables. Takes a few seconds. Scheduled refresh arrives with the Phase 5 scheduler.</small>
+  </form>
+  <p class="muted"><small>Store: {{ "{:,}".format(counts.kev) }} known-exploited CVEs, {{ "{:,}".format(counts.epss) }} EPSS-scored CVEs.</small></p>
+</div>
+
+<div class="card">
+  <h3>Your stack <small>(known-exploited CVEs matching the watchlist)</small></h3>
+  {% if watchlist_count == 0 %}
+    <p class="muted">The technology watchlist is empty. Add the vendors and products you run on the
+      <a href="{{ prefix }}/watchlist">Watchlist</a> tab and this section fills in.</p>
+  {% elif not stack %}
+    <p class="muted">No known-exploited CVE matches the watchlist{% if counts.kev == 0 %} (the KEV feed is not loaded yet){% endif %}.</p>
+  {% else %}
+    <table>
+      <tr><th>CVE</th><th>Vendor / product</th><th>Added</th><th>Due</th><th>EPSS</th><th>Matched</th></tr>
+      {% for r in stack %}
+        <tr>
+          <td>{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}
+              {% if r.ransomware %}<span class="badge badge-ransom" title="known ransomware campaign use">ransomware</span>{% endif %}</td>
+          <td>{{ r.vendor }} {{ r.product }}</td>
+          <td>{{ r.date_added }}</td>
+          <td>{{ r.due_date or "—" }}</td>
+          <td>{{ "%.2f" | format(r.epss) if r.epss is not none else "—" }}</td>
+          <td><small>{{ r.matched | join(", ") }}</small></td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>Newly known-exploited
+    <small>(added to CISA KEV in the last {{ days }} days —
+      {% if days == 7 %}<a href="{{ prefix }}?days=30">show 30</a>{% else %}<a href="{{ prefix }}?days=7">show 7</a>{% endif %})</small></h3>
+  {% if not recent %}
+    <p class="muted">Nothing in that window{% if counts.kev == 0 %}: the KEV feed is not loaded yet. Click Refresh feeds above{% endif %}.</p>
+  {% else %}
+    <table>
+      <tr><th>CVE</th><th>Vendor / product</th><th>Vulnerability</th><th>Added</th><th>Due</th><th>EPSS</th><th>CVSS</th></tr>
+      {% for r in recent %}
+        <tr>
+          <td>{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}
+              {% if r.ransomware %}<span class="badge badge-ransom" title="known ransomware campaign use">ransomware</span>{% endif %}</td>
+          <td>{{ r.vendor }} {{ r.product }}</td>
+          <td><small>{{ r.name }}</small></td>
+          <td>{{ r.date_added }}</td>
+          <td>{{ r.due_date or "—" }}</td>
+          <td>{{ "%.2f" | format(r.epss) if r.epss is not none else "—" }}</td>
+          <td>{{ r.cvss_score if r.cvss_score is not none else "—" }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>Trending <small>(largest EPSS rises at the last refresh, score ≥ 0.10)</small></h3>
+  {% if not risers %}
+    <p class="muted">No movement recorded yet. EPSS movement appears after the second refresh, once there is a previous score to compare with.</p>
+  {% else %}
+    <table>
+      <tr><th>CVE</th><th>EPSS</th><th>Change</th><th>Vendor / product</th><th>CVSS</th></tr>
+      {% for r in risers %}
+        <tr>
+          <td>{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}</td>
+          <td>{{ "%.2f" | format(r.epss) }} <small>(was {{ "%.2f" | format(r.prev_epss) }})</small></td>
+          <td class="ok">+{{ "%.2f" | format(r.delta) }}</td>
+          <td>{% if r.vendor %}{{ r.vendor }} {{ r.product }}{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td>{{ r.cvss_score if r.cvss_score is not none else "—" }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+</div>
+{% endblock %}

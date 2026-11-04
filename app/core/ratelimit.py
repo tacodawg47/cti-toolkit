@@ -16,6 +16,7 @@ import time
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 
+from .config import settings
 from .db import connect
 
 # Known vendor limits. A vendor may set rpm (requests per minute), rpd
@@ -40,6 +41,11 @@ LIMITS: dict[str, dict[str, int]] = {
     "rdap": {"rpm": 30},
     "yaraify": {"rpm": 30},              # abuse.ch, same soft limit as the rest of the suite
     "crtsh": {"rpm": 10},                # crt.sh is a slow shared service; go easy on it
+    # Phase 2, vulnerability intelligence. NVD publishes 5 requests per 30 s
+    # without a key and 50 with one; GitHub search is 10 a minute without a
+    # token and 30 with one. Both expressed per minute, on the safe side.
+    "nvd": {"rpm": 50 if settings.nvd_api_key else 5},
+    "github": {"rpm": 30 if settings.github_token else 10},
 }
 
 
