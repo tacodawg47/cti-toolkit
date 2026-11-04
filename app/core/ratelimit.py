@@ -46,6 +46,11 @@ LIMITS: dict[str, dict[str, int]] = {
     # token and 30 with one. Both expressed per minute, on the safe side.
     "nvd": {"rpm": 50 if settings.nvd_api_key else 5},
     "github": {"rpm": 30 if settings.github_token else 10},
+    # ransomware.live PRO has no hard cap ("fair use", data cached 30 min on
+    # their side). A group-profile sweep is a few hundred calls once a day.
+    "ransomwarelive": {"rpm": 120},
+    "vulnlookup": {"rpm": 30},            # CIRCL's public instance, keyless; courtesy limit
+    "euvd": {"rpm": 60},                  # ENISA's public API, keyless; courtesy limit
 }
 
 

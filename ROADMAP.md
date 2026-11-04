@@ -154,11 +154,88 @@ limit. Previdian was considered as a third KEV source and dropped
 
 Progress 2026-11-03: first build committed with the four tabs, the CISA KEV
 and EPSS feeds, NVD and GitHub lookups, the priority matrix, the watchlist
-and the alias table (docs/runbooks/vulnerability-intelligence.md). Still to
-wire: VulnCheck KEV and XDB, inthewild.io (its API refused connections that
-day), OTX pulses by CVE, ransomware.live (PRO key), AttackerKB, the Nuclei
-template index, and an NVD recent-changes feed so "Your stack" also shows
-new CVEs not yet in KEV.
+and the alias table (docs/runbooks/vulnerability-intelligence.md). Second
+build the same day: a "New exploit code" table (GitHub search for CVE-named
+repositories created in the last 7 days, run on every refresh and meant to
+run at least daily once scheduled, with a your-stack-only toggle, on the
+Dashboard and the Exploits tab) and ransomware.live PRO group profiles (the CVEs each
+group exploits; shown on the detail page and counted as in-the-wild
+exploitation for P1). inthewild.io dropped: API down, RSS and database
+frozen since January 2025; replaced by Vulnerability-Lookup (CIRCL)
+sightings, keyless, with exploited / published-PoC / seen types. Third
+build: the Exploit-DB, Metasploit and Nuclei indexes as bulk feeds into an
+`exploits` table; Exploit-DB joins GitHub in the "New exploit code" table,
+Metasploit sets P2 as the weaponised tier, Nuclei is a badge. Sources
+considered and not used: cve.now (an aggregator of sources already pulled
+directly; keep as a fallback), Senserva's tracker (an HTML page, not a
+feed). Still to wire: VulnCheck KEV and XDB, OTX pulses by CVE, AttackerKB,
+and an NVD recent-changes feed so "Your stack" also shows new CVEs not yet
+in KEV.
+
+Ideas taken from Senserva's non-Microsoft CVE tracker (reviewed 2026-11-04;
+its data is CISA KEV ranked by EPSS with NVD/CIRCL CVSS, VulnCheck KEV and
+ENISA EUVD flags, and vendor advisory links, all of which we pull or can pull
+first-hand). Built the same day:
+- ENISA EUVD (EU vulnerability database, keyless API) as a feed: a second
+  government "exploited" list, into the kev table as source euvd, with
+  ENISA's CVSS and EPSS kept.
+- CVSS fallback: ENISA's score, else the CNA's score from the CVE record on
+  Vulnerability-Lookup, so a fresh CVE is never "not scored".
+- "Hottest right now": a deterministic heat score (weights in the runbook)
+  over exploited status, ransomware use, EPSS, CVSS, recency, exploit code
+  and 48-hour sightings; top 10 / 100 on the Dashboard with the reasons.
+  Chatter comes from Vulnerability-Lookup's sightings (Bluesky, Telegram,
+  MISP, Shadowserver, PoC notes). X/Twitter is not a source: no free API
+  and scraping breaks its terms. Phase 4 news mentions and Phase 5
+  Telegram collection will add to the same chatter table.
+- Text brief: rendered under the hottest list on every load, one line per
+  CVE plus a source preamble and a triage ask, for a report, a ticket or
+  whatever LLM the operator chooses. Built from the ranked list only, which
+  never uses the watchlist, so it reveals nothing about the operator's
+  stack; no model runs inside the app (Phase 11).
+Still open from that review: CSV / JSON / RSS exports (Phase 8) and the
+per-vendor history and monthly chart (dashboards parking-lot item).
+
+**Supply chain tab** (decided 2026-11-04, fifth tab of this module, to
+build next): "is a library, package or repository I depend on vulnerable
+or compromised?", the question GitHub Advisory Database and OSV answer
+with package-level affected versions per ecosystem (npm, PyPI, Maven, Go,
+crates, RubyGems, NuGet...). Three parts:
+- A packages watchlist (ecosystem, name, optional version) checked against
+  the keyless OSV batch query API on refresh, which is what pip-audit
+  already does for this project's own dependencies; results link to the
+  advisory and to the CVE detail page when one exists.
+- A lockfile / manifest upload (requirements.txt, package-lock.json,
+  go.sum, Cargo.lock...) checked the same way, cve.now's lockfile checker
+  idea, for the operator's own projects.
+- Malicious and compromised package reports: the OpenSSF malicious-packages
+  repository (OSV-format records, keyless) as the feed, plus public
+  reporting on hijacked packages and repositories (Socket, Phylum,
+  StepSecurity, Sonatype, ReversingLabs blogs) through the Phase 4 news
+  feed with a "supply chain" keyword category; the operator will name
+  specific sources. Shown newest first with ecosystem and package name.
+Nothing here needs a key. Record also that GHSA/OSV add little as a CVE
+feed for the other tabs: nearly every entry that matters there already
+has a CVE in NVD.
+
+Open gaps noted 2026-11-04 from the live dashboard:
+- Many CVEs show no vendor, product or CVSS: those fields come from KEV,
+  EUVD or NVD, and NVD is fetched per CVE only when a page is opened. Fix:
+  an NVD recent-changes feed (lastModStartDate over the last 7 days, pages
+  of 2,000) run with the other feeds, so every recently published or
+  modified CVE has its NVD record locally; the free NVD key makes it ten
+  times faster. Also fills "Your stack" with new CVEs not yet in KEV.
+- Charts: the module is tables only. Add small inline SVG charts rendered
+  server-side (no JavaScript library needed): KEV additions per month with
+  the ransomware share, most-exploited vendors over 12 months, heat bars
+  in the hottest table, and a sparkline of sightings per day on the detail
+  page. Senserva and cve.feedly.com use this to make the page readable at a
+  glance. Belongs with the dashboards parking-lot item; do a first pass
+  before Phase 2 closes.
+- Ingest everything, surface selectively (decided): KEV ignores CVSS and
+  many exploited CVEs are medium severity, EPSS is needed for every CVE a
+  page can open, and the exploit indexes are small. Filtering happens on
+  the dashboard (heat, exploitation, exploit code), not at ingest.
 
 Three cheap signals to add once the detail page exists (agreed 2026-11-03):
 - Patch available: NVD tags references as "Patch" or "Vendor Advisory";
@@ -676,6 +753,42 @@ this list and decide what to pull into active work. Keeps the project moving.
     Essentials; pairs with the Wazuh agent on the host.
   Not overkill for a security portfolio — security-testing your own tool is a
   selling point. Keep it out of the app runtime.
+- GreyNoise API key (parked 2026-11-03): GreyNoise no longer issues free
+  keys to consumer email domains, and a paid business plan is not worth it
+  for this toolkit. Revisit once the operator owns a domain with inbound
+  mail (the Phase 4 newsletter-alias item provides exactly that): sign up
+  with an address on that domain and drop the key into the existing
+  GreyNoise vendor module. Until then the 10/day community endpoint stands.
+- GreyNoise Project Swarm (parked 2026-11-03, operator interested): deploy
+  GreyNoise's sensor (a managed honeypot) on a cheap VPS with a public IP,
+  never on the home network, and read what hits it through their API
+  (sessions, payloads, PCAP; comparison against their global grid). It is a
+  data SOURCE for this toolkit, not something to rebuild: (1) an enrichment
+  card "seen on my sensors" per IP, a first-party signal like the local
+  resolution-history store; (2) a dashboard of top attacking IPs and payloads
+  in the last 24h with one-click pivot into enrichment; (3) sensor payloads
+  that carry a CVE (exploit attempts) become first-party "exploited in the
+  wild against my IP space" sightings on the vulnerability detail page.
+  Wazuh is a different layer (host and app log detection); the sensor can
+  ship its logs there too, but the value here is GreyNoise's analysis and
+  the API. Needs a GreyNoise account and the sensor terms checked first.
+  Pricing as published 2026-11-03: a one-time $1 identity verification, no
+  subscription, no contract.
+  OPSEC AND PERSONAL SECURITY, non-negotiable when this is picked up:
+  - Run the sensor on a cheap VPS and NEVER on the home network. A honeypot
+    invites traffic by design; attackers who probe it will keep probing the
+    IP, and anything on the same network is in the blast radius.
+  - The VPS is disposable: nothing personal on it, no reused passwords, SSH
+    keys only, a separate key pair from everything else, and no route from
+    it back to the home network or to this toolkit's host.
+  - The sensor's public IP is not tied to the operator's name: register the
+    VPS with the same pseudonymous alias and domain used for the newsletter
+    and GreyNoise accounts, not a personal email.
+  - Read sensor data through the GreyNoise API only; never pull raw PCAP or
+    payloads onto the home machine except into the isolated VM, and treat
+    every payload as hostile input (the same rule as breach data).
+  - Keep the toolkit integration read-only: it fetches sensor results, it
+    never manages or reconfigures the sensor from the home host.
 
 ## Data handling policy (breach and leak data)
 
@@ -755,6 +868,16 @@ Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
   OTX, GreyNoise) are queried on demand from the detail page.
 - 2026-11-03: Vulnerability intelligence laid out as four tabs (Dashboard,
   Search, Exploits, Watchlist); see the Phase 2 section.
+- 2026-11-03: ransomware.live PRO key obtained. Its terms (fair use, no
+  relaying other users' queries, no re-serving the data, no cloning their
+  dashboard) fit a local single-user toolkit; the group sweep runs at most
+  daily. A Phase 3 ransomware tracker on the same key stays within the
+  terms as long as it is local and has its own look.
+- 2026-11-03: inthewild.io dropped as a source (dormant since January 2025).
+- 2026-11-03: API keys that had been pasted into chat sessions were rotated
+  in .env, except VirusTotal, which cannot be rotated without a new account
+  and was kept (free key, non-commercial, no financial exposure). Rule going
+  forward: keys go straight into .env, never into chat.
 - 2026-11-03: pypdf 6.21.4 added for PDF text extraction after a full vet
   (docs/runbooks/vetting-a-dependency.md): PyPI provenance names the
   py-pdf/pypdf publish workflow, every packaged file matches the GitHub tag,

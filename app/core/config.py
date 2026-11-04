@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     # GitHub search works without a token at 10 searches a minute.
     nvd_api_key: str = ""
     github_token: str = ""
+    # ransomware.live PRO (free key from my.ransomware.live): group profiles
+    # with the CVEs each group exploits. Phase 3 reuses it for victims.
+    ransomwarelive_api_key: str = ""
 
     # Server: local only by design.
     host: str = "127.0.0.1"

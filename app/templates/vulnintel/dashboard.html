@@ -5,7 +5,7 @@
   <h3>Feeds</h3>
   <table>
     <tr><th>Feed</th><th>Last fetched</th><th>Entries</th><th>Version</th><th>Status</th></tr>
-    {% for key, label in [("cisa_kev", "CISA KEV"), ("epss", "EPSS")] %}
+    {% for key, label in feed_labels.items() %}
       {% set f = feeds.get(key) %}
       <tr>
         <th>{{ label }}</th>
@@ -18,10 +18,64 @@
   </table>
   <form method="post" action="{{ prefix }}/refresh" style="margin-top: 10px;">
     <button type="submit" class="small">Refresh feeds</button>
-    <small>Downloads the CISA KEV catalog (about 2 MB) and the EPSS scores (about 3 MB) and reloads
-      the local tables. Takes a few seconds. Scheduled refresh arrives with the Phase 5 scheduler.</small>
+    <small>Downloads CISA KEV (2 MB), ENISA's exploited list (about 20 pages), EPSS (3 MB), the Exploit-DB
+      index (10 MB), the Metasploit module index (11 MB), the Nuclei CVE index (2 MB) and the last week of
+      sightings, runs the GitHub search for the last 7 days of CVE-named repositories, and reloads the
+      local tables. About a minute. Scheduled refresh arrives with the Phase 5 scheduler.</small>
   </form>
-  <p class="muted"><small>Store: {{ "{:,}".format(counts.kev) }} known-exploited CVEs, {{ "{:,}".format(counts.epss) }} EPSS-scored CVEs.</small></p>
+  <form method="post" action="{{ prefix }}/refresh-ransomware" style="margin-top: 8px;">
+    <button type="submit" class="small">Refresh ransomware groups</button>
+    <small>Reads every group profile from ransomware.live PRO for the CVEs each group exploits.
+      A few hundred requests, a minute or two; needs <code>RANSOMWARELIVE_API_KEY</code>. Once a day is plenty.</small>
+  </form>
+  <p class="muted"><small>Store: {{ "{:,}".format(counts.kev) }} known-exploited CVEs,
+    {{ "{:,}".format(counts.epss) }} EPSS-scored CVEs,
+    {{ "{:,}".format(counts.exploits.get("exploitdb", 0)) }} with an Exploit-DB entry,
+    {{ "{:,}".format(counts.exploits.get("metasploit", 0)) }} with a Metasploit module,
+    {{ "{:,}".format(counts.exploits.get("nuclei", 0)) }} with a Nuclei template,
+    {{ "{:,}".format(counts.ransomware) }} tied to ransomware groups.</small></p>
+</div>
+
+<div class="card">
+  <h3>New exploit code
+    <small>(GitHub repositories created and Exploit-DB entries published in the last 7 days —
+      {% if poc_stack %}<a href="{{ prefix }}">show all</a>{% else %}<a href="{{ prefix }}?poc=stack">your stack only</a>{% endif %})</small></h3>
+  {% with rows = poc_rows, days = 7, feed = feeds.get("github_poc") %}{% include "vulnintel/_poc_table.html" %}{% endwith %}
+  {% if poc_rows | length >= 25 %}<p><small>Newest 25 shown. The <a href="{{ prefix }}/exploits{% if poc_stack %}?poc=stack{% endif %}">Exploits</a> tab lists the last 30 days.</small></p>{% endif %}
+</div>
+
+<div class="card">
+  <h3>Hottest right now
+    <small>(ranked by heat: exploited +40, ransomware +10, EPSS ×30, CVSS ×1, listed this week +25 down to −15 over a year, Metasploit +5, PoC +3, sightings up to +10 —
+      {% if hot == 10 %}<a href="{{ prefix }}?hot=100">show 100</a>{% else %}<a href="{{ prefix }}">show 10</a>{% endif %})</small></h3>
+  {% if not hottest %}
+    <p class="muted">Nothing to rank yet: click Refresh feeds above.</p>
+  {% else %}
+    <table>
+      <tr><th>#</th><th>CVE</th><th>Vendor / product</th><th>Listed exploited</th><th>Heat</th><th>CVSS</th><th>EPSS</th><th>Why</th></tr>
+      {% for r in hottest %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}</td>
+          <td>{% if r.vendor or r.product %}{{ r.vendor or "" }} {{ r.product or "" }}{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td>{{ r.kev_added or "—" }}</td>
+          <td><strong>{{ r.heat }}</strong></td>
+          <td>{{ r.cvss if r.cvss is not none else "—" }}</td>
+          <td>{{ "%.2f" | format(r.epss) if r.epss is not none else "—" }}</td>
+          <td><small>{{ r.parts | join(", ") }}</small></td>
+        </tr>
+      {% endfor %}
+    </table>
+    <p class="muted"><small>"Listed exploited" is the date CISA or ENISA added the CVE, not the CVE's year: an old CVE
+      that was just confirmed exploited is hot by definition. Vendor, product and CVSS come from KEV, EUVD or NVD;
+      a CVE known only from exploit code or chatter shows them after it is opened once.</small></p>
+    <details style="margin-top: 8px;">
+      <summary class="muted">text brief (copy and paste into a report, a ticket, or your own AI)</summary>
+      <textarea rows="14" readonly>{{ brief }}</textarea>
+      <p class="muted"><small>Built from this ranked list only, which never uses your watchlist, so it reveals nothing about
+        your stack. No model is called from inside the app.</small></p>
+    </details>
+  {% endif %}
 </div>
 
 <div class="card">
@@ -38,7 +92,7 @@
         <tr>
           <td>{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}
               {% if r.ransomware %}<span class="badge badge-ransom" title="known ransomware campaign use">ransomware</span>{% endif %}</td>
-          <td>{{ r.vendor }} {{ r.product }}</td>
+          <td>{{ r.vendor or "" }} {{ r.product or "" }}</td>
           <td>{{ r.date_added }}</td>
           <td>{{ r.due_date or "—" }}</td>
           <td>{{ "%.2f" | format(r.epss) if r.epss is not none else "—" }}</td>
@@ -51,7 +105,7 @@
 
 <div class="card">
   <h3>Newly known-exploited
-    <small>(added to CISA KEV in the last {{ days }} days —
+    <small>(added to CISA KEV or ENISA EUVD in the last {{ days }} days —
       {% if days == 7 %}<a href="{{ prefix }}?days=30">show 30</a>{% else %}<a href="{{ prefix }}?days=7">show 7</a>{% endif %})</small></h3>
   {% if not recent %}
     <p class="muted">Nothing in that window{% if counts.kev == 0 %}: the KEV feed is not loaded yet. Click Refresh feeds above{% endif %}.</p>
@@ -61,8 +115,9 @@
       {% for r in recent %}
         <tr>
           <td>{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}
+              {% for s in (r.sources or "").split(",") if s %}<span class="badge{% if s == "cisa" %} badge-kev{% endif %}">{{ kev_names.get(s, s) }}</span>{% endfor %}
               {% if r.ransomware %}<span class="badge badge-ransom" title="known ransomware campaign use">ransomware</span>{% endif %}</td>
-          <td>{{ r.vendor }} {{ r.product }}</td>
+          <td>{{ r.vendor or "" }} {{ r.product or "" }}</td>
           <td><small>{{ r.name }}</small></td>
           <td>{{ r.date_added }}</td>
           <td>{{ r.due_date or "—" }}</td>
