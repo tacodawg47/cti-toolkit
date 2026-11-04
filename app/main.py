@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -24,8 +24,14 @@ from .core.config import PROJECT_ROOT, settings
 from .core.indicators import MAX_INDICATOR_LEN, canonical, detect_type, normalise
 from .core.ratelimit import LIMITS, rate_limiter
 from .modules.enrich import base, registry, shodan
+from .modules.extract import extractor
+from .modules.extract import fetch as extract_fetch
+from .modules.extract import pdf as extract_pdf
 
 BASE_DIR = Path(__file__).resolve().parent
+
+# An uploaded file larger than this is refused before it is read in full.
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 
@@ -146,6 +152,59 @@ async def enrich(request: Request, indicator: str = Form(...), force: bool = For
         {"indicator": indicator, "value": value, "itype": itype, "force": force,
          "results": results, "aggregate": aggregate},
     )
+
+
+@app.get("/extract", response_class=HTMLResponse)
+def extract_page(request: Request):
+    return templates.TemplateResponse(request, "extract.html", {})
+
+
+@app.post("/extract", response_class=HTMLResponse)
+async def extract(
+    request: Request,
+    text: str = Form(""),
+    url: str = Form(""),
+    file: UploadFile | None = File(None),
+):
+    """Extract IOCs from whichever input was given: a file, a URL, or text.
+
+    The three inputs are checked in that order so a form with a stale
+    textarea and a freshly chosen file does what the analyst meant.
+    """
+    _reject_cross_site(request)
+    ctx: dict = {"text": text, "url": url}
+    body: str | None = None
+
+    if file is not None and file.filename:
+        # Read one byte past the cap: if we get it, the file is too big, and
+        # we have not pulled the rest of it into memory.
+        data = await file.read(MAX_UPLOAD_BYTES + 1)
+        if len(data) > MAX_UPLOAD_BYTES:
+            ctx["error"] = f"file too large (over {MAX_UPLOAD_BYTES // (1024 * 1024)} MB)"
+        elif data[:5] == b"%PDF-" or (file.filename.lower().endswith(".pdf")):
+            body, err = extract_pdf.pdf_text(data)
+            if err:
+                ctx["error"] = err
+            ctx["source"] = f"PDF {file.filename}"
+        else:
+            body = data.decode("utf-8", errors="replace")
+            ctx["source"] = f"file {file.filename}"
+    elif url.strip():
+        body, kind, err = await extract_fetch.fetch_text(url.strip())
+        if err:
+            ctx["error"] = err
+        ctx["source"] = f"{kind or 'page'} at {url.strip()}"
+    elif text.strip():
+        body = text
+        ctx["source"] = "pasted text"
+    else:
+        ctx["error"] = "Paste some text, enter a URL, or choose a file."
+
+    if body is not None:
+        ctx["result"] = extractor.extract(body)
+        ctx["plain_list"] = extractor.plain_list
+        ctx["type_order"] = extractor.TYPE_ORDER
+    return templates.TemplateResponse(request, "extract.html", ctx)
 
 
 @app.get("/health", response_class=HTMLResponse)

@@ -6,6 +6,10 @@ clickable or auto-linked, e.g. hxxp://evil[.]com or evil[dot]com. We refang on
 input (turn it back into a real value), normalise it (strip wrappers, drop a
 port, lowercase where case is irrelevant), and then detect the type before
 looking it up.
+
+Types: hash, ip, url, domain, and (since Phase 2) cve. A CVE ID is not an
+indicator of compromise, but it arrives through the same input boxes and is
+routed to the vulnerability intelligence module instead of enrichment.
 """
 
 import ipaddress
@@ -21,6 +25,11 @@ HASH_PATTERNS = {
     "sha1": re.compile(r"^[a-fA-F0-9]{40}$"),
     "sha256": re.compile(r"^[a-fA-F0-9]{64}$"),
 }
+
+# A CVE identifier: "CVE-" + four-digit year + at least four digits. The
+# sequence part has had no upper bound since 2014 (CVE-2021-44228 is five
+# digits; seven digits are allowed), so only a minimum is enforced here.
+CVE_PATTERN = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
 
 # A reasonably strict domain matcher: labels of a-z/0-9/hyphen, at least one dot.
 DOMAIN_PATTERN = re.compile(
@@ -135,13 +144,16 @@ def canonical(itype: str, value: str) -> str:
 
     Hashes (hex) and domains (DNS is case-insensitive) are lowercased. IPs are
     rewritten in Python's compressed form, so "2001:DB8::1", "2001:db8:0::1"
-    and "2001:0db8::0001" all become "2001:db8::1" (IPv4 is unchanged). URLs
-    are left as-is because their paths are case-sensitive.
+    and "2001:0db8::0001" all become "2001:db8::1" (IPv4 is unchanged). CVE
+    IDs are uppercased, the form MITRE and NVD use. URLs are left as-is
+    because their paths are case-sensitive.
     """
     if itype in ("hash", "domain"):
         return value.lower()
     if itype == "ip":
         return str(ipaddress.ip_address(value))
+    if itype == "cve":
+        return value.upper()
     return value
 
 
@@ -153,9 +165,11 @@ def hash_kind(value: str) -> str | None:
 
 
 def detect_type(value: str) -> str:
-    """Return one of: hash, ip, url, domain, unknown. Expects a refanged value."""
+    """Return one of: hash, cve, ip, url, domain, unknown. Expects a refanged value."""
     if hash_kind(value):
         return "hash"
+    if CVE_PATTERN.match(value):
+        return "cve"
     try:
         ipaddress.ip_address(value)
         return "ip"

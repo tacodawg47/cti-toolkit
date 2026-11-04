@@ -18,7 +18,13 @@
      {% if value and value != indicator %}(cleaned to <code>{{ value }}</code>){% endif %}</p>
 
   {% if itype == "unknown" %}
-    <div class="card">Could not recognise that as a hash, IP, domain, or URL.</div>
+    <div class="card">Could not recognise that as a hash, IP, domain, URL, or CVE ID.</div>
+  {% elif itype == "cve" %}
+    <div class="card">
+      <code>{{ value }}</code> is a vulnerability identifier, not an indicator of
+      compromise. It is handled by the Vulnerability Intelligence module
+      (Phase 2, in progress), not by the enrichment vendors.
+    </div>
   {% endif %}
 
   {% if aggregate %}

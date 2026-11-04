@@ -84,31 +84,81 @@ local store, built on the Phase 1 HTTP client, cache and rate limiter.
   goes to urlscan through enrichment, never here.
 
 **Vulnerability intelligence** (`app/modules/vulnerability_intelligence/`)
-- Two views over one local store (a `vulnerabilities` table in SQLite):
-  - Search: paste a CVE ID or a nickname. Alias resolution, then NVD, CISA
-    KEV, EPSS, inthewild.io, GreyNoise CVE tags, GitHub proof-of-concept
-    search, ransomware.live group exploited-CVE lists and OTX pulses, shown as
-    one detail page with a P1 to P5 priority (the plugin's prioritisation
-    matrix) and the reasons behind it.
-  - Feed (dashboard): CISA KEV, EPSS and inthewild.io each publish their whole
-    dataset as one bulk file (JSON or CSV), so the feed downloads those files
-    into the table and the dashboard is a set of queries over it: added to
-    KEV in the last 7 or 30 days, flagged for ransomware use, EPSS risers
-    since the last refresh, newly exploited per inthewild. Every row links to
-    the detail page. A manual "Refresh feeds" button in Phase 2; scheduled
-    refresh waits for the Phase 5 scheduler (same parking-lot pattern as
-    bulk paste).
-- Technology watchlist: vendor and product names matched case-insensitively
-  against KEV vendorProject/product and NVD CPE strings. It is a filter and a
-  highlight on the feed, not a gate: the full feed stays one click away.
-  Editable in the UI and stored in the git-ignored data folder, because it
-  may describe the operator's own stack.
-- CVE alias table (nickname to CVE, e.g. CitrixBleed to CVE-2023-4966),
-  editable in the UI, seeded from KEV and advisories.
-- GitHub proof-of-concept search runs on demand when a detail page opens
-  (keyless limit is 10 searches a minute), cached with a TTL, and never across
-  the whole feed. VulnCheck KEV and an NVD API key are drop-in slots once the
-  operator creates those free accounts.
+
+One module page at `/vulnerability-intelligence` with four tabs (a server-
+rendered sub-navigation, no JavaScript needed), all reading one local store:
+a `vulnerabilities` table in SQLite filled from bulk feeds, plus per-CVE
+lookups made on demand and cached. Tab design agreed 2026-11-03; features
+borrowed from cve.feedly.com, VulnCheck KEV and XDB, cvedetails.com and
+AttackerKB are marked with the source they come from.
+
+1. **Dashboard** (default tab). Sections, each a query over the table:
+   - *Your stack*: new or updated vulnerabilities whose vendor/product (KEV
+     fields, NVD CPE) match the technology watchlist, newest first, with
+     KEV, EPSS and exploit-available badges. The reason the watchlist exists.
+   - *Newly known-exploited*: additions to CISA KEV and VulnCheck KEV in the
+     last 7 / 30 days, with the ransomware-use flag and, from VulnCheck, the
+     citation of the exploitation report (VulnCheck KEV lists more CVEs than
+     CISA and cites its evidence; needs the free VulnCheck token).
+   - *Trending*: EPSS risers since the last refresh (cve.feedly.com's
+     "trending" idea, driven by EPSS now and by news mentions once Phase 4
+     links articles to CVEs).
+   - *Feed status*: age of each bulk feed and a "Refresh feeds" button.
+     Manual refresh in Phase 2; scheduled refresh waits for the Phase 5
+     scheduler (same parking-lot pattern as bulk paste).
+2. **Search**. A CVE ID or nickname (alias table) opens the detail page, the
+   cve.feedly.com-style "one page per CVE" view:
+   - Header: ID, aliases, description, published and last-modified dates,
+     CVSS vector and score, CWE, and the P1 to P5 priority with the reasons
+     behind it (the plugin's prioritisation matrix: KEV, EPSS, exploit
+     availability, ransomware use, watchlist match).
+   - Affected products with version ranges from the NVD CPE configuration
+     (cvedetails.com's product table).
+   - References grouped by NVD's own tags: vendor advisory, patch, exploit,
+     third-party analysis (cvedetails.com's categorised references).
+   - Exploitation evidence: CISA KEV dates and due date, VulnCheck KEV
+     citations, inthewild.io sightings, GreyNoise tags, ransomware.live
+     groups known to exploit it, OTX pulses mentioning it.
+   - Community assessment: AttackerKB attacker-value and exploitability
+     ratings with the analyst write-ups (needs a free AttackerKB key; drop-in
+     slot, skipped when absent).
+   - Exploit availability panel: the Exploits tab's result for this CVE.
+   - Raw JSON per source, as the enrichment cards have.
+   - Slow per-CVE sources (NVD, GitHub, OTX, AttackerKB) are fetched when
+     the page opens and cached with a TTL; the bulk-fed facts render
+     instantly from the table.
+3. **Exploits**. Enter a CVE; the tab queries GitHub code/repository search,
+   inthewild.io, VulnCheck XDB (its index of exploit code across GitHub and
+   elsewhere, with the exploit type) and the Nuclei template index, and
+   lists what exists with repository, author, stars, created date and last
+   push. Links only, never a download: fake "PoC" repositories carrying
+   malware aimed at researchers are a known lure, so the tab says so and
+   shows age and star count as the analyst's first filter. GitHub keyless
+   limit is 10 searches a minute, so results are cached with a TTL and the
+   search is never run across the whole feed.
+4. **Watchlist**. Manage the technology watchlist (vendor, product, optional
+   version pattern; matched case-insensitively against KEV
+   vendorProject/product and NVD CPE vendor:product) and the CVE alias table
+   (nickname to CVE, seeded from KEV and advisories). Both editable in the
+   UI; the watchlist lives in the git-ignored data folder because it may
+   describe the operator's own stack. It is a filter and a highlight, not a
+   gate: the full feed stays one tab away.
+
+Bulk feeds (downloaded whole into the table): CISA KEV JSON, EPSS daily
+CSV, inthewild.io exploited list, VulnCheck KEV (token). Per-CVE lookups
+(on demand, cached): NVD, GitHub search, OTX, GreyNoise, ransomware.live,
+AttackerKB, VulnCheck XDB. Keys needed: VulnCheck and AttackerKB are free
+accounts the operator creates when wanted; an NVD key only raises the rate
+limit. Previdian was considered as a third KEV source and dropped
+(2026-11-03): it is a paid product.
+
+Three cheap signals to add once the detail page exists (agreed 2026-11-03):
+- Patch available: NVD tags references as "Patch" or "Vendor Advisory";
+  show a badge and the link, so "exploited and unpatched" stands out.
+- Score disagreement: highlight a CVE whose EPSS is high while its CVSS is
+  low (or the reverse). Those are the ones a CVSS-only triage misses.
+- Deadlines: CISA's KEV due date shown as a countdown on the dashboard and
+  the detail page; it is a federal deadline, but a useful urgency proxy.
 
 ### Phase 3: Ransomware and breach tracking, credential exposure, domain monitoring
 - Ransomware and leak tracker: ransomware.live (free PRO tier), breach.house (paid API, account TBD), RansomLook (open source, also covers markets, forums, Telegram).
@@ -695,6 +745,16 @@ Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
   table, with a technology watchlist as a filter, not a gate. Bulk feed files
   (KEV, EPSS, inthewild) are downloaded whole; per-CVE APIs (NVD, GitHub,
   OTX, GreyNoise) are queried on demand from the detail page.
+- 2026-11-03: Vulnerability intelligence laid out as four tabs (Dashboard,
+  Search, Exploits, Watchlist); see the Phase 2 section.
+- 2026-11-03: pypdf 6.21.4 added for PDF text extraction after a full vet
+  (docs/runbooks/vetting-a-dependency.md): PyPI provenance names the
+  py-pdf/pypdf publish workflow, every packaged file matches the GitHub tag,
+  no startup hooks or binaries, no known vulnerabilities. Installed at six
+  days old, one day inside the one-week rule, by operator decision: the
+  6.21.x line is security hardening for hostile PDFs, which is exactly the
+  input this toolkit feeds it. The only process execution in the package is
+  an optional external JBIG2 image decoder that is off unless configured.
 
 ## Additional free sources to consider (by phase)
 

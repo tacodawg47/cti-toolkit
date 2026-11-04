@@ -24,6 +24,12 @@ the release history is long, and the latest release is not brand new. Prefer
 packages that are well known: FastAPI, httpx, pydantic, Jinja2 are all
 mainstream with large maintainer teams.
 
+For a NEW package, go further before installing: download the wheel without
+installing it, confirm its digest and provenance, compare it with the
+project's repository at the same tag, and scan it for code a library of
+that kind has no reason to contain. The step-by-step version, with the
+`scripts/audit_wheel.py` helper, is in `vetting-a-dependency.md`.
+
 ## 2. Pin with hashes
 
 `requirements.in` lists what we want, loosely:

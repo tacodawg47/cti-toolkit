@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Extract IOCs — CTI Toolkit{% endblock %}
+{% block content %}
+<h1>Extract IOCs</h1>
+<p class="muted">Paste a report, give the URL of an advisory, or upload a PDF.
+  Defanged indicators (hxxp, [.], (dot), [at]) are recognised. Each result can
+  be sent to enrichment with one click.</p>
+
+<form method="post" action="/extract" enctype="multipart/form-data">
+  <textarea name="text" rows="10"
+            placeholder="Paste text here: a blog post, an advisory, an email, a tweet…">{{ text | default('') }}</textarea>
+  <p style="margin: 10px 0 4px;">
+    <label class="muted">or fetch a page (HTTPS, public sites only; for reports and advisories, never for a suspected malicious URL):</label>
+    <input type="text" name="url" value="{{ url | default('') }}" placeholder="https://vendor.example/blog/report">
+  </p>
+  <p style="margin: 6px 0 4px;">
+    <label class="muted">or upload a PDF or text file (max 10 MB):</label>
+    <input type="file" name="file" accept=".pdf,.txt,.csv,.json,.html,.htm,.md,application/pdf,text/*">
+  </p>
+  <button type="submit">Extract</button>
+</form>
+
+{% if error %}
+  <div class="card"><p class="err">⚠ {{ error }}</p></div>
+{% endif %}
+
+{% if result %}
+  <div class="card">
+    {%- set names = {"ip": ("IP", "IPs"), "domain": ("domain", "domains"), "url": ("URL", "URLs"),
+                     "hash": ("hash", "hashes"), "email": ("email", "emails"), "cve": ("CVE", "CVEs")} -%}
+    <strong>Source:</strong> {{ source }} — {{ "{:,}".format(result.chars) }} characters examined{% if result.truncated %} <span class="err">(input cut at the size limit)</span>{% endif %}.
+    <br>
+    <strong>Found:</strong>
+    {% if result.items -%}
+      {% for t in type_order if result.counts.get(t) -%}
+        {{ result.counts[t] }} {{ names[t][0] if result.counts[t] == 1 else names[t][1] }}{% if not loop.last %}, {% endif %}
+      {%- endfor %}.
+    {%- else %}
+      nothing that looks like an indicator.
+    {%- endif %}
+  </div>
+
+  {% for t in type_order %}
+    {% set items = result.by_type(t) %}
+    {% if items %}
+      <div class="card">
+        <h3>{{ {"ip": "IP addresses", "domain": "Domains", "url": "URLs", "hash": "File hashes",
+                "email": "Email addresses", "cve": "CVE identifiers"}[t] }}
+          <small>({{ items | length }})</small></h3>
+        <table>
+          {% for i in items %}
+            <tr{% if i.popular_rank or i.note in ("private", "loopback", "link-local", "multicast", "reserved", "documentation") %} class="dim"{% endif %}>
+              <td style="width: 65%; word-break: break-all;"><code>{{ i.value }}</code>
+                {% if i.defanged %}<span class="badge badge-defanged" title="only seen in defanged form">defanged</span>{% endif %}
+                {% if i.popular_rank %}<span class="badge badge-popular" title="in the Tranco top list; enrichment would skip it">Tranco #{{ "{:,}".format(i.popular_rank) }}</span>{% endif %}
+                {% if i.note %}<span class="badge{% if i.note in ("private", "loopback", "link-local", "multicast", "reserved", "documentation") %} badge-private{% endif %}">{{ i.note }}</span>{% endif %}
+              </td>
+              <td style="width: 10%;">{% if i.count > 1 %}×{{ i.count }}{% endif %}</td>
+              <td style="text-align: right;">
+                {% if t in ("ip", "domain", "url", "hash") %}
+                  <form class="inline-form" method="post" action="/enrich">
+                    <input type="hidden" name="indicator" value="{{ i.value }}">
+                    <button class="small" type="submit">Enrich</button>
+                  </form>
+                {% elif t == "cve" %}
+                  <span class="muted" title="Vulnerability Intelligence module: Phase 2, in progress">vuln intel (soon)</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </table>
+        <details style="margin-top: 8px;">
+          <summary class="muted">plain list (copy and paste)</summary>
+          <textarea rows="{{ [items | length, 8] | min }}" readonly>{{ plain_list(items) }}</textarea>
+        </details>
+      </div>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+{% endblock %}

@@ -38,6 +38,7 @@ import base (so `import app...` works), and `-v` lists each test.
 | `tests/test_indicators.py` | `refang` (defanged input) and `detect_type` (hash/ip/url/domain/unknown) |
 | `tests/test_virustotal.py` | VT URL id, path building, and the malicious/suspicious/clean/unknown heuristic |
 | `tests/test_vendors.py` | every other vendor's `_summarise`; `normalise` and `canonical` (ports, punycode, IPv6); `fetch_json` branches (404, non-JSON, wrong shape, oversized body, total timeout, non-HTTPS, redirects); an end-to-end AbuseIPDB and URLhaus lookup with a mock transport and a temp database (cache round trip); the rate-limiter loop with a fake clock; the registry's crash handling, aggregate line, and the private-IP, Tranco and hashlookup gates with the "query anyway" override; the Tranco loader; config host validation; allowed Host headers; health-page path display |
+| `tests/test_extract.py` | Phase 2 extraction: the CVE indicator type; document-wide refang; every pattern (IPv4 validation, IPv6 candidates, filename-vs-domain, URL trimming, hash kinds, email, CVE); de-duplication, counts and the defanged flag; the Tranco tag; HTML to text; the URL fetcher's refusals and mocked responses; a hand-built one-page PDF through `pdf_text` and the upload route, plus the pypdf error paths; and the `/extract` route through FastAPI's test client |
 
 ## How a mocked HTTP test works
 

@@ -8,3 +8,6 @@ pydantic-settings
 jinja2
 python-multipart
 idna            # punycode for internationalised domains; already pulled in by httpx
+
+# Phase 2
+pypdf==6.21.4   # PDF text for IOC extraction; vetted 2026-11-03, see docs/runbooks/vetting-a-dependency.md
