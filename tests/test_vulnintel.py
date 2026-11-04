@@ -650,28 +650,63 @@ class PocAndRansomwareFeedTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
         self.assertFalse(res["ok"])
         self.assertIn("no API key", res["error"])
 
-    async def test_ransomware_feed_reads_profiles(self):
+    async def test_ransomware_feed_reads_profiles_and_skips_unchanged(self):
         from unittest.mock import patch
         seen_headers = {}
+        detail_calls = []
+        victims = {"clop": 2}
 
         def handler(req):
             seen_headers.update(req.headers)
             if req.url.path == "/groups":
-                return httpx.Response(200, json={"client": "t", "count": 2, "groups": [
+                return httpx.Response(200, json={"client": "t", "count": 3, "groups": [
                     {"group": "lockbit3", "victims": 1, "vulnerabilities": [{"CVE": "CVE-2023-4966", "CVSS": 7.5}]},
-                    {"group": "clop", "victims": 2}]})
+                    {"group": "clop", "victims": victims["clop"]},
+                    {"group": "0day syndicate", "victims": 0}]})
+            detail_calls.append(req.url.path)
             if req.url.path == "/groups/clop":
                 return httpx.Response(200, json={"group": "clop", "vulnerabilities": [
                     {"Vendor": "Progress", "Product": "MOVEit Transfer", "CVE": "CVE-2023-34362", "CVSS": 9.8}]})
+            if req.url.path == "/groups/0day syndicate":                   # httpx decodes the path here
+                self.assertEqual(req.url.raw_path, b"/groups/0day%20syndicate")   # but the wire is encoded
+                return httpx.Response(200, json={"group": "0day syndicate", "vulnerabilities": []})
             raise AssertionError(req.url.path)
         base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
         with patch.object(settings, "ransomwarelive_api_key", "test-key"):
             res = await rl_feed.refresh()
+            self.assertTrue(res["ok"], res)
+            self.assertEqual(res["read"], 2)
+            self.assertEqual(seen_headers.get("x-api-key"), "test-key")
+            self.assertEqual(store.ransomware_groups_for("CVE-2023-34362"), ["clop"])
+            self.assertEqual(store.ransomware_groups_for("CVE-2023-4966"), ["lockbit3"])
+            # second run: nothing changed, so no profile is re-read
+            detail_calls.clear()
+            res = await rl_feed.refresh()
+            self.assertEqual((res["read"], detail_calls), (0, []))
+            # a changed victim count triggers one re-read
+            victims["clop"] = 3
+            res = await rl_feed.refresh()
+            self.assertEqual((res["read"], detail_calls), (1, ["/groups/clop"]))
+
+    async def test_ransomware_feed_retries_on_429(self):
+        from unittest.mock import patch
+        calls = {"n": 0}
+
+        def handler(req):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return httpx.Response(429)
+            return httpx.Response(200, json={"groups": [{"group": "x", "victims": 1, "vulnerabilities": ["CVE-2024-1111"]}]})
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        sleeps = []
+
+        async def fake_sleep(s):
+            sleeps.append(s)
+        with patch.object(settings, "ransomwarelive_api_key", "k"), patch("asyncio.sleep", fake_sleep):
+            res = await rl_feed.refresh()
         self.assertTrue(res["ok"], res)
-        self.assertEqual(res["entries"], 2)
-        self.assertEqual(seen_headers.get("x-api-key"), "test-key")
-        self.assertEqual(store.ransomware_groups_for("CVE-2023-34362"), ["clop"])
-        self.assertEqual(store.ransomware_groups_for("CVE-2023-4966"), ["lockbit3"])
+        self.assertEqual(sleeps, [rl_feed.RETRY_WAIT])
+        self.assertEqual(store.ransomware_groups_for("CVE-2024-1111"), ["x"])
 
 
 class ExploitIndexParseTests(unittest.TestCase):
