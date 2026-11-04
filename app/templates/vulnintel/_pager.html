@@ -1,0 +1,9 @@
+{# Expects `t` with page, pages, start, end, total and `key`. #}
+{% if t.pages > 1 %}
+<p class="pager"><small>
+  rows {{ t.start }}–{{ t.end }} of {{ t.total }} ·
+  {% if t.page > 1 %}<a href="{{ tlink(t.key, page=t.page - 1) }}">previous</a>{% else %}<span class="muted">previous</span>{% endif %}
+  · page {{ t.page }} of {{ t.pages }} ·
+  {% if t.page < t.pages %}<a href="{{ tlink(t.key, page=t.page + 1) }}">next 10</a>{% else %}<span class="muted">next</span>{% endif %}
+</small></p>
+{% endif %}

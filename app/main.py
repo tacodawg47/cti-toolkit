@@ -185,6 +185,7 @@ async def health(request: Request):
         "nvd (optional)": bool(settings.nvd_api_key),
         "github (optional)": bool(settings.github_token),
         "ransomwarelive": bool(settings.ransomwarelive_api_key),
+        "vulncheck (optional)": bool(settings.vulncheck_api_key),
     }
     versions = {}
     for pkg in ("fastapi", "httpx", "pydantic", "uvicorn", "jinja2", "pypdf"):

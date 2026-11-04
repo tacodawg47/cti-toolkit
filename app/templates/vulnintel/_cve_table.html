@@ -1,0 +1,47 @@
+{# Expects `t` (a _table() dict), `date_label`, optional `show_heat`, `show_counts`, `empty` (message). #}
+{% set f = t.filters %}
+{% macro th(tkey, fsort, fdesc, key, label) -%}
+  <th><a href="{{ tlink(tkey, sort=key, dir=('asc' if (fsort == key and fdesc) else 'desc')) }}" class="sortlink">{{ label }}{% if fsort == key %} {{ '▼' if fdesc else '▲' }}{% endif %}</a></th>
+{%- endmacro %}
+{% include "vulnintel/_filterbar.html" %}
+{% if not t.rows %}
+  <p class="muted">{{ empty or "Nothing matches." }}</p>
+{% else %}
+  <table>
+    <tr>
+      {{ th(t.key, f.sort, f.desc, "cve_id", "CVE") }}
+      {{ th(t.key, f.sort, f.desc, "vendor", "Vendor") }}
+      {{ th(t.key, f.sort, f.desc, "product", "Product") }}
+      {{ th(t.key, f.sort, f.desc, "date", date_label) }}
+      <th>Fix</th>
+      <th>Exploit code</th>
+      {{ th(t.key, f.sort, f.desc, "cvss", "CVSS") }}
+      {{ th(t.key, f.sort, f.desc, "epss", "EPSS") }}
+      {% if show_heat %}{{ th(t.key, f.sort, f.desc, "heat", "Heat") }}<th>Why</th>{% endif %}
+    </tr>
+    {% for r in t.rows %}
+      <tr>
+        <td style="white-space: nowrap;">{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}
+          {% for s in r.sources %}<span class="badge{% if s == 'cisa' %} badge-kev{% endif %}" title="listed as exploited">{{ kev_names.get(s, s) }}</span>{% endfor %}
+          {% if r.ransomware %}<span class="badge badge-ransom" title="known ransomware campaign use">ransomware</span>{% endif %}</td>
+        <td>{{ r.vendor or "—" }}</td>
+        <td>{{ r.product or "—" }}</td>
+        <td>{{ r.date or "—" }}</td>
+        <td>{% if r.fix == "patch" %}<span class="ok">patch</span>{% elif r.fix == "advisory" %}<span class="ok">advisory</span>{% elif r.fix == "none" %}<span class="err">none</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td style="white-space: nowrap;">
+          {% if r.code.msf %}<span class="badge badge-kev" title="Metasploit module">MSF</span>{% endif %}
+          {% if r.code.edb %}<span class="badge" title="Exploit-DB entry">EDB{% if show_counts and r.edb %} ×{{ r.edb }}{% endif %}</span>{% endif %}
+          {% if r.code.gh %}<span class="badge" title="GitHub repositories">GitHub{% if show_counts and r.repos %} ×{{ r.repos }}{% endif %}</span>{% endif %}
+          {% if r.code.nuclei %}<span class="badge" title="Nuclei template">Nuclei</span>{% endif %}
+          {% if not (r.code.msf or r.code.edb or r.code.gh or r.code.nuclei) %}<span class="muted">—</span>{% endif %}</td>
+        <td>{{ r.cvss if r.cvss is not none else "—" }}</td>
+        <td>{{ "%.2f" | format(r.epss) if r.epss is not none else "—" }}</td>
+        {% if show_heat %}
+          <td style="white-space: nowrap;"><strong>{{ r.heat }}</strong><span class="barwrap"><span class="bar" style="width: {{ (r.heat / 133 * 100) | round | int }}%"></span></span></td>
+          <td><small>{{ r.parts | join(", ") }}</small></td>
+        {% endif %}
+      </tr>
+    {% endfor %}
+  </table>
+  {% include "vulnintel/_pager.html" %}
+{% endif %}

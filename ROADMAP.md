@@ -230,9 +230,20 @@ Built 2026-11-04 after the live dashboard review:
   the detail page. First pass; more belongs with the dashboards parking-lot
   item.
 - A "ransomware groups and the CVEs they exploit" table on the Dashboard:
-  this year's CVEs and the top 15 groups by default, all years on request.
+  this year's CVEs by default, all years on request, one CVE per line.
   The data lives in data/cti.db (ransomware_cves, ransomware_groups) and is
-  never re-served.
+  never re-served. Victim counts are all-time until the Phase 3 feed.
+- Dashboard workshop (2026-11-04): the feed table and refresh buttons
+  moved to a Feeds tab with a one-line status on the Dashboard; every CVE
+  table shares one renderer with separate vendor and product columns, Fix
+  and Exploit-code columns, dropdown filters (vendor, tags, EPSS, window),
+  sortable headers and ten-row paging, all server-side in the URL; CISA due
+  dates dropped from the Dashboard (kept on the detail page); chart legend;
+  heat defined in one line; "Ask your AI" wording for the text block;
+  "show 30 days" labels; Exploits tab sorts newest or hottest. Collapsible
+  sections deferred (need a little script to remember state; with HTMX).
+- VulnCheck KEV and XDB: key slot added (VULNCHECK_API_KEY); the feed is
+  the next source to wire once the operator's community token exists.
 - Ingest everything, surface selectively (decided): KEV ignores CVSS and
   many exploited CVEs are medium severity, EPSS is needed for every CVE a
   page can open, and the exploit indexes are small. Filtering happens on

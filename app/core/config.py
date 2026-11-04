@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     # ransomware.live PRO (free key from my.ransomware.live): group profiles
     # with the CVEs each group exploits. Phase 3 reuses it for victims.
     ransomwarelive_api_key: str = ""
+    # VulnCheck community token: VulnCheck KEV (broader than CISA's, with
+    # citations) and the XDB exploit index. Feed wired once a key exists.
+    vulncheck_api_key: str = ""
 
     # Server: local only by design.
     host: str = "127.0.0.1"

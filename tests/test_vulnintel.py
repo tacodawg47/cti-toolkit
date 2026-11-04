@@ -20,7 +20,7 @@ import httpx
 from app.core import db
 from app.core.config import settings
 from app.modules.enrich import base
-from app.modules.vulnerability_intelligence import brief, charts, hotness, priority, routes, service, store
+from app.modules.vulnerability_intelligence import brief, charts, hotness, priority, routes, service, store, tables
 from app.modules.vulnerability_intelligence.feeds import chatter as chatter_feed
 from app.modules.vulnerability_intelligence.feeds import nvd_recent
 from app.modules.vulnerability_intelligence.feeds import epss as epss_feed
@@ -440,8 +440,14 @@ class RouteTests(TempDbMixin, unittest.TestCase):
     def test_dashboard_empty(self):
         r = self.client.get("/vulnerability-intelligence")
         self.assertEqual(r.status_code, 200)
+        self.assertIn("No feeds loaded yet", r.text)
+        self.assertIn("The watchlist is empty", r.text)
+        r = self.client.get("/vulnerability-intelligence/feeds")
+        self.assertEqual(r.status_code, 200)
         self.assertIn("not loaded", r.text)
-        self.assertIn("watchlist is empty", r.text)
+        self.assertIn("Refresh feeds", r.text)
+        # the refresh buttons live on the Feeds tab only
+        self.assertNotIn('action="/vulnerability-intelligence/refresh"', self.client.get("/vulnerability-intelligence").text)
 
     def test_search_redirects_for_cve_and_alias(self):
         r = self.client.get("/vulnerability-intelligence/search", params={"q": "cve-2023-4966"}, follow_redirects=False)
@@ -1094,6 +1100,56 @@ class DashboardDataTests(TempDbMixin, unittest.TestCase):
         self.assertEqual(len(store.ransomware_group_table(year=2026, limit=1)), 1)
 
 
+class TableHelperTests(unittest.TestCase):
+    def _rows(self):
+        return [
+            {"cve_id": "CVE-2026-1", "vendor": "Ivanti", "product": "A", "date": "2026-11-01", "cvss": 9.0, "epss": 0.9,
+             "kev": True, "ransomware": False, "code": {"msf": True, "edb": False, "nuclei": False, "gh": False}},
+            {"cve_id": "CVE-2026-2", "vendor": "Citrix", "product": "B", "date": "2026-10-01", "cvss": None, "epss": 0.2,
+             "kev": False, "ransomware": True, "code": {"msf": False, "edb": True, "nuclei": False, "gh": False}},
+            {"cve_id": "CVE-2026-3", "vendor": None, "product": None, "date": None, "cvss": 5.0, "epss": None,
+             "kev": False, "ransomware": False, "code": {"msf": False, "edb": False, "nuclei": False, "gh": False}},
+        ]
+
+    def test_parse(self):
+        from starlette.datastructures import QueryParams
+        f = tables.Filters.parse(QueryParams("x_vendor=Ivanti&x_tag=exploited&x_tag=bogus&x_epss=0.5&x_since=30&x_sort=cvss&x_dir=asc&x_page=3"), "x")
+        self.assertEqual((f.vendor, f.tags, f.epss, f.since, f.sort, f.desc, f.page), ("Ivanti", ["exploited"], 0.5, 30, "cvss", False, 3))
+        self.assertTrue(f.active)
+        f = tables.Filters.parse(QueryParams("x_epss=0.3&x_since=5&x_sort=nope&x_page=-2"), "x", "date")
+        self.assertEqual((f.epss, f.since, f.sort, f.desc, f.page), (None, None, "date", True, 1))
+        self.assertFalse(f.active)
+
+    def test_apply_filters_and_sorts(self):
+        rows = self._rows()
+        f = tables.Filters(vendor="ivanti")
+        self.assertEqual([r["cve_id"] for r in tables.apply(rows, f)], ["CVE-2026-1"])
+        f = tables.Filters(tags=["code"])
+        self.assertEqual([r["cve_id"] for r in tables.apply(rows, f)], ["CVE-2026-1", "CVE-2026-2"])
+        f = tables.Filters(tags=["weaponised", "exploited"])
+        self.assertEqual([r["cve_id"] for r in tables.apply(rows, f)], ["CVE-2026-1"])
+        f = tables.Filters(epss=0.5)
+        self.assertEqual([r["cve_id"] for r in tables.apply(rows, f)], ["CVE-2026-1"])
+        f = tables.Filters(since=30)
+        self.assertEqual([r["cve_id"] for r in tables.apply(rows, f, since_day="2026-10-15")], ["CVE-2026-1"])
+        f = tables.Filters(sort="cvss", desc=True)
+        self.assertEqual([r["cve_id"] for r in tables.apply(rows, f)], ["CVE-2026-1", "CVE-2026-3", "CVE-2026-2"])   # None last
+        f = tables.Filters(sort="vendor", desc=False)
+        self.assertEqual([r["cve_id"] for r in tables.apply(rows, f)], ["CVE-2026-2", "CVE-2026-1", "CVE-2026-3"])
+        self.assertEqual(tables.vendor_options(rows), ["Citrix", "Ivanti"])
+
+    def test_paginate_and_fix(self):
+        rows = [{"n": i} for i in range(23)]
+        p = tables.paginate(rows, 3)
+        self.assertEqual((p["page"], p["pages"], p["start"], p["end"], [r["n"] for r in p["rows"]]), (3, 3, 21, 23, [20, 21, 22]))
+        self.assertEqual(tables.paginate(rows, 99)["page"], 3)
+        self.assertEqual(tables.paginate([], 1)["start"], 0)
+        self.assertEqual(tables.fix_status(1, "[]"), "patch")
+        self.assertEqual(tables.fix_status(0, '[{"tags": ["Vendor Advisory"]}]'), "advisory")
+        self.assertEqual(tables.fix_status(0, "[]"), "none")
+        self.assertIsNone(tables.fix_status(None, None))
+
+
 class ChartTests(unittest.TestCase):
     def test_monthly_bars(self):
         svg = charts.monthly_bars([{"month": "2026-10", "total": 10, "ransomware": 4},
@@ -1139,16 +1195,21 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
         self.assertIn("New exploit code", r.text)
         self.assertIn("/cve/CVE-2024-3400", r.text)
         self.assertIn("Hottest right now", r.text)
-        self.assertIn("text brief", r.text)
+        self.assertIn("Ask your AI.", r.text)
+        self.assertNotIn("reveals nothing", r.text)
         self.assertIn("- CVE-2024-3400 |", r.text)          # the brief lists it (PoC this week)
         self.assertIn("Ransomware groups and the CVEs they exploit", r.text)
-        r = self.client.get("/vulnerability-intelligence?hot=100")
-        self.assertIn("show 10", r.text)
-        r = self.client.get("/vulnerability-intelligence?poc=stack")
-        self.assertIn("No new exploit code for anything on the watchlist", r.text)
+        self.assertIn("show 30 days", r.text)
+        self.assertNotIn("Due", r.text.split("Trending")[0].split("Hottest")[1])   # no due-date column
+        # the vendor filter on the exploit-code table keeps the row for a non-matching vendor out
+        r = self.client.get("/vulnerability-intelligence?poc_vendor=Nobody")
+        self.assertIn("No new exploit code matches.", r.text)
+        self.assertIn("0 of 1 rows", r.text)
         r = self.client.get("/vulnerability-intelligence/exploits")
         self.assertIn("Recently published exploit code", r.text)
         self.assertIn("/cve/CVE-2024-3400", r.text)
+        r = self.client.get("/vulnerability-intelligence/exploits?poc_sort=heat")
+        self.assertIn("Why", r.text)
 
     def test_dashboard_charts_and_groups(self):
         from datetime import datetime, timezone
@@ -1162,9 +1223,38 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
         self.assertIn("Citrix", r.text)                        # vendor chart label
         self.assertIn("clop", r.text)
         self.assertIn("CVE-2026-118527", r.text)
+        self.assertIn("Victims (all time)", r.text)
+        self.assertIn("of which known ransomware use", r.text)   # chart legend
         r = self.client.get("/vulnerability-intelligence?groups=all")
         self.assertIn("CVE-2026-118527", r.text)
-        self.assertIn("CVE-2026 only, top 15", r.text)        # the link back to the default view
+        self.assertIn("CVE-2026 only", r.text)                   # the link back to the default view
+
+    def test_tables_filter_sort_and_page(self):
+        from datetime import datetime, timezone
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        rows = []
+        for i in range(12):
+            rows.append({"cve_id": f"CVE-2026-{10000 + i}", "vendor": "Ivanti" if i % 2 else "Citrix",
+                         "product": f"P{i}", "name": "x", "date_added": today, "due_date": None,
+                         "ransomware": 1 if i == 3 else 0, "description": "", "required_action": "",
+                         "notes": "", "cwes": []})
+        store.upsert_kev(rows, "cisa")
+        store.upsert_epss([(f"CVE-2026-{10000 + i}", 0.05 * i, 0.5) for i in range(12)], today)
+        store.upsert_exploits("metasploit", [{"ref": "m", "cve_id": "CVE-2026-10003", "title": "t", "url": None,
+                                              "date": None, "kind": "exploit", "platform": None, "verified": 1}])
+        r = self.client.get("/vulnerability-intelligence")
+        self.assertIn("rows 1–10 of 12", r.text)                 # newly known-exploited, paged
+        self.assertIn("next 10", r.text)
+        r = self.client.get("/vulnerability-intelligence?kev_page=2")
+        self.assertIn("rows 11–12 of 12", r.text)
+        r = self.client.get("/vulnerability-intelligence?kev_vendor=Ivanti&kev_tag=ransomware&kev_tag=weaponised")
+        self.assertIn("1 of 12 rows", r.text)
+        self.assertIn("CVE-2026-10003", r.text)
+        r = self.client.get("/vulnerability-intelligence?kev_epss=0.5")
+        self.assertIn("2 of 12 rows", r.text)                    # 0.50 and 0.55
+        r = self.client.get("/vulnerability-intelligence?kev_sort=epss&kev_dir=asc")
+        body = r.text.split("Newly known-exploited")[1]
+        self.assertLess(body.index("CVE-2026-10000"), body.index("CVE-2026-10001"))
 
     def test_cve_page_shows_ransomware_groups(self):
         store.upsert_ransomware_cves([("CVE-2023-4966", "lockbit3")])

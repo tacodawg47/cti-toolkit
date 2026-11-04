@@ -1,0 +1,47 @@
+{% extends "vulnintel/layout.html" %}
+{% block tab %}
+<div class="card">
+  <h3>Feeds</h3>
+  <table>
+    <tr><th>Feed</th><th>Last fetched</th><th>Entries</th><th>Version</th><th>Status</th></tr>
+    {% for key, label in feed_labels.items() %}
+      {% set f = feeds.get(key) %}
+      <tr>
+        <th>{{ label }}</th>
+        <td>{% if f and f.fetched_at %}{{ f.fetched_at | ago }}{% else %}never{% endif %}</td>
+        <td>{% if f and f.entries %}{{ "{:,}".format(f.entries) }}{% else %}—{% endif %}</td>
+        <td>{{ f.version if f and f.version else "—" }}</td>
+        <td>{% if f and f.error %}<span class="err">⚠ {{ f.error }}</span>{% elif f and f.fetched_at %}<span class="ok">ok</span>{% else %}<span class="no">not loaded</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+  </table>
+  <form method="post" action="{{ prefix }}/refresh" style="margin-top: 10px;">
+    <button type="submit" class="small">Refresh feeds</button>
+    <small>Downloads CISA KEV (2 MB), ENISA's exploited list (about 20 pages), EPSS (3 MB), NVD's changes
+      since the last run (seven days the first time), the Exploit-DB index (10 MB), the Metasploit module
+      index (11 MB), the Nuclei CVE index (2 MB) and the last 48 hours of sightings, runs the GitHub search
+      for the last 7 days of CVE-named repositories, and reloads the local tables. Two or three minutes
+      without an NVD key, about one with it. Scheduled refresh arrives with the Phase 5 scheduler.</small>
+  </form>
+  <form method="post" action="{{ prefix }}/refresh-ransomware" style="margin-top: 8px;">
+    <button type="submit" class="small">Refresh ransomware groups</button>
+    <small>Reads group profiles from ransomware.live PRO for the CVEs each group exploits, one request a
+      second. The first run reads all 400-odd profiles (about seven minutes); later runs re-read only groups whose
+      victim count changed (seconds). Needs <code>RANSOMWARELIVE_API_KEY</code>. Once a day is plenty.</small>
+  </form>
+</div>
+
+<div class="card">
+  <h3>Store</h3>
+  <table>
+    <tr><th>Known-exploited CVEs</th><td>{{ "{:,}".format(counts.kev) }}</td></tr>
+    <tr><th>EPSS-scored CVEs</th><td>{{ "{:,}".format(counts.epss) }}</td></tr>
+    <tr><th>With an Exploit-DB entry</th><td>{{ "{:,}".format(counts.exploits.get("exploitdb", 0)) }}</td></tr>
+    <tr><th>With a Metasploit module</th><td>{{ "{:,}".format(counts.exploits.get("metasploit", 0)) }}</td></tr>
+    <tr><th>With a Nuclei template</th><td>{{ "{:,}".format(counts.exploits.get("nuclei", 0)) }}</td></tr>
+    <tr><th>Tied to ransomware groups</th><td>{{ "{:,}".format(counts.ransomware) }}</td></tr>
+  </table>
+  <p class="muted"><small>Everything lives in <code>data/cti.db</code> (git-ignored). Sources, limits and keys are in
+    <code>docs/runbooks/vulnerability-intelligence.md</code>.</small></p>
+</div>
+{% endblock %}
