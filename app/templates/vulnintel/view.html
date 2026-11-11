@@ -1,0 +1,15 @@
+{% extends "vulnintel/layout.html" %}
+{% block title %}{{ view.title }} — CTI Toolkit{% endblock %}
+{% block tab %}
+<div class="card">
+  <h2 style="margin: 0 0 6px;">{{ view.title }} <small class="muted">view {{ view.number }} · {{ "{:,}".format(t.unfiltered) }} CVEs</small></h2>
+  <p><small>{{ view.rule }}</small></p>
+  {% for n in view.notes %}<p class="muted"><small>{{ n }}</small></p>{% endfor %}
+  {% with date_label = view.date_label, show_maturity = view.show_maturity,
+          empty = ("The watchlist is empty: add vendors and products on the Watchlist tab." if view.slug == "watchlist" and t.unfiltered == 0
+                   else "Nothing matches." if t.unfiltered else "Nothing in this view yet: load the feeds on the Feeds tab.") %}
+    {% include "vulnintel/_cve_table.html" %}
+  {% endwith %}
+  <p class="muted"><small><a href="{{ prefix }}/views">All views</a></small></p>
+</div>
+{% endblock %}

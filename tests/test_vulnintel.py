@@ -1551,3 +1551,134 @@ class SsvcOtxPageTests(TempDbMixin, unittest.TestCase):
     def test_page_without_otx_key(self):
         r = self.client.get("/vulnerability-intelligence/cve/CVE-2023-4966")
         self.assertIn("Add OTX_API_KEY to .env", r.text)
+
+
+CIRCL_KEV_ITEMS = [
+    {"vulnerability": {"vulnId": "CVE-2026-0001"}, "gcve": {"origin_uuid": "c8fb6bf1-f81f-4cb8-95b1-eadbb3b54ee8"},
+     "status": {"exploited": True, "status_reason": "confirmed"},
+     "timestamps": {"first_seen_at": "2026-11-08T00:00:00+00:00"},
+     "evidence": [{"source": "shadowserver", "details": {"feed": "Shadowserver honeypot"}}],
+     "scope": {"notes": "Affected: Fortinet"}, "characteristics": {"remote_code_execution": True}},
+    {"vulnerability": {"vulnId": "CVE-2026-0002"}, "gcve": {"origin_uuid": "405284c2-e461-4670-8979-7fd2c9755a60"},
+     "status": {"exploited": True, "status_reason": "confirmed"}, "timestamps": {"first_seen_at": "2026-11-01T00:00:00Z"},
+     "evidence": []},                                                     # CISA via CIRCL: skipped
+    {"vulnerability": {"vulnId": "CVE-2026-0003"}, "gcve": {"origin_uuid": "1a89b78e-f703-45f3-bb86-59eb712668bd"},
+     "status": {"exploited": True, "status_reason": "confirmed"}, "timestamps": {"asserted_at": "2026-11-09T00:00:00Z"},
+     "evidence": []},                                                     # CIRCL's own
+    {"vulnerability": {"vulnId": "CVE-2026-0004"}, "gcve": {"origin_uuid": "x"},
+     "status": {"exploited": True, "status_reason": "suspected"}, "timestamps": {}, "evidence": []},   # suspected: skipped
+    {"vulnerability": {"vulnId": "not-a-cve"}, "status": {"exploited": True, "status_reason": "confirmed"}},
+]
+
+
+class CirclKevTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
+    async def asyncTearDown(self):
+        await base.aclose()
+
+    def test_parse_items(self):
+        from app.modules.vulnerability_intelligence.feeds import circl_kev
+        out = circl_kev.parse_items(CIRCL_KEV_ITEMS)
+        self.assertEqual(sorted(out), ["circl", "shadowserver"])
+        row = out["shadowserver"][0]
+        self.assertEqual((row["cve_id"], row["date_added"]), ("CVE-2026-0001", "2026-11-08"))
+        self.assertTrue(row["notes"].startswith("Remote code execution."))
+        self.assertEqual(out["circl"][0]["date_added"], "2026-11-09")
+        self.assertIn("shadowserver", priority.KEV_NAMES)
+
+    async def test_refresh_pages_and_stores(self):
+        from app.modules.vulnerability_intelligence.feeds import circl_kev
+
+        def handler(req):
+            self.assertEqual(req.url.path, "/api/kev/")
+            return httpx.Response(200, json={"metadata": {"count": 5}, "data": CIRCL_KEV_ITEMS})
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        res = await circl_kev.refresh()
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(res["entries"], 2)
+        self.assertEqual([k["source"] for k in store.get_kev("CVE-2026-0001")], ["shadowserver"])
+        self.assertEqual(store.get_kev("CVE-2026-0002"), [])
+
+
+class ViewTests(TempDbMixin, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        rows, _ = kev_feed.parse(json.dumps(KEV_DOC).encode())          # CVE-2023-4966 (Citrix), CVE-2026-118527 (Ivanti)
+        store.upsert_kev(rows, "cisa")
+        store.upsert_kev([{**rows[0], "date_added": "2023-10-10"}], "shadowserver")   # earlier listing elsewhere
+        store.upsert_exploits("metasploit", [{"ref": "exploit/x", "cve_id": "CVE-2023-4966", "title": "t", "url": None,
+                                             "date": None, "kind": "exploit", "platform": None, "verified": 0}])
+        store.upsert_exploits("nuclei", [{"ref": "cves/2025/CVE-2025-1111.yaml", "cve_id": "CVE-2025-1111", "title": "t",
+                                          "url": None, "date": None, "kind": "high", "platform": None, "verified": 0}])
+        store.upsert_poc_repos(poc_feed.parse_items([gh_repo("CVE-2025-2222-poc", "2026-11-01", 3)]))
+        store.upsert_epss([("CVE-2025-1111", 0.6, 0.9), ("CVE-2025-2222", 0.2, 0.8)], "2026-11-10")
+
+    def test_exploited_view(self):
+        from app.modules.vulnerability_intelligence import views
+        rows = {r["cve_id"]: r for r in views.BY_SLUG["exploited"].rows()}
+        self.assertEqual(set(rows), {"CVE-2023-4966", "CVE-2026-118527"})
+        citrix = rows["CVE-2023-4966"]
+        self.assertEqual(citrix["sources"], ["cisa", "shadowserver"])
+        self.assertEqual(citrix["date"], "2023-10-10")                   # earliest listing = first seen exploited
+        self.assertTrue(citrix["ransomware"])
+        self.assertEqual(citrix["maturity"], "module")
+        self.assertEqual(views.BY_SLUG["exploited"].count(), 2)
+
+    def test_code_not_exploited_view(self):
+        from app.modules.vulnerability_intelligence import views
+        v = views.BY_SLUG["code"]
+        rows = {r["cve_id"]: r for r in v.rows()}
+        self.assertEqual(set(rows), {"CVE-2025-1111", "CVE-2025-2222"})   # the Metasploit CVE is exploited, so not here
+        self.assertEqual(rows["CVE-2025-1111"]["maturity"], "template")
+        self.assertEqual(rows["CVE-2025-2222"]["maturity"], "proof of concept")
+        self.assertEqual(rows["CVE-2025-2222"]["date"], "2026-11-01")
+        self.assertEqual(v.count(), 2)
+
+    def test_watchlist_view(self):
+        from app.modules.vulnerability_intelligence import views
+        self.assertEqual(views.BY_SLUG["watchlist"].rows(), [])
+        store.add_watchlist("Ivanti")
+        rows = views.BY_SLUG["watchlist"].rows()
+        self.assertEqual([r["cve_id"] for r in rows], ["CVE-2026-118527"])
+        self.assertEqual(rows[0]["matched"], ["Ivanti"])
+
+
+class ViewRouteTests(ViewTests):
+    def setUp(self):
+        super().setUp()
+        from fastapi.testclient import TestClient
+        from app.main import app
+        self.client = TestClient(app, base_url="http://127.0.0.1")
+
+    def test_views_pages(self):
+        r = self.client.get("/vulnerability-intelligence/views")
+        self.assertIn("Exploit code, not yet exploited", r.text)
+        r = self.client.get("/vulnerability-intelligence/views/code")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Exploit maturity", r.text)
+        self.assertIn(">template</a>", r.text)
+        # default sort is newest code first: the GitHub PoC has a date, the Nuclei-only row does not
+        self.assertLess(r.text.index("CVE-2025-2222"), r.text.index("CVE-2025-1111"))
+        r = self.client.get("/vulnerability-intelligence/views/code?v_sort=epss&v_dir=desc")
+        self.assertLess(r.text.index("CVE-2025-1111"), r.text.index("CVE-2025-2222"))
+        r = self.client.get("/vulnerability-intelligence/views/exploited?v_tag=ransomware")
+        self.assertIn("CVE-2023-4966", r.text)
+        self.assertNotIn("CVE-2026-118527</code>", r.text)
+        self.assertIn("No view named", self.client.get("/vulnerability-intelligence/views/nope").text)
+
+    def test_dashboard_counters(self):
+        r = self.client.get("/vulnerability-intelligence")
+        self.assertIn('href="/vulnerability-intelligence/views/exploited" class="viewcount"><strong>2</strong> Exploited', r.text)
+
+
+class FirstSeenTests(TempDbMixin, unittest.TestCase):
+    def test_old_cve_reported_again_is_not_new(self):
+        from datetime import datetime, timezone
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        rows, _ = kev_feed.parse(json.dumps(KEV_DOC).encode())
+        old = [r for r in rows if r["cve_id"] == "CVE-2023-4966"]           # CISA listed 2023-10-18
+        store.upsert_kev(old, "cisa")
+        store.upsert_kev([{**old[0], "date_added": today}], "shadowserver")  # a honeypot saw it today
+        self.assertEqual(store.recent_kev(7), [])                            # not "newly exploited"
+        hot = {r["cve_id"]: r for r in service.hottest(10)}["CVE-2023-4966"]
+        self.assertEqual(hot["first_exploited"], "2023-10-18")
+        self.assertTrue(any(p.startswith("listed ") and p.endswith("y ago") for p in hot["parts"]), hot["parts"])

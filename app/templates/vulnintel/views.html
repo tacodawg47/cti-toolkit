@@ -1,0 +1,18 @@
+{% extends "vulnintel/layout.html" %}
+{% block tab %}
+{% if error %}<div class="card"><p class="err">⚠ {{ error }}</p></div>{% endif %}
+<p class="muted">A view is a saved rule over the local store, with its own page, filters and paging. A CVE can sit in
+  several views at once. More views (Patch Tuesday, new and severe, likely next, edge and perimeter, and others)
+  are planned; see ROADMAP.md, Phase 2.</p>
+<table>
+  <tr><th>#</th><th>View</th><th>CVEs</th><th>Rule</th></tr>
+  {% for v in views %}
+    <tr>
+      <td>{{ v.number }}</td>
+      <td style="white-space: nowrap;"><a href="{{ prefix }}/views/{{ v.slug }}"><strong>{{ v.title }}</strong></a></td>
+      <td>{{ "{:,}".format(view_counts.get(v.slug, 0)) }}</td>
+      <td><small>{{ v.rule }}</small></td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %}

@@ -1,4 +1,6 @@
-{# Expects `t` (a _table() dict), `date_label`, optional `show_heat`, `empty` (message).
+{# Expects `t` (a _table() dict), `date_label`, optional `show_heat`, `show_maturity`
+   (replaces the yes/no exploit column with module / template / proof of concept),
+   `empty` (message).
    The wrapper's id is the anchor every sort, filter and page link returns to,
    so the browser lands back on this table instead of the top of the page. #}
 {% set f = t.filters %}
@@ -17,7 +19,8 @@
       {{ th(t.key, f.sort, f.desc, "product", "Product") }}
       {{ th(t.key, f.sort, f.desc, "date", date_label) }}
       <th title="From NVD's reference tags: patch = a reference tagged Patch; advisory = only a Vendor Advisory (a fix or workaround may be described there, NVD has not tagged a patch); none = neither">Fix</th>
-      <th title="Yes when a Metasploit module, Exploit-DB entry, VulnCheck XDB entry, Nuclei template or GitHub repository exists. Open the CVE for the links.">Exploit code available?</th>
+      {% if show_maturity %}<th title="module = Metasploit (packaged, point and run); template = Nuclei (a scanner check); proof of concept = Exploit-DB, VulnCheck XDB or GitHub">Exploit maturity</th>
+      {% else %}<th title="Yes when a Metasploit module, Exploit-DB entry, VulnCheck XDB entry, Nuclei template or GitHub repository exists. Open the CVE for the links.">Exploit code available?</th>{% endif %}
       {{ th(t.key, f.sort, f.desc, "cvss", "CVSS") }}
       {{ th(t.key, f.sort, f.desc, "epss", "EPSS") }}
       {% if show_heat %}{{ th(t.key, f.sort, f.desc, "heat", "Heat") }}<th>Why it's hot</th>{% endif %}
@@ -40,7 +43,8 @@
         {% if c.xdb %}{% set _ = where.append("VulnCheck XDB") %}{% endif %}
         {% if c.nuclei %}{% set _ = where.append("Nuclei") %}{% endif %}
         {% if c.gh %}{% set _ = where.append("GitHub") %}{% endif %}
-        <td>{% if where %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#exploits" class="err" title="{{ where | join(', ') }}">Yes</a>{% else %}<span class="muted">No</span>{% endif %}</td>
+        {% if show_maturity %}<td style="white-space: nowrap;"><a href="{{ prefix }}/cve/{{ r.cve_id }}#exploits" {% if r.maturity == "module" %}class="err"{% endif %} title="{{ where | join(', ') }}">{{ r.maturity or "—" }}</a></td>
+        {% else %}<td>{% if where %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#exploits" class="err" title="{{ where | join(', ') }}">Yes</a>{% else %}<span class="muted">No</span>{% endif %}</td>{% endif %}
         <td>{{ r.cvss if r.cvss is not none else "—" }}</td>
         <td>{{ "%.2f" | format(r.epss) if r.epss is not none else "—" }}</td>
         {% if show_heat %}

@@ -376,9 +376,14 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
 - VulnCheck KEV (built 2026-11-10; the XDB index is paid, see above) and
   OTX pulses by CVE (built 2026-11-11) are done. AttackerKB is dropped:
   Rapid7 retired the public platform and API on 2026-08-18.
-- A bulk SSVC source for the views that filter on it (3, 5, 11): CISA's
-  vulnrichment repository on GitHub. Today SSVC is read per CVE when a
-  detail page opens and saved in an `ssvc` table.
+- The CVE List as a bulk feed (CVEProject cvelistV5 on GitHub: a full
+  zip, then hourly change files): the reporting organisation's vendor and
+  product for every CVE from the day it is published, plus CISA's ADP
+  block with SSVC. Measured 2026-11-11: 76% of CVEs published since
+  October had no product data in NVD (its analysis backlog), so tables
+  show a dash for their vendor. This is also the bulk SSVC source the
+  views that filter on SSVC need (5, 11, and SSVC "active" in view 1);
+  today SSVC is read per CVE when a detail page opens.
 - Partial table reloads with HTMX (sort, filter, and page without a full
   page load) when HTMX is vendored; the anchors cover the annoyance until
   then.
@@ -389,7 +394,9 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   table in the database, so a CVE can sit in several and its badges show
   which. The dashboard keeps the counters, the charts, and the top rows of
   the three or four views the operator pins. Views and their membership
-  rules, in build order:
+  rules, in build order (1 to 3 built 2026-11-11: a Views tab, one page
+  per view, and a counter strip on the Dashboard; pinning waits until more
+  views exist):
   1. Exploited: in CISA KEV, VulnCheck KEV, the EUVD exploited list, any
      catalogue in Vulnerability-Lookup's `/api/kev` (it aggregates CIRCL,
      CISA, ENISA, Shadowserver and others), Microsoft `Exploited:Yes`, or
@@ -1951,9 +1958,8 @@ checker built for it also serves Phase 3 brand-handle checks.
   app/core that every feature calls; providers selected in .env;
   per-task routing (a small model for summaries and translation, a
   stronger one for TTP extraction and query suggestions); timeouts and
-  retries for slow local or serverless endpoints; a token and cost log per
-  feature; and the "sensitive data stays local" rule enforced in that
-  module, not left to each caller. Each provider is called through its own
+  retries for slow local or serverless endpoints; and a token and cost log
+  per feature. Each provider is called through its own
   official client (the Anthropic SDK for Claude; Ollama and other local
   servers through their OpenAI-compatible endpoint), not through one
   provider's client pretending to be another, so provider-specific
@@ -2524,6 +2530,17 @@ Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
 - 2026-11-11: No LLM client before Phase 11 (an outside suggestion to
   build one now was reviewed): nothing calls a model until then; the
   client's design notes are in Phase 11.
+- 2026-11-11: "Listed as exploited" means the earliest listing on any
+  list ("first seen exploited"), for the heat score, Newly
+  known-exploited, and every table. Honeypot catalogues re-date old CVEs
+  each time they see an attempt; the latest date made 2019-2021 CVEs look
+  new.
+- 2026-11-11: Vulnerability-Lookup's KEV aggregation is ingested, one
+  source per catalogue. It republishes KEVIntel and Previdian, the
+  commercial catalogues dropped as direct sources on 2026-11-03; their
+  assertions are used as CIRCL publishes them, labelled "via CIRCL".
+- 2026-11-11: View 3 (exploit code, not yet exploited) opens newest code
+  first; EPSS order is left to view 6 (Likely next).
 - 2026-11-11: Sandbox choice (CAPE, DRAKVUF Sandbox, Cuckoo3, or a hosted
   service) deferred to the malware analysis module's own phase.
 - 2026-11-11: Malware samples may be stored outside the VM, but only as

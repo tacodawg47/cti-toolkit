@@ -166,6 +166,30 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-11: views 1 to 3 and the CIRCL KEV aggregation
+
+- Vulnerability-Lookup `/api/kev/` held 6,521 entries. First full load,
+  confirmed only, CISA skipped: KEVIntel 2,759, Shadowserver 1,417,
+  Previdian 376, ENISA CSIRTs Network 82, CIRCL (its own catalogue, CTI
+  feed and incident response) 26, SiberKapan 11, Check Point 1,
+  host-logs 1. Distinct exploited CVEs went from 5,863 to 5,877: the
+  catalogues overlap heavily with CISA and VulnCheck.
+- Source names arrive with dots (`cti-feed.circl.lu`); they are normalised
+  before mapping. A first load stored six rows under the raw names; they
+  were deleted from the local database and reloaded.
+- With the new catalogues, Hottest filled with 2019-2021 CVEs again
+  (Log4Shell, Citrix CVE-2019-19781) because honeypot catalogues give old
+  CVEs fresh dates and recency used the latest listing. Switched to the
+  earliest listing. Two old CVEs (CVE-2017-12636, CVE-2011-3923) still rank
+  high because 2026-11-09 is genuinely the first time any list named
+  them.
+- Performance: the dashboard took 4.5 s after the load; 3.7 s of it was
+  the per-CVE hottest query. Rebuilt on the views' one-pass query: 1.4 s.
+  View timings on real data: exploited 0.22 s (5,877 rows), watchlist
+  0.14 s (52), code 0.59 s (26,995).
+- NVD backlog: of 12,892 CVEs published since October with an NVD record,
+  9,853 have no CPE product data (Awaiting Analysis or Deferred).
+
 ### 2026-11-11: supply-chain sources for the Phase 2 Supply chain tab
 
 The operator proposed sources; each was checked for access, licence, and
