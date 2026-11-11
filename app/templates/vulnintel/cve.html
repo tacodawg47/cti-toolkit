@@ -23,7 +23,7 @@
   <p class="muted"><small>The matrix cannot see your exposure. An internet-facing instance moves a P3 up;
     a well-isolated one with compensating controls can move a P2 down. Your call, this is the evidence.</small></p>
   <p>
-    <a href="{{ prefix }}/cve/{{ rep.cve_id }}?refresh=1">refetch NVD and GitHub</a>
+    <a href="{{ prefix }}/cve/{{ rep.cve_id }}?refresh=1">refetch NVD, GitHub and OTX</a>
     · <a href="https://nvd.nist.gov/vuln/detail/{{ rep.cve_id }}" rel="noopener noreferrer" target="_blank">NVD</a>
     · <a href="https://www.cve.org/CVERecord?id={{ rep.cve_id }}" rel="noopener noreferrer" target="_blank">cve.org</a>
     {% if rep.kev %}· <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?field_cve={{ rep.cve_id }}" rel="noopener noreferrer" target="_blank">CISA KEV</a>{% endif %}
@@ -45,7 +45,7 @@
       <tr><th>CVSS</th><td>{% if cve.cvss_score is not none %}<strong>{{ cve.cvss_score }}</strong> {{ cve.cvss_severity or "" }} <small>v{{ cve.cvss_version }}</small><br><code>{{ cve.cvss_vector }}</code>
           {% elif rep.cvss_fallback %}<strong>{{ rep.cvss_fallback.cvss_score }}</strong> {{ rep.cvss_fallback.cvss_severity or "" }} <small>not yet scored by NVD; from {{ rep.cvss_fallback.source }}</small>{% if rep.cvss_fallback.cvss_vector %}<br><code>{{ rep.cvss_fallback.cvss_vector }}</code>{% endif %}
           {% else %}not scored{% endif %}</td>
-          <th>CWE</th><td>{{ cve.cwe or "—" }}</td></tr>
+          <th>CWE</th><td>{% if cve.cwe %}{{ cve.cwe }}{% elif rep.cwe_fallback %}{{ rep.cwe_fallback }} <small>(from the CVE record; NVD has none)</small>{% else %}—{% endif %}</td></tr>
       <tr><th>EPSS</th><td>{% if rep.epss %}<strong>{{ "%.4f" | format(rep.epss.epss) }}</strong> <small>({{ "%.0f" | format(rep.epss.percentile * 100) }}th percentile, {{ rep.epss.score_date | day }}{% if rep.epss.prev_epss is not none %}, was {{ "%.4f" | format(rep.epss.prev_epss) }}{% endif %})</small>{% else %}<span class="muted">no score in the local EPSS table{% if not rep.feeds.get("epss") %} (feed not loaded){% endif %}</span>{% endif %}</td>
           <th>Fix reference</th><td>{% if rep.fix_status == "patch" %}<span class="ok">patch tagged in NVD</span>{% elif rep.fix_status == "advisory" %}<span class="ok">vendor advisory</span> <small>(see References)</small>{% else %}<span class="no">none tagged in NVD</span>{% endif %}</td></tr>
     </table>
@@ -53,6 +53,30 @@
     <p class="muted">NVD has no record for this ID. It may be reserved but not yet published, or rejected.</p>
     {% if rep.cvss_fallback %}<p>CVSS <strong>{{ rep.cvss_fallback.cvss_score }}</strong> {{ rep.cvss_fallback.cvss_severity or "" }}
       <small>from {{ rep.cvss_fallback.source }}</small>{% if rep.cvss_fallback.cvss_vector %} <code>{{ rep.cvss_fallback.cvss_vector }}</code>{% endif %}</p>{% endif %}
+  {% endif %}
+</div>
+
+{% set s = rep.ssvc %}
+<div class="card">
+  <h3>CISA SSVC <small>(Stakeholder-Specific Vulnerability Categorization, from the CISA-ADP block of the CVE record)</small></h3>
+  {% if s %}
+    <table>
+      <tr><th>Exploitation</th>
+          <td>{% if s.exploitation == "active" %}<span class="verdict-malicious">active</span>{% elif s.exploitation == "poc" %}<span class="verdict-suspicious">poc</span>{% else %}{{ s.exploitation or "—" }}{% endif %}
+            <small>none = no evidence; poc = public proof of concept; active = exploited in the wild</small></td></tr>
+      <tr><th>Automatable</th>
+          <td>{% if s.automatable == "yes" %}<span class="verdict-suspicious">yes</span>{% else %}{{ s.automatable or "—" }}{% endif %}
+            <small>yes = steps 1 to 4 of the kill chain can be scripted (reconnaissance to exploitation)</small></td></tr>
+      <tr><th>Technical impact</th>
+          <td>{% if s.technical_impact == "total" %}<span class="verdict-suspicious">total</span>{% else %}{{ s.technical_impact or "—" }}{% endif %}
+            <small>total = the attacker gets full control of the component or all of its information</small></td></tr>
+      <tr><th>Assessed</th><td>{{ s.timestamp or "—" }} <small>by {{ s.role or "CISA" }}{% if s.version %}, SSVC {{ s.version }}{% endif %}.
+        A snapshot: "none" here may be out of date, so it never lowers the priority.</small></td></tr>
+    </table>
+  {% elif rep.record.status in ("error", "quota") %}
+    <p class="err">⚠ Could not read the CVE record: {{ rep.record.error }}</p>
+  {% else %}
+    <p class="muted">CISA has not published an SSVC assessment for this CVE (it assesses new CVEs as they are published; older ones may have none).</p>
   {% endif %}
 </div>
 
@@ -134,8 +158,37 @@
   {% endif %}
 </div>
 
+{% set o = rep.otx %}
+<div class="card">
+  <h3>OTX pulses <small>(AlienVault Open Threat Exchange: community reports that mention this CVE)</small>
+    {% if o.status == "quota" %}<span class="verdict-unavailable">QUOTA</span>
+    {% elif o.status == "error" %}<span class="verdict-unavailable">UNAVAILABLE</span>{% endif %}
+  </h3>
+  {% if o.status == "not_configured" %}<p class="muted">Add OTX_API_KEY to .env to see pulses here.</p>
+  {% elif o.error %}<p class="err">⚠ {{ o.error }}</p>
+  {% elif not o.pulses %}<p class="muted">No pulse mentions this CVE.</p>
+  {% else %}
+    <p class="muted"><small>{{ o.count }} pulse{{ "" if o.count == 1 else "s" }} from {{ o.authors }} author{{ "" if o.authors == 1 else "s" }}{% if (o.series or 0) > o.pulses | length %}; the newest {{ o.pulses | length }} shown{% endif %}{% if o.cached %} (cached){% endif %}.
+      Near-identical pulses one author publishes repeatedly (daily automated lists) are folded into one row marked ×N.
+      Context, not evidence: anyone can publish a pulse, and one listing many indicators may mention this CVE only in passing.
+      Pulses never change the priority.</small></p>
+    <table>
+      <tr><th>Pulse</th><th>Author</th><th>Updated</th><th>Adversary / malware</th></tr>
+      {% for pl in o.pulses %}
+        <tr><td><a href="{{ pl.url }}" rel="noopener noreferrer nofollow" target="_blank">{{ pl.name }}</a>
+              {% if (pl.repeats or 1) > 1 %}<span class="badge" title="{{ pl.repeats }} near-identical pulses from this author since {{ pl.oldest }}; the newest is linked">×{{ pl.repeats }} since {{ pl.oldest }}</span>{% endif %}
+              {% if pl.tags %}<div class="tagline">{% for t in pl.tags %}<span class="badge">{{ t }}</span>{% endfor %}</div>{% endif %}</td>
+            <td>{% if pl.author == "AlienVault" %}<strong title="AlienVault's own curated account">AlienVault</strong>{% else %}{{ pl.author or "—" }}{% endif %}</td>
+            <td style="white-space: nowrap;">{{ pl.modified or pl.created or "—" }}</td>
+            <td><small>{{ pl.adversary or "" }}{% if pl.adversary and pl.malware %}; {% endif %}{{ pl.malware | join(", ") }}{% if pl.attack_ids %}{% if pl.adversary or pl.malware %}; {% endif %}{{ pl.attack_ids }} ATT&amp;CK technique{{ "" if pl.attack_ids == 1 else "s" }}{% endif %}</small></td></tr>
+      {% endfor %}
+    </table>
+    <p class="muted"><small><a href="https://otx.alienvault.com/indicator/cve/{{ rep.cve_id }}" rel="noopener noreferrer" target="_blank">All pulses on OTX</a></small></p>
+  {% endif %}
+</div>
+
 <div class="card" id="exploits">
-  <h3>Exploit code <small>(Metasploit, Exploit-DB, Nuclei indexes)</small></h3>
+  <h3>Exploit code <small>(Metasploit, Exploit-DB, Nuclei and VulnCheck XDB indexes)</small></h3>
   {% with exploits = rep.exploits %}{% include "vulnintel/_exploit_lists.html" %}{% endwith %}
 </div>
 
@@ -149,7 +202,7 @@
 </div>
 
 <details class="card">
-  <summary class="muted">raw data (KEV, EPSS, NVD as stored)</summary>
-  <pre style="white-space: pre-wrap; font-size: 12px;">{{ {"kev": rep.kev, "epss": rep.epss, "nvd": cve} | tojson(indent=2) }}</pre>
+  <summary class="muted">raw data (KEV, EPSS, NVD as stored, SSVC)</summary>
+  <pre style="white-space: pre-wrap; font-size: 12px;">{{ {"kev": rep.kev, "epss": rep.epss, "nvd": cve, "ssvc": rep.ssvc} | tojson(indent=2) }}</pre>
 </details>
 {% endblock %}

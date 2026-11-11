@@ -306,8 +306,8 @@ AttackerKB are marked with the source they come from.
 Bulk feeds (downloaded whole into the table): CISA KEV JSON, VulnCheck
 KEV, EPSS daily CSV, ENISA EUVD, NVD recent changes, and the Exploit-DB,
 Metasploit, and Nuclei indexes. Per-CVE lookups (on demand, cached): NVD,
-GitHub search, Vulnerability-Lookup sightings, ransomware.live, and, not
-yet wired, OTX and GreyNoise. VulnCheck XDB as its own index is a paid
+GitHub search, Vulnerability-Lookup sightings and the CVE record (with
+CISA SSVC), ransomware.live, OTX pulses, and, not yet wired, GreyNoise. VulnCheck XDB as its own index is a paid
 subscription (HTTP 402 on the community tier); the XDB exploit links that
 come inside VulnCheck KEV entries are used instead, so exploited CVEs have
 them.
@@ -327,7 +327,10 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   product, and CVSS, and the tech stack watchlist shows CVEs for watched
   products before they reach KEV), and the Exploit-DB, Metasploit, and
   Nuclei indexes (an `exploits` table, which also holds the XDB links).
-- Per-CVE lookups, cached: NVD, GitHub, ransomware.live PRO group profiles
+- Per-CVE lookups, cached: NVD, GitHub, OTX pulses (context only, never
+  scored; a daily automated series from one author folds into one row),
+  CISA SSVC from the CVE record (shown with its date; raises the priority,
+  never lowers it), ransomware.live PRO group profiles
   (the CVEs each group exploits), and Vulnerability-Lookup (CIRCL) sightings
   (keyless; exploited / published-PoC / seen types).
 - Scoring: the priority matrix (KEV, EPSS, exploit availability, ransomware
@@ -367,9 +370,12 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   inthewild.io (API down; RSS and database frozen since January 2025).
 
 **Still to wire**
-- OTX pulses by CVE. (VulnCheck KEV built 2026-11-10; the XDB index is
-  paid, see above.) AttackerKB is dropped: Rapid7 retired the public
-  platform and API on 2026-08-18.
+- VulnCheck KEV (built 2026-11-10; the XDB index is paid, see above) and
+  OTX pulses by CVE (built 2026-11-11) are done. AttackerKB is dropped:
+  Rapid7 retired the public platform and API on 2026-08-18.
+- A bulk SSVC source for the views that filter on it (3, 5, 11): CISA's
+  vulnrichment repository on GitHub. Today SSVC is read per CVE when a
+  detail page opens and saved in an `ssvc` table.
 - Partial table reloads with HTMX (sort, filter, and page without a full
   page load) when HTMX is vendored; the anchors cover the annoyance until
   then.
@@ -460,7 +466,7 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   patchtuesdaydashboard.com (gone), KEVIntel (now Previdian, paid API),
   huntr (no feed), Project Zero's in-the-wild sheet (freshness
   unconfirmed).
-- Include (2026-11-06): CISA SSVC from Vulnrichment (CC0). The CVE records
+- Include (2026-11-06; per-CVE part built 2026-11-11): CISA SSVC from Vulnrichment (CC0). The CVE records
   already fetched from Vulnerability-Lookup carry it in the CISA-ADP
   container, so no new source is needed. Store Exploitation (none / poc /
   active), Automatable (no / yes), and Technical Impact (partial / total)
@@ -2345,6 +2351,10 @@ Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
   as an index is not used: it needs a paid subscription; the XDB links
   inside KEV entries are free and stored. Data labelled "VulnCheck KEV"
   per VulnCheck's attribution request.
+- 2026-11-11: OTX pulses and CISA SSVC on the CVE detail page. Pulses
+  are context and never scored. SSVC "active" sets P1, "poc" counts as a
+  proof of concept, and automatable plus total impact sets at least P4;
+  SSVC never lowers a level.
 - 2026-11-10: The Dashboard's New exploit code table is dropped in favour
   of the Exploits tab (same rows); the Dashboard keeps charts, hottest,
   watchlist, ransomware groups, newly exploited, and trending, plus a

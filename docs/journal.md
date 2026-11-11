@@ -149,6 +149,15 @@ Built 2026-11-04 after the live dashboard review:
   Vendor Advisory reference but no Patch reference.
 - Trending was empty because EPSS had been loaded once (2026-11-03 scores);
   the 2026-11-10 refresh gave it a previous score, and it filled in.
+- 2026-11-11: OTX pulses and CISA SSVC on the detail page. First live look
+  at CVE-2024-3400: OTX returned 50 pulses from 4 authors, 39 of them one
+  account's daily "Actively_Exploited_Kev" list, which pushed every real
+  report off the first ten rows; pulses from one author with the same
+  title minus dates now fold into one row. Another account clones
+  AlienVault's pulses, so titles appear twice under different authors (left
+  visible on purpose). One account pastes hashes and paragraphs into tags;
+  tag, title and adversary lengths are capped. SSVC for CVE-2024-3400:
+  active / yes / total, assessed 2024-04-17.
 - Ingest everything, surface selectively (decided): KEV ignores CVSS and
   many exploited CVEs are medium severity, EPSS is needed for every CVE a
   page can open, and the exploit indexes are small. Filtering happens on
@@ -506,6 +515,7 @@ deployment.
   a local-only tool into a reachable website, design the security posture
   before exposing it. Open questions to work through then, with first-cut
   first-cut notes as a starting point:
+  - local AI model to analyze files (such as potential malware) and extract its configuration, metadata, hardcoded C2 information, loaded dlls, other relevant info, for tracking, correlation, research. 
   - Login-only vs fully public: default to authenticated (even a single
     account, or basic auth at a reverse proxy). The app spends metered API
     keys and exposes `/health` (key presence, versions), so an open instance

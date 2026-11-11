@@ -34,6 +34,7 @@ from app.modules.vulnerability_intelligence.feeds import vulncheck_kev as vc_fee
 from app.modules.vulnerability_intelligence.feeds import ransomwarelive as rl_feed
 from app.modules.vulnerability_intelligence.http import gunzip_bounded
 from app.modules.vulnerability_intelligence.sources import github, nvd, vulnlookup
+from app.modules.vulnerability_intelligence.sources import otx as otx_cve
 
 SIGHTINGS_DOC = {
     "metadata": {"count": 3, "page": 1, "per_page": 1000},
@@ -126,10 +127,13 @@ class TempDbMixin:
         # is tested by setting a fake one explicitly.
         self._orig_vc = settings.vulncheck_api_key
         settings.vulncheck_api_key = ""
+        self._orig_otx = settings.otx_api_key
+        settings.otx_api_key = ""
 
     def tearDown(self):
         settings.data_dir = self._orig_dir
         settings.vulncheck_api_key = self._orig_vc
+        settings.otx_api_key = self._orig_otx
         shutil.rmtree(self._tmp, ignore_errors=True)
 
 
@@ -1389,3 +1393,161 @@ class NvdKeyRejectedTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
             self.assertIn("NVD_API_KEY", store.feed_status()["nvd_recent"]["error"])
         finally:
             settings.nvd_api_key = orig
+
+
+CVE5_WITH_SSVC = {"containers": {
+    "cna": {"providerMetadata": {"shortName": "palo_alto"}, "problemTypes": [{"descriptions": [{"cweId": "CWE-77"}]}]},
+    "adp": [{"providerMetadata": {"shortName": "CISA-ADP"}, "metrics": [
+        {"other": {"type": "ssvc", "content": {"id": "CVE-2024-3400", "role": "CISA Coordinator",
+                   "options": [{"Exploitation": "active"}, {"Automatable": "yes"}, {"Technical Impact": "total"}],
+                   "version": "2.0.3", "timestamp": "2024-04-17T04:00:13.543064Z"}}},
+        {"other": {"type": "kev", "content": {"dateAdded": "2024-04-12"}}},
+        {"cvssV3_1": {"version": "3.1", "baseScore": 10.0, "baseSeverity": "CRITICAL", "vectorString": "CVSS:3.1/AV:N"}},
+    ]}]}}
+
+OTX_CVE_DOC = {"pulse_info": {"count": 3, "pulses": [
+    {"id": "aaa", "name": "Old pulse", "created": "2024-04-13T00:00:00", "modified": "2024-04-13T00:00:00",
+     "author": {"username": "someone"}, "tags": ["pan-os"], "adversary": "UTA0218",
+     "malware_families": [{"display_name": "UPSTYLE"}], "attack_ids": [{"id": "T1190"}]},
+    {"id": "bbb", "name": "New pulse", "created": "2026-11-01T00:00:00", "modified": "2026-11-03T00:00:00",
+     "author": {"username": "AlienVault"}, "tags": [], "adversary": "", "malware_families": [], "attack_ids": []},
+    {"name": "no id, skipped"},
+]}}
+
+
+class SsvcTests(unittest.TestCase):
+    def test_ssvc_and_cwe_from_record(self):
+        s = vulnlookup.ssvc_from_record(CVE5_WITH_SSVC)
+        self.assertEqual((s["exploitation"], s["automatable"], s["technical_impact"]), ("active", "yes", "total"))
+        self.assertEqual(s["timestamp"], "2024-04-17")
+        self.assertIsNone(vulnlookup.ssvc_from_record(CVE5_RECORD))     # CNA only, no CISA-ADP
+        self.assertIsNone(vulnlookup.ssvc_from_record({}))
+        self.assertEqual(vulnlookup.cwe_from_record(CVE5_WITH_SSVC), "CWE-77")
+        self.assertEqual(vulnlookup.cvss_from_record(CVE5_WITH_SSVC)["cvss_score"], 10.0)   # from CISA-ADP
+
+    def test_priority_uses_ssvc_only_to_raise(self):
+        base_args = dict(kev_sources=[], ransomware=False, epss=None, cvss=None, poc_count=0, watchlist_hits=[])
+        active = priority.compute(**base_args, ssvc={"exploitation": "active", "timestamp": "2026-11-01"})
+        self.assertEqual(active.level, "P1")
+        self.assertIn("CISA SSVC as of 2026-11-01: Exploitation active", active.reasons)
+        self.assertEqual(priority.compute(**base_args, ssvc={"exploitation": "poc"}).level, "P3")
+        severe = {"exploitation": "none", "automatable": "yes", "technical_impact": "total"}
+        self.assertEqual(priority.compute(**base_args, ssvc=severe).level, "P4")
+        # a stale "none" never lowers what other evidence set
+        kev = priority.compute(**{**base_args, "kev_sources": ["cisa"]}, ssvc={"exploitation": "none"})
+        self.assertEqual(kev.level, "P1")
+        self.assertEqual(priority.compute(**base_args).level, "P5")
+
+
+class OtxCveTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
+    async def asyncTearDown(self):
+        await base.aclose()
+
+    def test_summarise_newest_first(self):
+        o = otx_cve.summarise(OTX_CVE_DOC)
+        self.assertEqual(o["count"], 3)
+        self.assertEqual([p["name"] for p in o["pulses"]], ["New pulse", "Old pulse"])
+        self.assertEqual(o["pulses"][1]["malware"], ["UPSTYLE"])
+        self.assertEqual(o["pulses"][1]["attack_ids"], 1)
+        self.assertEqual(o["pulses"][0]["url"], "https://otx.alienvault.com/pulse/bbb")
+        self.assertEqual(o["authors"], 2)
+
+    def test_daily_series_folded_per_author(self):
+        daily = [{"id": f"d{i}", "name": f"Actively_Exploited_Kev | Nov {i}, 2026", "created": f"2026-11-{i:02d}T00:00:00",
+                  "modified": f"2026-11-{i:02d}T00:00:00", "author": {"username": "bot"}} for i in range(1, 8)]
+        clone = {"id": "c1", "name": "Actively_Exploited_Kev | Nov 3, 2026", "created": "2026-11-03T00:00:00",
+                 "modified": "2026-11-03T00:00:00", "author": {"username": "someone-else"}}
+        o = otx_cve.summarise({"pulse_info": {"count": 8, "pulses": daily + [clone]}})
+        self.assertEqual(o["series"], 2)                       # one per author
+        first = o["pulses"][0]
+        self.assertEqual((first["id"], first["repeats"], first["oldest"]), ("d7", 7, "2026-11-01"))
+        self.assertEqual(o["pulses"][1]["repeats"], 1)
+        self.assertNotEqual(otx_cve.series_key("a", "Ivanti exploitation wave"),
+                            otx_cve.series_key("a", "Citrix exploitation wave"))
+
+    async def test_pulses_not_configured_without_key(self):
+        self.assertEqual((await otx_cve.pulses("CVE-2024-3400"))["status"], "not_configured")
+
+    async def test_pulses_fetch_and_cache(self):
+        calls = []
+
+        def handler(req):
+            calls.append(req.url.path)
+            self.assertEqual(req.headers["x-otx-api-key"], "test-otx")
+            return httpx.Response(200, json=OTX_CVE_DOC)
+
+        settings.otx_api_key = "test-otx"
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        first = await otx_cve.pulses("cve-2024-3400")
+        self.assertEqual(first["status"], "ok")
+        self.assertEqual(calls, ["/api/v1/indicators/cve/CVE-2024-3400/general"])
+        second = await otx_cve.pulses("CVE-2024-3400")
+        self.assertTrue(second["cached"])
+        self.assertEqual(len(calls), 1)
+
+    async def test_report_with_ssvc_and_otx(self):
+        def handler(req):
+            if req.url.host == "services.nvd.nist.gov":
+                return httpx.Response(200, json={"vulnerabilities": []})
+            if req.url.host == "api.github.com":
+                return httpx.Response(200, json={"total_count": 0, "items": []})
+            if req.url.host == "vulnerability.circl.lu" and "/api/vulnerability/" in req.url.path:
+                return httpx.Response(200, json=CVE5_WITH_SSVC)
+            if req.url.host == "vulnerability.circl.lu":
+                return httpx.Response(200, json={"metadata": {"count": 0}, "data": []})
+            if req.url.host == "otx.alienvault.com":
+                return httpx.Response(200, json=OTX_CVE_DOC)
+            raise AssertionError(req.url)
+
+        settings.otx_api_key = "test-otx"
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        rep = await service.report("CVE-2024-3400")
+        self.assertEqual(rep["priority"].level, "P1")              # SSVC active, nothing else
+        self.assertEqual(rep["ssvc"]["exploitation"], "active")
+        self.assertEqual(store.get_ssvc("CVE-2024-3400")["automatable"], "yes")
+        self.assertEqual(rep["otx"]["count"], 3)
+        self.assertEqual(rep["cwe_fallback"], "CWE-77")
+        self.assertEqual(rep["cvss_fallback"]["cvss_score"], 10.0)
+
+
+class SsvcOtxPageTests(TempDbMixin, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        from fastapi.testclient import TestClient
+        from app.main import app
+        self.client = TestClient(app, base_url="http://127.0.0.1")
+
+        def handler(req):
+            if req.url.host == "vulnerability.circl.lu" and "/api/vulnerability/" in req.url.path:
+                return httpx.Response(200, json=CVE5_WITH_SSVC)
+            if req.url.host == "vulnerability.circl.lu":
+                return httpx.Response(200, json={"metadata": {"count": 0}, "data": []})
+            if req.url.host == "otx.alienvault.com":
+                return httpx.Response(200, json=OTX_CVE_DOC)
+            if req.url.host == "services.nvd.nist.gov":
+                return httpx.Response(200, json=NVD_DOC)
+            if req.url.host == "api.github.com":
+                return httpx.Response(200, json={"total_count": 0, "items": []})
+            raise AssertionError(req.url)
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+
+    def tearDown(self):
+        import asyncio
+        asyncio.run(base.aclose())
+        super().tearDown()
+
+    def test_page_shows_ssvc_and_pulses(self):
+        settings.otx_api_key = "test-otx"
+        r = self.client.get("/vulnerability-intelligence/cve/CVE-2023-4966")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("CISA SSVC", r.text)
+        self.assertIn('<span class="verdict-malicious">active</span>', r.text)
+        self.assertIn("2024-04-17", r.text)
+        self.assertIn("OTX pulses", r.text)
+        self.assertIn("https://otx.alienvault.com/pulse/bbb", r.text)
+        self.assertIn("UPSTYLE", r.text)
+        self.assertIn("Context, not evidence", r.text)
+
+    def test_page_without_otx_key(self):
+        r = self.client.get("/vulnerability-intelligence/cve/CVE-2023-4966")
+        self.assertIn("Add OTX_API_KEY to .env", r.text)
