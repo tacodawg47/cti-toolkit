@@ -8,13 +8,14 @@
     Feeds: {{ summary.loaded }} of {{ summary.total }} loaded{% if summary.newest %}, newest {{ summary.newest | ago }}{% endif %}{% if summary.failing %}, <span class="err">{{ summary.failing | length }} failing ({{ summary.failing | join(", ") }})</span>{% endif %}
     · <a href="{{ prefix }}/feeds">Feeds tab</a>
   {% endif %}
+  {% if new_code %}<br>New exploit code in the last 7 days for <strong>{{ new_code }}</strong> CVE{{ "" if new_code == 1 else "s" }} · <a href="{{ prefix }}/exploits">Exploits tab</a>{% endif %}
 </p>
 
 {% if chart_monthly or chart_vendors %}
 <div class="card">
   <h3>Exploitation over the last 12 months <small>(CVEs first listed as exploited per month)</small></h3>
   {{ chart_monthly | safe }}
-  <p class="legend"><span class="swatch" style="background: #2563eb;"></span> listed as exploited (CISA KEV or ENISA EUVD)
+  <p class="legend"><span class="swatch" style="background: #2563eb;"></span> listed as exploited (CISA KEV, VulnCheck KEV or ENISA EUVD; earliest listing)
     <span class="swatch" style="background: #f87171; margin-left: 14px;"></span> of which known ransomware use</p>
   <h3 style="margin-top: 14px;">Most-exploited vendors <small>(same window)</small></h3>
   {{ chart_vendors | safe }}
@@ -25,8 +26,8 @@
   <h3>Hottest right now</h3>
   <p class="muted"><small>Heat is a 0 to 133 score for how much the world is acting on a CVE right now: exploitation
     evidence, EPSS, CVSS, how recently it was listed as exploited, exploit code, and sightings in the last 48 hours.
-    "Listed exploited" is the date CISA or ENISA added it, not the CVE's year.</small></p>
-  {% with t = hot, date_label = "Listed exploited", show_heat = true, empty = "Nothing to rank yet: load the feeds." %}{% include "vulnintel/_cve_table.html" %}{% endwith %}
+    "Listed as exploited" is the date an exploited list (CISA, VulnCheck, ENISA) added it, not the CVE's year.</small></p>
+  {% with t = hot, date_label = "Listed as exploited", show_heat = true, empty = "Nothing to rank yet: load the feeds." %}{% include "vulnintel/_cve_table.html" %}{% endwith %}
   {% if hot.rows %}
     <details style="margin-top: 8px;">
       <summary><strong>Ask your AI.</strong> <span class="muted">Copy this block into your AI model of choice for a prioritized
@@ -42,16 +43,16 @@
     <p class="muted">The watchlist is empty. Add the vendors and products you run on the
       <a href="{{ prefix }}/watchlist">Watchlist</a> tab and this section fills in.</p>
   {% else %}
-    {% with t = stack, date_label = "Listed exploited", empty = "No known-exploited CVE matches the watchlist." %}{% include "vulnintel/_cve_table.html" %}{% endwith %}
+    {% with t = stack, date_label = "Listed as exploited", empty = "No known-exploited CVE matches the watchlist." %}{% include "vulnintel/_cve_table.html" %}{% endwith %}
     <h3 style="margin-top: 14px;">New CVEs for watched products <small>(published in NVD in the last 7 days, exploited or not)</small></h3>
     {% with t = stack_new, date_label = "Published", empty = "None" ~ (" (the NVD recent-changes feed has not run yet)" if not feeds.get("nvd_recent") or not feeds.get("nvd_recent").fetched_at else "") ~ "." %}{% include "vulnintel/_cve_table.html" %}{% endwith %}
   {% endif %}
 </div>
 
-<div class="card">
+<div class="card" id="t-groups">
   <h3>Ransomware groups and the CVEs they exploit
     <small>(ransomware.live group profiles —
-      {% if groups_all %}<a href="{{ prefix }}">CVE-{{ this_year }} only</a>{% else %}CVE-{{ this_year }}-* only · <a href="{{ prefix }}?groups=all">all years</a>{% endif %})</small></h3>
+      {% if groups_all %}<a href="{{ prefix }}#t-groups">CVE-{{ this_year }} only</a>{% else %}CVE-{{ this_year }}-* only · <a href="{{ prefix }}?groups=all#t-groups">all years</a>{% endif %})</small></h3>
   {% if not groups.rows %}
     <p class="muted">Nothing yet{% if counts.ransomware == 0 %}: run Refresh ransomware groups on the Feeds tab (needs the PRO key){% else %} for this year's CVEs; try all years{% endif %}.</p>
   {% else %}
@@ -79,17 +80,10 @@
 </div>
 
 <div class="card">
-  <h3>New exploit code <small>(GitHub repositories created and Exploit-DB entries published in the last 7 days)</small></h3>
-  {% with t = poc, date_label = "Newest code", show_counts = true, empty = ("The GitHub proof-of-concept feed is not loaded yet." if not feeds.get("github_poc") or not feeds.get("github_poc").fetched_at else "No new exploit code matches.") %}{% include "vulnintel/_cve_table.html" %}{% endwith %}
-  <p class="muted"><small>Metasploit and Nuclei badges mean an entry exists at all; those indexes carry no "added" date.
-    The <a href="{{ prefix }}/exploits">Exploits</a> tab lists the last 30 days.</small></p>
-</div>
-
-<div class="card">
   <h3>Newly known-exploited
     <small>(listed in the last {{ days }} days —
-      {% if days == 7 %}<a href="{{ prefix }}?days=30">show 30 days</a>{% else %}<a href="{{ prefix }}?days=7">show 7 days</a>{% endif %})</small></h3>
-  {% with t = kev, date_label = "Listed exploited", empty = "Nothing in that window" ~ (": the KEV feed is not loaded yet." if counts.kev == 0 else ".") %}{% include "vulnintel/_cve_table.html" %}{% endwith %}
+      {% if days == 7 %}<a href="{{ prefix }}?days=30#t-kev">show 30 days</a>{% else %}<a href="{{ prefix }}?days=7#t-kev">show 7 days</a>{% endif %})</small></h3>
+  {% with t = kev, date_label = "Listed as exploited", empty = "Nothing in that window" ~ (": the KEV feed is not loaded yet." if counts.kev == 0 else ".") %}{% include "vulnintel/_cve_table.html" %}{% endwith %}
 </div>
 
 <div class="card">

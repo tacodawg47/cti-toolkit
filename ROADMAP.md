@@ -303,11 +303,14 @@ AttackerKB are marked with the source they come from.
    gate: the full feed stays one tab away.
 5. **Feeds**. The status and age of each bulk feed, with refresh buttons.
 
-Bulk feeds (downloaded whole into the table): CISA KEV JSON, EPSS daily
-CSV, ENISA EUVD, NVD recent changes, the Exploit-DB, Metasploit, and Nuclei
-indexes, and VulnCheck KEV (token; not yet wired). Per-CVE lookups (on
-demand, cached): NVD, GitHub search, Vulnerability-Lookup sightings,
-ransomware.live, and, not yet wired, OTX, GreyNoise, and VulnCheck XDB.
+Bulk feeds (downloaded whole into the table): CISA KEV JSON, VulnCheck
+KEV, EPSS daily CSV, ENISA EUVD, NVD recent changes, and the Exploit-DB,
+Metasploit, and Nuclei indexes. Per-CVE lookups (on demand, cached): NVD,
+GitHub search, Vulnerability-Lookup sightings, ransomware.live, and, not
+yet wired, OTX and GreyNoise. VulnCheck XDB as its own index is a paid
+subscription (HTTP 402 on the community tier); the XDB exploit links that
+come inside VulnCheck KEV entries are used instead, so exploited CVEs have
+them.
 Keys needed: VulnCheck is a free account created when wanted; an NVD key
 only raises the rate limit. Previdian was considered as a third KEV source and dropped
 (2026-11-03): it is a paid product.
@@ -316,12 +319,14 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
 - Tabs: Dashboard, Search (one detail page per CVE with the P1 to P5
   priority and its reasons), Exploits, Watchlist (technology watchlist and
   CVE alias table), and Feeds (feed status and refresh buttons).
-- Bulk feeds: CISA KEV, EPSS, ENISA EUVD (a second government "exploited"
+- Bulk feeds: CISA KEV, VulnCheck KEV (source vulncheck, with the reports
+  it cites as exploitation evidence and its XDB exploit links), EPSS, ENISA
+  EUVD (a second government "exploited"
   list, stored as source euvd with ENISA's CVSS and EPSS kept), NVD recent
   changes (everything modified since the last run, so recent CVEs carry vendor,
-  product, and CVSS, and "Your stack" shows CVEs for watched products before
-  they reach KEV), and the Exploit-DB, Metasploit, and Nuclei indexes (an
-  `exploits` table).
+  product, and CVSS, and the tech stack watchlist shows CVEs for watched
+  products before they reach KEV), and the Exploit-DB, Metasploit, and
+  Nuclei indexes (an `exploits` table, which also holds the XDB links).
 - Per-CVE lookups, cached: NVD, GitHub, ransomware.live PRO group profiles
   (the CVEs each group exploits), and Vulnerability-Lookup (CIRCL) sightings
   (keyless; exploited / published-PoC / seen types).
@@ -331,15 +336,23 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   badge). CVSS fallback: ENISA's score, else the CNA's score from the CVE
   record on Vulnerability-Lookup, so a fresh CVE is never "not scored". A
   deterministic heat score drives "Hottest right now" (weights in the runbook).
-- Dashboard sections: Your stack; Newly known-exploited; Trending (EPSS
-  risers); Hottest right now (top 10 / 100 with reasons); New exploit code
-  (GitHub search for CVE-named repositories created in the last 7 days, plus
-  Exploit-DB, with a your-stack-only toggle); ransomware groups and the CVEs
-  they exploit (this year by default; data in data/cti.db, never re-served);
-  server-rendered SVG charts (known-exploited CVEs per month with the
+- Dashboard sections (trimmed 2026-11-10): feed status and a count of CVEs
+  with new exploit code this week; Hottest right now (top 10 / 100 with
+  reasons); Tech stack watchlist; ransomware groups and the CVEs
+  they exploit; Newly known-exploited; Trending (EPSS risers). The New
+  exploit code table moved to the Exploits tab, where the same rows already
+  sat over 30 days (GitHub repositories, Exploit-DB, and VulnCheck XDB by
+  date added). The ransomware group table shows this year by default (data
+  in data/cti.db, never re-served). Server-rendered SVG charts (known-exploited CVEs per month with the
   ransomware share, most-exploited vendors over 12 months, heat bars, and a
   sightings-per-day sparkline on the detail page); feed status. Every CVE table
-  shares one renderer with server-side filters, sorting, and paging.
+  shares one renderer with server-side filters (vendor, tags, EPSS, CVSS,
+  window), sorting, and paging; each link returns to its table through a
+  `#t-<table>` anchor, so the reload does not lose the scroll position.
+  Columns: CVE with its list and ransomware tags underneath, vendor,
+  product, date, Fix, "Exploit code available?" (yes or no; the detail page
+  carries the links), CVSS, EPSS, and on the hottest table Heat and "Why
+  it's hot".
 - Text brief: rendered under the hottest list, one line per CVE plus a source
   preamble and a triage ask, for a report, a ticket, or an external LLM. It is
   built from the ranked list only (never the watchlist), so it reveals nothing
@@ -354,9 +367,12 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   inthewild.io (API down; RSS and database frozen since January 2025).
 
 **Still to wire**
-- VulnCheck KEV and XDB (key slot VULNCHECK_API_KEY exists; needs the free
-  community token) and OTX pulses by CVE. AttackerKB is dropped: Rapid7
-  retired the public platform and API on 2026-08-18.
+- OTX pulses by CVE. (VulnCheck KEV built 2026-11-10; the XDB index is
+  paid, see above.) AttackerKB is dropped: Rapid7 retired the public
+  platform and API on 2026-08-18.
+- Partial table reloads with HTMX (sort, filter, and page without a full
+  page load) when HTMX is vendored; the anchors cover the annoyance until
+  then.
 - Include (2026-11-09): views. The dashboard's stacked sections become
   named views over the one `vulnerabilities` table, each a saved filter
   with its own URL, a counter on the dashboard, and the shared table
@@ -2325,6 +2341,15 @@ Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
 - 2026-11-10: Microsoft rows in the Patch Tuesday view default to
   high or critical severity, exploit code, or exploited; to refine
   against real data.
+- 2026-11-10: VulnCheck KEV wired with the community token. VulnCheck XDB
+  as an index is not used: it needs a paid subscription; the XDB links
+  inside KEV entries are free and stored. Data labelled "VulnCheck KEV"
+  per VulnCheck's attribution request.
+- 2026-11-10: The Dashboard's New exploit code table is dropped in favour
+  of the Exploits tab (same rows); the Dashboard keeps charts, hottest,
+  watchlist, ransomware groups, newly exploited, and trending, plus a
+  one-line count. Exploit code shows as yes or no in tables, with sources
+  on the detail page. CVSS joins EPSS as a table filter.
 
 ## Additional free sources to consider (by phase)
 

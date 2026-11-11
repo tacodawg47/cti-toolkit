@@ -52,6 +52,9 @@ LIMITS: dict[str, dict[str, int]] = {
     "ransomwarelive": {"rpm": 60},
     "vulnlookup": {"rpm": 30},            # CIRCL's public instance, keyless; courtesy limit
     "euvd": {"rpm": 60},                  # ENISA's public API, keyless; courtesy limit
+    # VulnCheck community tier allows 1,000 a minute; a full KEV pull is about
+    # a dozen pages, so a modest cap costs nothing.
+    "vulncheck": {"rpm": 60},
 }
 
 

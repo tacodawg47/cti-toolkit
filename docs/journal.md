@@ -20,6 +20,21 @@ initramfs. Booting the previous kernel from the GRUB advanced menu and
 rebuilding the initramfs for the new kernel (then updating GRUB) normally
 fixes it without a reinstall. Not yet tried.
 
+### 2026-11-10: NVD answers 404 for the configured key
+
+The feed refresh reported "HTTP 404 from NVD" for the recent-changes feed,
+and detail pages said "NVD has no record with that ID" for CVEs NVD
+certainly has. Cause: the NVD_API_KEY in .env is rejected. NVD answers
+an invalid, revoked, or unactivated key with HTTP 404 and a
+`message: Invalid apiKey.` header (not 401). The same requests without
+the key return 200. The key had worked on 2026-11-04 (health page showed
+50 requests a minute), so it was replaced or revoked since, possibly in
+the key rotation. Fix on the operator's side: request a new key, click the
+activation link, put it in .env, restart. Code change: a 404 with a key
+configured is now reported as a rejected key on the Feeds tab and the
+detail page, since an unknown CVE comes back as 200 with no results. The
+by-hand check is in the vulnerability runbook under Troubleshooting.
+
 ## Policy exceptions
 
 ### 2026-11-03: pypdf installed one day inside the one-week rule
@@ -112,6 +127,28 @@ Built 2026-11-04 after the live dashboard review:
   sections deferred (need a little script to remember state; with HTMX).
 - VulnCheck KEV and XDB: key slot added (VULNCHECK_API_KEY); the feed is
   the next source to wire once the community token exists.
+~~~
+
+### Phase 2: VulnCheck KEV and the dashboard review (2026-11-10)
+
+~~~text
+- VulnCheck KEV wired: cursor-paged API, 5,857 entries and 11,095 XDB
+  exploit links on the first run (13 pages of 500, about 10 seconds).
+  The XDB index itself answered 402 (subscription required) on the
+  community token, so XDB coverage is limited to exploited CVEs.
+  Citations (the reports VulnCheck cites as exploitation evidence) show on
+  the detail page; entries VulnCheck's own honeypots confirmed say so.
+- Dashboard review: tags moved under the CVE ID; "Listed as exploited";
+  "Exploit code available?" as yes or no (hover for sources, the detail
+  page has the links); "Why it's hot"; a CVSS filter (4, 7, 9) next to
+  EPSS; sort, filter, and page links return to their table with a
+  `#t-<key>` anchor instead of the top of the page. The New exploit code
+  table left the Dashboard (the Exploits tab already showed the same rows
+  over 30 days) and became a one-line count with a link.
+- "advisory" in the Fix column, explained to the operator: NVD tagged a
+  Vendor Advisory reference but no Patch reference.
+- Trending was empty because EPSS had been loaded once (2026-11-03 scores);
+  the 2026-11-10 refresh gave it a previous score, and it filled in.
 - Ingest everything, surface selectively (decided): KEV ignores CVSS and
   many exploited CVEs are medium severity, EPSS is needed for every CVE a
   page can open, and the exploit indexes are small. Filtering happens on

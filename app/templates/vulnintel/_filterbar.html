@@ -1,6 +1,6 @@
 {# Expects `t` (a _table() dict). One GET form; other tables' parameters ride along as hidden inputs. #}
 {% set f = t.filters %}
-<form method="get" action="{{ request.url.path }}" class="filterbar">
+<form method="get" action="{{ request.url.path }}#t-{{ t.key }}" class="filterbar">
   {% for k, v in other_params(t.key) %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
   {% if f.sort %}<input type="hidden" name="{{ t.key }}_sort" value="{{ f.sort }}">{% endif %}
   <input type="hidden" name="{{ t.key }}_dir" value="{{ 'desc' if f.desc else 'asc' }}">
@@ -17,12 +17,17 @@
       <option value="">any</option>
       {% for e in epss_choices %}<option value="{{ e }}" {% if f.epss == e %}selected{% endif %}>{{ e }}</option>{% endfor %}
     </select></label>
+  <label>CVSS ≥
+    <select name="{{ t.key }}_cvss">
+      <option value="">any</option>
+      {% for c, name in cvss_choices %}<option value="{{ c }}" {% if f.cvss == c %}selected{% endif %}>{{ c }} ({{ name }})</option>{% endfor %}
+    </select></label>
   <label>last
     <select name="{{ t.key }}_since">
       <option value="">any time</option>
       {% for d in since_choices %}<option value="{{ d }}" {% if f.since == d %}selected{% endif %}>{{ d }} days</option>{% endfor %}
     </select></label>
   <button type="submit" class="small">Filter</button>
-  {% if f.active %}<a href="{{ tlink(t.key, vendor=None, tag=None, epss=None, since=None) }}" class="muted">clear</a>{% endif %}
+  {% if f.active %}<a href="{{ tlink(t.key, vendor=None, tag=None, epss=None, cvss=None, since=None) }}" class="muted">clear</a>{% endif %}
   <small class="muted">{{ t.total }}{% if t.total != t.unfiltered %} of {{ t.unfiltered }}{% endif %} rows</small>
 </form>

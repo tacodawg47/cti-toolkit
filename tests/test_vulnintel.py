@@ -30,6 +30,7 @@ from app.modules.vulnerability_intelligence.feeds import exploitdb as edb_feed
 from app.modules.vulnerability_intelligence.feeds import metasploit as msf_feed
 from app.modules.vulnerability_intelligence.feeds import nuclei as nuclei_feed
 from app.modules.vulnerability_intelligence.feeds import poc as poc_feed
+from app.modules.vulnerability_intelligence.feeds import vulncheck_kev as vc_feed
 from app.modules.vulnerability_intelligence.feeds import ransomwarelive as rl_feed
 from app.modules.vulnerability_intelligence.http import gunzip_bounded
 from app.modules.vulnerability_intelligence.sources import github, nvd, vulnlookup
@@ -121,9 +122,14 @@ class TempDbMixin:
         # over between tests, making the GitHub mock sleep for real.
         from app.core.ratelimit import rate_limiter
         rate_limiter._minute.clear()
+        # Tests never use the operator's real keys: a feed that needs a token
+        # is tested by setting a fake one explicitly.
+        self._orig_vc = settings.vulncheck_api_key
+        settings.vulncheck_api_key = ""
 
     def tearDown(self):
         settings.data_dir = self._orig_dir
+        settings.vulncheck_api_key = self._orig_vc
         shutil.rmtree(self._tmp, ignore_errors=True)
 
 
@@ -1192,7 +1198,8 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
         store.upsert_poc_repos(poc_feed.parse_items([gh_repo("CVE-2024-3400-poc", "2099-01-02", 3)]))
         store.set_feed_status("github_poc", entries=1, version="test")
         r = self.client.get("/vulnerability-intelligence")
-        self.assertIn("New exploit code", r.text)
+        self.assertNotIn("<h3>New exploit code", r.text)          # moved to the Exploits tab
+        self.assertIn("New exploit code in the last 7 days for <strong>1</strong> CVE", r.text)
         self.assertIn("/cve/CVE-2024-3400", r.text)
         self.assertIn("Hottest right now", r.text)
         self.assertIn("Ask your AI.", r.text)
@@ -1201,8 +1208,15 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
         self.assertIn("Ransomware groups and the CVEs they exploit", r.text)
         self.assertIn("show 30 days", r.text)
         self.assertNotIn("Due", r.text.split("Trending")[0].split("Hottest")[1])   # no due-date column
+        self.assertIn("Exploit code available?", r.text)
+        self.assertIn('class="err" title="GitHub">Yes</a>', r.text)
+        self.assertIn("Why it's hot", r.text)
+        self.assertIn("Listed as exploited", r.text)
+        # every sort link returns to its table
+        self.assertIn('hot_sort=cvss&amp;hot_dir=desc#t-hot"', r.text)
+        self.assertIn('action="/vulnerability-intelligence#t-hot"', r.text)
         # the vendor filter on the exploit-code table keeps the row for a non-matching vendor out
-        r = self.client.get("/vulnerability-intelligence?poc_vendor=Nobody")
+        r = self.client.get("/vulnerability-intelligence/exploits?poc_vendor=Nobody")
         self.assertIn("No new exploit code matches.", r.text)
         self.assertIn("0 of 1 rows", r.text)
         r = self.client.get("/vulnerability-intelligence/exploits")
@@ -1278,3 +1292,100 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+VC_ITEM = {
+    "vendorProject": "Linux", "product": "Kernel", "vulnerabilityName": "Linux Kernel Info Leak",
+    "shortDescription": "Leak.", "required_action": "Apply updates.", "knownRansomwareCampaignUse": "Known",
+    "cve": ["CVE-2026-99999"], "cwes": ["CWE-200"],
+    "vulncheck_xdb": [{"xdb_id": "d78be1b0f067", "xdb_url": "https://vulncheck.com/xdb/d78be1b0f067",
+                       "date_added": "2099-01-01T06:21:55Z", "exploit_type": "info-leak",
+                       "clone_ssh_url": "git@github.com:someone/CVE-2026-99999.git"}],
+    "vulncheck_reported_exploitation": [
+        {"url": "https://access.redhat.com/security/cve/cve-2026-99999", "date_added": "2026-10-19T00:00:00Z"},
+        {"url": "javascript:alert(1)", "date_added": "2026-10-19T00:00:00Z"}],
+    "reported_exploited_by_vulncheck_canaries": True,
+    "date_added": "2026-10-19T00:00:00Z", "_timestamp": "2026-10-20T00:00:00Z",
+}
+
+
+class VulnCheckKevTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
+    def test_parse_page(self):
+        kev, xdb, cursor = vc_feed.parse_page({"_meta": {"next_cursor": "abc"}, "data": [VC_ITEM, {"cve": ["junk"]}]})
+        self.assertEqual(cursor, "abc")
+        self.assertEqual(len(kev), 1)
+        row = kev[0]
+        self.assertEqual((row["cve_id"], row["date_added"], row["ransomware"]), ("CVE-2026-99999", "2026-10-19", 1))
+        self.assertEqual([c["url"] for c in row["citations"]], ["https://access.redhat.com/security/cve/cve-2026-99999"])
+        self.assertIn("canaries", row["notes"])
+        self.assertEqual(xdb[0]["title"], "someone/CVE-2026-99999")
+        self.assertEqual((xdb[0]["kind"], xdb[0]["date"]), ("info-leak", "2099-01-01"))
+        with self.assertRaises(ValueError):
+            vc_feed.parse_page({"error": True})
+
+    async def test_skipped_without_token(self):
+        res = await vc_feed.refresh()
+        self.assertTrue(res["ok"])
+        self.assertIn("skipped", res["version"])
+
+    async def test_refresh_follows_cursor_and_stores(self):
+        seen = []
+
+        def handler(req):
+            self.assertEqual(req.url.host, "api.vulncheck.com")
+            self.assertEqual(req.headers["authorization"], "Bearer test-token")
+            seen.append(dict(req.url.params))
+            if "cursor" not in req.url.params:
+                return httpx.Response(200, json={"_meta": {"next_cursor": "page2"}, "data": [VC_ITEM]})
+            other = {**VC_ITEM, "cve": ["CVE-2023-4966"], "vulncheck_xdb": [], "knownRansomwareCampaignUse": "Unknown"}
+            return httpx.Response(200, json={"_meta": {}, "data": [other]})
+
+        settings.vulncheck_api_key = "test-token"
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        res = await vc_feed.refresh()
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(res["entries"], 2)
+        self.assertIn("start_cursor", seen[0])
+        self.assertEqual(seen[1]["cursor"], "page2")
+        kev = store.get_kev("CVE-2026-99999")
+        self.assertEqual(kev[0]["source"], "vulncheck")
+        self.assertEqual(kev[0]["citations"][0]["date"], "2026-10-19")
+        self.assertEqual(store.exploit_counts(), {"xdb": 1})
+        self.assertTrue(store.flags_for(["CVE-2026-99999"])["CVE-2026-99999"]["code"]["xdb"])
+        # XDB entries count as new exploit code by the date XDB added them
+        self.assertEqual([r["cve_id"] for r in store.recent_poc(30)], ["CVE-2026-99999"])
+        self.assertEqual(priority.KEV_NAMES["vulncheck"], "VulnCheck KEV")
+
+    async def test_bad_token_is_reported(self):
+        settings.vulncheck_api_key = "wrong"
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(401))))
+        res = await vc_feed.refresh()
+        self.assertFalse(res["ok"])
+        self.assertIn("401", store.feed_status()["vulncheck_kev"]["error"])
+
+
+class CvssFilterTests(unittest.TestCase):
+    def test_cvss_filter(self):
+        f = tables.Filters.parse({"t_cvss": "7.0"}, "t")
+        self.assertEqual(f.cvss, 7.0)
+        self.assertTrue(f.active)
+        rows = [{"cve_id": "A", "cvss": 9.8}, {"cve_id": "B", "cvss": 5.0}, {"cve_id": "C", "cvss": None}]
+        self.assertEqual([r["cve_id"] for r in tables.apply(rows, f)], ["A"])
+        self.assertIsNone(tables.Filters.parse({"t_cvss": "6.5"}, "t").cvss)     # only the offered bands
+
+
+class NvdKeyRejectedTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
+    async def test_404_with_a_key_names_the_key(self):
+        orig = settings.nvd_api_key
+        settings.nvd_api_key = "revoked"
+        try:
+            base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(
+                lambda r: httpx.Response(404, headers={"message": "Invalid apiKey."}))))
+            res = await nvd.fetch("CVE-2024-3400")
+            self.assertEqual(res["status"], "error")
+            self.assertIn("NVD_API_KEY", res["error"])
+            out = await nvd_recent.refresh()
+            self.assertFalse(out["ok"])
+            self.assertIn("NVD_API_KEY", store.feed_status()["nvd_recent"]["error"])
+        finally:
+            settings.nvd_api_key = orig
