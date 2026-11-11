@@ -1682,3 +1682,114 @@ class FirstSeenTests(TempDbMixin, unittest.TestCase):
         hot = {r["cve_id"]: r for r in service.hottest(10)}["CVE-2023-4966"]
         self.assertEqual(hot["first_exploited"], "2023-10-18")
         self.assertTrue(any(p.startswith("listed ") and p.endswith("y ago") for p in hot["parts"]), hot["parts"])
+
+
+def cve5(cve_id, vendor="Acme", product="Widget", published="2026-11-10T00:00:00Z", ssvc=None, state="PUBLISHED"):
+    rec = {"dataType": "CVE_RECORD", "cveMetadata": {"cveId": cve_id, "state": state, "assignerShortName": "acme",
+                                                     "datePublished": published, "dateUpdated": published},
+           "containers": {"cna": {"title": "Widget overflow", "affected": [{"vendor": vendor, "product": product},
+                                                                          {"vendor": "n/a", "product": "n/a"}],
+                                  "descriptions": [{"lang": "en", "value": "A   buffer overflow."}],
+                                  "problemTypes": [{"descriptions": [{"cweId": "CWE-787"}]}],
+                                  "metrics": [{"cvssV3_1": {"version": "3.1", "baseScore": 9.1, "baseSeverity": "CRITICAL",
+                                                            "vectorString": "CVSS:3.1/AV:N"}}]}}}
+    if ssvc:
+        rec["containers"]["adp"] = [{"providerMetadata": {"shortName": "CISA-ADP"}, "metrics": [
+            {"other": {"type": "ssvc", "content": {"options": [{"Exploitation": ssvc}, {"Automatable": "yes"},
+                                                              {"Technical Impact": "total"}],
+                                                  "timestamp": "2026-11-09T00:00:00Z"}}}]}]
+    return rec
+
+
+def zip_of(records: dict, folder: str = "cves/2026/1xxx") -> bytes:
+    import io
+    import zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, rec in records.items():
+            zf.writestr(f"{folder}/{name}.json", json.dumps(rec))
+        zf.writestr("cves/deltaLog.json", "[]")                        # non-CVE files are ignored
+    return buf.getvalue()
+
+
+class CveListTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
+    async def asyncTearDown(self):
+        await base.aclose()
+
+    def test_parse_record(self):
+        from app.modules.vulnerability_intelligence.feeds import cvelist
+        row = cvelist.parse_record(cve5("CVE-2026-1001", ssvc="active"))
+        self.assertEqual(row["products"], [("Acme", "Widget", "")])          # "n/a" pairs dropped
+        self.assertEqual((row["published"], row["cvss_score"], row["cwe"]), ("2026-11-10", 9.1, "CWE-787"))
+        self.assertEqual(row["description"], "A buffer overflow.")
+        self.assertEqual(row["ssvc"]["exploitation"], "active")
+        self.assertIsNone(cvelist.parse_record({"nope": 1}))
+
+    async def test_full_load_then_deltas(self):
+        import io
+        import zipfile
+        from datetime import datetime, timedelta, timezone
+        from app.modules.vulnerability_intelligence.feeds import cvelist
+        today = datetime.now(timezone.utc).date()
+        yesterday = today - timedelta(days=1)
+        inner = zip_of({"CVE-2026-1001": cve5("CVE-2026-1001"), "CVE-2026-1002": cve5("CVE-2026-1002", ssvc="active")})
+        outer = io.BytesIO()
+        with zipfile.ZipFile(outer, "w", zipfile.ZIP_STORED) as zf:
+            zf.writestr("cves.zip", inner)
+        delta = zip_of({"CVE-2026-1003": cve5("CVE-2026-1003", vendor="Ivanti", product="Connect Secure")}, "deltaCves")
+        seen = []
+
+        def handler(req):
+            path = req.url.path
+            seen.append(path.rsplit("/", 1)[-1])
+            if path.endswith(f"{yesterday.isoformat()}_all_CVEs_at_midnight.zip.zip"):
+                return httpx.Response(200, content=outer.getvalue())
+            if "all_CVEs_at_midnight" in path:
+                return httpx.Response(404)                              # today's snapshot not out yet
+            if path.endswith(f"{yesterday.isoformat()}_delta_CVEs_at_end_of_day.zip"):
+                return httpx.Response(200, content=delta)
+            if f"{today.isoformat()}_delta_CVEs_at_" in path:
+                return httpx.Response(200, content=zip_of({}, "deltaCves"))
+            return httpx.Response(404)
+
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        self.assertIn("not loaded yet", (await cvelist.refresh())["version"])
+        res = await cvelist.full_load()
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(res["entries"], 2)
+        self.assertIn(f"{yesterday.isoformat()}_delta_CVEs_at_end_of_day.zip", seen)   # the gap day applied
+        self.assertTrue(store.get_sync(cvelist.SYNC_KEY).startswith(today.isoformat()))
+        self.assertFalse((settings.data_dir / "cvelist").exists())                      # downloads removed
+        self.assertEqual(store.get_ssvc("CVE-2026-1002")["exploitation"], "active")
+
+        from app.modules.vulnerability_intelligence import views
+        exploited = {r["cve_id"]: r for r in views.BY_SLUG["exploited"].rows()}
+        self.assertEqual(exploited["CVE-2026-1002"]["sources"], ["ssvc"])               # SSVC active counts
+        self.assertEqual(exploited["CVE-2026-1002"]["date"], "2026-11-09")
+        self.assertEqual(exploited["CVE-2026-1002"]["vendor"], "Acme")                 # from the CVE record
+        self.assertEqual(exploited["CVE-2026-1002"]["cvss"], 9.1)
+        store.add_watchlist("Ivanti")
+        self.assertEqual([r["cve_id"] for r in views.BY_SLUG["watchlist"].rows()], ["CVE-2026-1003"])
+
+    async def test_too_far_behind_asks_for_reload(self):
+        from datetime import datetime, timedelta, timezone
+        from app.modules.vulnerability_intelligence.feeds import cvelist
+        old = datetime.now(timezone.utc).date() - timedelta(days=30)
+        store.set_sync(cvelist.SYNC_KEY, f"{old.isoformat()} midnight")
+        res = await cvelist.refresh()
+        self.assertFalse(res["ok"])
+        self.assertIn("load the CVE List again", res["error"])
+
+
+class SsvcActiveIsExploitedTests(ViewTests):
+    def test_ssvc_active_cve_is_not_in_the_code_view(self):
+        from app.modules.vulnerability_intelligence import views
+        # CVE-2025-1111 has a Nuclei template and is on no list; CISA now assesses it as actively exploited.
+        store.save_ssvc("CVE-2025-1111", {"exploitation": "active", "automatable": "yes",
+                                          "technical_impact": "total", "timestamp": "2026-11-09"})
+        code = {r["cve_id"] for r in views.BY_SLUG["code"].rows()}
+        self.assertEqual(code, {"CVE-2025-2222"})
+        self.assertEqual(views.BY_SLUG["code"].count(), 1)
+        exploited = {r["cve_id"]: r for r in views.BY_SLUG["exploited"].rows()}
+        self.assertEqual(exploited["CVE-2025-1111"]["sources"], ["ssvc"])
+        self.assertEqual(views.BY_SLUG["exploited"].count(), 3)

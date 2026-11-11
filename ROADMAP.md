@@ -376,14 +376,18 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
 - VulnCheck KEV (built 2026-11-10; the XDB index is paid, see above) and
   OTX pulses by CVE (built 2026-11-11) are done. AttackerKB is dropped:
   Rapid7 retired the public platform and API on 2026-08-18.
-- The CVE List as a bulk feed (CVEProject cvelistV5 on GitHub: a full
-  zip, then hourly change files): the reporting organisation's vendor and
-  product for every CVE from the day it is published, plus CISA's ADP
-  block with SSVC. Measured 2026-11-11: 76% of CVEs published since
-  October had no product data in NVD (its analysis backlog), so tables
-  show a dash for their vendor. This is also the bulk SSVC source the
-  views that filter on SSVC need (5, 11, and SSVC "active" in view 1);
-  today SSVC is read per CVE when a detail page opens.
+- Built 2026-11-11: the CVE List as a bulk feed (CVEProject cvelistV5:
+  one 660 MB midnight snapshot on first load, then the end-of-day and
+  hourly change files on each refresh). Gives every CVE the reporting
+  organisation's vendor, product, package, CVSS and CWE from publication
+  day, and CISA's SSVC in bulk (219,097 CVEs assessed). Vendor coverage
+  for CVEs published since October went from 24% (NVD alone) to 94%.
+  SSVC "active" now counts for view 1.
+- Still open: vendor and product for old CVEs. Pre-2017 CVE records often
+  say "n/a" for vendor and product, and the local NVD data covers only
+  CVEs changed since 2026-11-04, so about 24,000 of view 3's 27,000 rows
+  (mostly old Exploit-DB entries) show a dash. A one-off full NVD load
+  (about 125 API pages with the key, roughly 2 GB) would fill them.
 - Partial table reloads with HTMX (sort, filter, and page without a full
   page load) when HTMX is vendored; the anchors cover the annoyance until
   then.
@@ -2541,6 +2545,11 @@ Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
   assertions are used as CIRCL publishes them, labelled "via CIRCL".
 - 2026-11-11: View 3 (exploit code, not yet exploited) opens newest code
   first; EPSS order is left to view 6 (Likely next).
+- 2026-11-11: The CVE List (cvelistV5) is a feed: vendor and product fall
+  back exploited list > NVD > CVE record everywhere, and CISA SSVC
+  "Exploitation: active" counts as exploited (view 1 badge "CISA SSVC:
+  active", dated by CISA's assessment). The first load is a separate
+  button because it downloads 660 MB; Refresh feeds applies the deltas.
 - 2026-11-11: Sandbox choice (CAPE, DRAKVUF Sandbox, Cuckoo3, or a hosted
   service) deferred to the malware analysis module's own phase.
 - 2026-11-11: Malware samples may be stored outside the VM, but only as

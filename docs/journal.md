@@ -166,6 +166,33 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-11: the CVE List feed (cvelistV5)
+
+- Release layout checked on GitHub: every hourly release carries that
+  day's midnight snapshot (`<day>_all_CVEs_at_midnight.zip.zip`, 660.2 MB)
+  and a delta of everything changed since midnight (`<day>_delta_CVEs_at_
+  <HH>00Z.zip`, 0.3 to 0.6 MB in the early hours); each day also gets an
+  `at_end_of_day` release with the whole day's delta. The repository
+  README confirms the deltas are cumulative from the midnight baseline.
+  Records sit under `deltaCves/` in a delta and `cves/<year>/<n>xxx/` in
+  the snapshot.
+- First load: 114 seconds for the download and 423,869 records, then the
+  04:00Z delta (427 records). cti.db grew from 187 MB to 495 MB. 486,004
+  vendor/product pairs over 260,219 CVEs; SSVC on 219,097 CVEs (active
+  1,784, poc 47,487). All 1,784 "active" CVEs were already on an exploited
+  list.
+- Vendor coverage, CVEs published since 2026-10-01: 23,088 records, 1,418
+  (6%) still without any vendor, against 76% before (NVD alone).
+- Watchlist view grew from 52 to 426 CVEs with the CVE record's products,
+  and slowed to 2.1 s (Python matching over every pair). SQL now narrows
+  by vendor with `instr` first (0.7 s) and the matches are cached until
+  the watchlist or a feed changes (0.01 s warm).
+- Bug caught live: `A UNION B EXCEPT C UNION D` in SQLite runs left to
+  right, so appending the SSVC-active set to the exploited set inside an
+  EXCEPT added those 1,784 CVEs to "not yet exploited" (Struts
+  CVE-2017-5638 appeared there). Fixed by bracketing the exploited set as
+  a subquery; a test pins it.
+
 ### 2026-11-11: views 1 to 3 and the CIRCL KEV aggregation
 
 - Vulnerability-Lookup `/api/kev/` held 6,521 entries. First full load,

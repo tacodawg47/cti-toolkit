@@ -17,11 +17,19 @@
   </table>
   <form method="post" action="{{ prefix }}/refresh" style="margin-top: 10px;">
     <button type="submit" class="small">Refresh feeds</button>
-    <small>Downloads CISA KEV (2 MB), ENISA's exploited list (about 20 pages), EPSS (3 MB), NVD's changes
+    <small>Downloads CISA KEV (2 MB), VulnCheck KEV (with a token), ENISA's exploited list (about 20 pages),
+      Vulnerability-Lookup's KEV collection (7 pages), the CVE List's change files (once loaded), EPSS (3 MB), NVD's changes
       since the last run (seven days the first time), the Exploit-DB index (10 MB), the Metasploit module
       index (11 MB), the Nuclei CVE index (2 MB) and the last 48 hours of sightings, runs the GitHub search
       for the last 7 days of CVE-named repositories, and reloads the local tables. Two or three minutes
       without an NVD key, about one with it. Scheduled refresh arrives with the Phase 5 scheduler.</small>
+  </form>
+  <form method="post" action="{{ prefix }}/load-cvelist" style="margin-top: 8px;">
+    <button type="submit" class="small">Load the CVE List</button>
+    <small>Downloads the official CVE List snapshot from the CVE Program's GitHub releases (about 660 MB),
+      reads every record into the local tables, then deletes the download. Several minutes; the page waits.
+      Needed once: after that, Refresh feeds applies the small hourly and end-of-day change files. Run it again
+      only if the toolkit has been off for more than two weeks.</small>
   </form>
   <form method="post" action="{{ prefix }}/refresh-ransomware" style="margin-top: 8px;">
     <button type="submit" class="small">Refresh ransomware groups</button>
