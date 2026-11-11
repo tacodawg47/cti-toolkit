@@ -364,7 +364,10 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   many exploited CVEs are medium severity, EPSS is needed for every CVE a page
   can open, and the exploit indexes are small. Filtering happens on the
   dashboard (heat, exploitation, exploit code), not at ingest.
-- Sources considered and not used: X/Twitter (no free API; scraping breaks its
+- Sources considered and not used: Aikido Intel (AGPL-licensed malware
+  feed with no documented download URL; dropped 2026-11-11, its blog stays
+  in the Phase 4 supply chain category), Snyk's vulnerability database
+  (API is Enterprise-only; blog and link-outs only), X/Twitter (no free API; scraping breaks its
   terms), Previdian (paid), cve.now (aggregates sources already pulled
   directly; fallback only), Senserva's tracker (an HTML page, not a feed),
   inthewild.io (API down; RSS and database frozen since January 2025).
@@ -510,23 +513,55 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   score-disagreement rule (below) highlighted when they pull apart.
 
 **Supply chain tab** (decided 2026-11-04, sixth tab of this module, to
-build next): "is a library, package or repository I depend on vulnerable
-or compromised?", the question GitHub Advisory Database and OSV answer
-with package-level affected versions per ecosystem (npm, PyPI, Maven, Go,
-crates, RubyGems, NuGet...). Three parts:
-- A packages watchlist (ecosystem, name, optional version) checked against
-  the keyless OSV batch query API on refresh, which is what pip-audit
-  already does for this project's own dependencies; results link to the
-  advisory and to the CVE detail page when one exists.
-- A lockfile / manifest upload (requirements.txt, package-lock.json,
-  go.sum, Cargo.lock...) checked the same way, cve.now's lockfile checker
-  idea, for the operator's own projects.
-- Malicious and compromised package reports: the OpenSSF malicious-packages
-  repository (OSV-format records, keyless) as the feed, plus public
-  reporting on hijacked packages and repositories (Socket, Phylum,
-  StepSecurity, Sonatype, ReversingLabs blogs) through the Phase 4 news
-  feed with a "supply chain" keyword category; specific sources to be
-  named. Shown newest first with ecosystem and package name.
+build next; sources settled 2026-11-11): "is a library, package or
+repository I depend on vulnerable or compromised?", and, for intelligence,
+"what is being planted or hijacked in the open-source ecosystems right
+now?". The data is package-level advisories per ecosystem (npm, PyPI,
+Maven, Go, crates.io, RubyGems, NuGet, Packagist, GitHub Actions), from
+OSV. Distribution ecosystems (Debian, Ubuntu, Alpine and the like) are out
+of scope.
+
+Collection: every malicious-package report, not only the watchlist
+(refined 2026-11-11). OSV is a database of advisories, not of package
+releases: each record is either a malicious-package report (`MAL-` IDs,
+from OpenSSF Malicious Packages, Apache 2.0) or a vulnerability advisory
+for a legitimate package (`GHSA-`, `PYSEC-`, `GO-`, `RUSTSEC-` and
+others). Its change list (`<ecosystem>/modified_id.csv`, newest first)
+names the records created or edited, so a refresh fetches only those.
+- Malicious-package reports: stored in bulk, all of them, from the
+  per-ecosystem files at
+  `storage.googleapis.com/osv-vulnerabilities/<ecosystem>/all.zip` (first
+  run) and the change list (every refresh). Keyless. Volume measured
+  2026-11-11 over 7 days across the nine ecosystems: about 590 (npm 538).
+- Vulnerability advisories: stored in bulk too (decided 2026-11-11 after
+  measuring). They are not a duplicate of the CVE feeds in three ways:
+  they name the exact package and the fixed version per ecosystem
+  ("npm lodash < 4.17.21, fixed in 4.17.21"), which NVD's CPE data does
+  badly for libraries, so CVE detail pages gain an "affected packages"
+  block; a minority have no CVE at all (GHSA-, RUSTSEC-, GO- and PYSEC-
+  only); and the AI and ML stack view (view 10) matches CVEs by package
+  name, which needs this mapping. Size: the nine ecosystems' bulk files
+  are about 305 MB zipped (npm 220 MB, almost all malicious-package
+  reports; the other eight together about 85 MB), stored as parsed rows.
+  The first download is larger than the feed helper's 32 MB cap, so it
+  streams to a file in the data folder and is unpacked with a size bound.
+  They are kept out of the Supply chain tab's main tables (which stay
+  about malicious and compromised packages) and appear on package pages,
+  CVE detail pages, and the watchlist results. The watchlist and lockfile
+  checks still use `querybatch`, which is always current.
+- OpenSSF Malicious Packages arrives through OSV; when built, confirm the
+  `MAL-` records in the OSV files match the repository, and read the
+  repository directly only if they do not.
+- Datadog malicious-software-packages-dataset (Apache 2.0): the
+  per-ecosystem `manifest.json` name lists only (npm, PyPI, IDE
+  extensions, AI skills; about 29,800 packages), which reach places OSV
+  does not. Its password-protected samples are never fetched by this
+  module; see the malware research corpus in the parking lot.
+- GitHub Advisory Database `GET /advisories?type=malware` (with the
+  existing token) as a cross-check of OSV, not a primary feed.
+- Package context from deps.dev (keyless; Google API terms allow caching;
+  generated data CC-BY 4.0): every version with its publish date, the
+  source repository's OpenSSF Scorecard, licences, and advisory IDs.
 - Open Source Malware (opensourcemalware.com, OSM Security; checked
   2026-11-06): a database of malicious packages, container images, and
   repositories plus the domains, IPs, and wallets tied to them. No binary
@@ -535,9 +570,48 @@ crates, RubyGems, NuGet...). Three parts:
   non-commercial internal use and local storage but not redistribution, so
   it is a runtime lookup here, never vendored. The bulk feed and STIX
   export are paid.
-Nothing here needs a key except the OSM token. Record also that GHSA/OSV add little as a CVE
-feed for the other tabs: nearly every entry that matters there already
-has a CVE in NVD.
+
+Presentation: comprehensive underneath, readable on top. Three tables
+plus a package page, all on the shared table renderer (filters, sort,
+paging, anchors):
+1. Watchlist: a packages watchlist (ecosystem, name, optional version)
+   and uploaded lockfiles or manifests (requirements.txt,
+   package-lock.json, go.sum, Cargo.lock...) checked with OSV's keyless
+   `querybatch` API on refresh and on upload (cve.now's lockfile checker
+   idea). The operator's own exposure; the source of future alerts.
+2. Compromised packages: malicious versions published inside a package
+   that already had clean releases (a hijacked maintainer account, a
+   worm such as Shai-Hulud), told apart from packages that were
+   malicious from the first upload by comparing the record's affected
+   versions with the package's version history from deps.dev. Low
+   volume, high value, and the default view.
+3. All malicious packages: every malicious-package report, newest first,
+   with filters for ecosystem, reporter (the `MAL-` record's origin:
+   OpenSSF package analysis, GitHub, Amazon Inspector, Checkmarx,
+   ReversingLabs and others), package age, and "has a vendor write-up".
+   Near-identical reports (one campaign publishing hundreds of typosquats
+   with the same description) fold into one row with a count, as OTX
+   series do.
+4. Vendor reports: the research posts from the supply-chain sources
+   (below), newest first, each with the packages it names that match a
+   stored report. Needs a small RSS/Atom reader; it is built once as the
+   first piece of the Phase 4 reader and reused there, not as a second
+   reader.
+- Package page (Checkmarx's AppSec Knowledge Center package view as the
+  model): every version of the package with its publish date, each marked
+  malicious, vulnerable, or fixed, plus Scorecard, the advisories (live
+  from OSV), the vendor write-ups about it, and link-outs (OSV, GitHub,
+  deps.dev, security.snyk.io, the registry page). Write-ups come from two
+  places: the `MAL-` record's own references, which often link the
+  vendor post that reported it (available from day one), and the vendor
+  reports table's package matches. A match on a package name alone is
+  shown as "mentioned", since some package names are ordinary words.
+
+Public reporting on supply-chain attacks comes through the Phase 4 news
+feed's "supply chain" category (sources named there). Nothing here needs
+a new key; OSM needs its token, the GitHub cross-check uses the existing
+one. Record also that GHSA/OSV add little as a CVE feed for the other
+tabs: nearly every entry that matters there already has a CVE in NVD.
 
 Three cheap signals (agreed 2026-11-03):
 - Patch available (built): the Fix column and the detail page show whether
@@ -893,6 +967,17 @@ addresses)
     feed "AI as weapon".
   - Note: this also tracks the attack surface of our own future "assist" phase
     — dogfooding awareness of a capability we will add.
+- Supply chain category (sources named 2026-11-11). A keyword category
+  for open-source supply-chain attacks (malicious and hijacked packages,
+  compromised maintainer accounts, CI and GitHub Actions abuse, package
+  worms), fed by research blogs and shown on the Phase 2 Supply chain tab
+  as well as in the news feed. Sources: Socket, StepSecurity,
+  ReversingLabs, Veracode (which bought Phylum's technology and team in
+  January 2025, so Phylum's research now appears there), Sonatype (blog
+  and the quarterly Open Source Malware Index, a report for context, not
+  a feed; its counts run far above OSV's and are not comparable), Checkmarx
+  Zero (checkmarx.com/zero-post/), Aikido, and Snyk. Each source's RSS or
+  Atom URL is confirmed when the reader is built.
 
 ### Phase 5: Collection infrastructure (collectors, scraping layer, scheduler, alerting)
 
@@ -1857,6 +1942,22 @@ checker built for it also serves Phase 3 brand-handle checks.
 
 ### Phase 11: AI assist (last)
 - Provider abstraction: none (default), Ollama, Claude Haiku 5.5 via the official Anthropic SDK.
+- Design notes for the client, recorded 2026-11-11 (an outside
+  suggestion to write an `llm_client.py` now was reviewed and deferred to
+  this phase, because the toolkit makes no model calls before it and
+  CLAUDE.md keeps the core deterministic; the Claude subscription used to
+  write the code is a development tool, not part of the toolkit, so
+  dropping it changes nothing in the app). When built: one module in
+  app/core that every feature calls; providers selected in .env;
+  per-task routing (a small model for summaries and translation, a
+  stronger one for TTP extraction and query suggestions); timeouts and
+  retries for slow local or serverless endpoints; a token and cost log per
+  feature; and the "sensitive data stays local" rule enforced in that
+  module, not left to each caller. Each provider is called through its own
+  official client (the Anthropic SDK for Claude; Ollama and other local
+  servers through their OpenAI-compatible endpoint), not through one
+  provider's client pretending to be another, so provider-specific
+  features and error handling stay correct.
 - Features, each a button beside deterministic results: enrichment summary, article summary, translation of non-English posts, TTP and ATT&CK extraction from reports, feed relevance ranking, report paragraph drafting.
 - Report-to-profile extraction (added 2026-11-06): the analyst gives a
   report (a URL through the Phase 2 fetcher, or pasted text, or a RAGFlow
@@ -2092,6 +2193,62 @@ this list and decide what to pull into active work. Keeps the project moving.
     every payload as hostile input (the same rule as breach data).
   - Keep the toolkit integration read-only: it fetches sensor results, it
     never manages or reconfigures the sensor from the home host.
+
+- Malware research corpus (parked 2026-11-11). A module for tracking
+  malware for research: per family and per sample, the metadata,
+  extracted configurations (C2 addresses, campaign IDs, keys, mutexes),
+  first and last seen, and the reports that describe it, so a family can
+  be followed over time. Candidate sources: MalwareBazaar (already
+  queried in Phase 1), Datadog's malicious-software-packages-dataset
+  samples (Apache 2.0; zip archives with the password "infected"),
+  Backstabber's Knife Collection (a peer-reviewed dataset of real npm,
+  PyPI, and RubyGems supply-chain attacks; access by request with an
+  institutional e-mail address, so it waits for the operator's own
+  domain), and the config parsers already named for the paste-C2 work
+  (rat_king_parser, CAPE-parsers). Rules: samples are stored and opened
+  only inside the isolated analysis VM, never by the web app or on the
+  host; the app keeps metadata and extracted values only. Extracted C2
+  values feed Phase 6 as pivots; the corpus itself is its own module, not
+  part of Phase 6. Storage rule, refined 2026-11-11: a sample may be
+  stored anywhere practical (the git-ignored data folder, an external
+  drive) as long as it stays inside an encrypted archive (the usual zip
+  with the password "infected"; AES via 7-Zip or pyzipper, since Python's
+  zipfile cannot write encrypted archives). It is never extracted,
+  opened, or parsed on the host: extraction, static analysis, and
+  execution happen only in the isolated worker or VM. The archive keeps
+  antivirus from quarantining it and stops an accidental double-click.
+  The data folder must not sit inside a cloud-synced directory.
+- Malware analysis: static and dynamic (parked 2026-11-11), the analysis
+  half of the corpus above. Staged, cheapest first:
+  1. Read existing public sandbox reports by hash, with no submission:
+     Recorded Future Triage (tria.ge), Hybrid Analysis, and VirusTotal
+     behaviour reports. Which of them offer a free API key to a
+     researcher is to be confirmed then (ANY.RUN's API is on paid plans).
+  2. Static analysis in an isolated worker: file type and hashes, PE
+     metadata, strings (FLOSS), capability detection (capa, Apache 2.0),
+     YARA, and the config parsers.
+  3. Dynamic analysis: a self-hosted sandbox, run as a separate service on
+     its own host and read through its API, never imported. Options as of
+     2026-11-11: CAPE (the most used; KVM on Ubuntu with Windows guests;
+     setup is the known pain point), DRAKVUF Sandbox (CERT Polska;
+     agentless, watches the guest from the hypervisor so malware cannot
+     find an in-guest agent; Xen-based, stricter hardware needs), and
+     Cuckoo3 (CERT-EE's Python 3 rewrite of Cuckoo). Writing a sandbox
+     from scratch is not planned: the snapshot-run-collect-revert loop is
+     a weekend, but behaviour capture, anti-evasion, and memory config
+     extraction are what those projects spent years on. What the toolkit
+     writes is the glue: submit, poll, fetch, normalise, store.
+  4. Public sandboxes, automated: submit through the API and pull the
+     results back into the corpus (verdict, family, signatures, extracted
+     config, contacted hosts, dropped files, ATT&CK techniques).
+     Recorded Future Triage (tria.ge) gives a free researcher account an
+     API key, but every submission is public and cannot be deleted;
+     private analysis is its paid product.
+  OPSEC: submitting to a public sandbox publishes the sample and can tip
+  off its operator, so dynamic analysis defaults to self-hosted, and any
+  public submission is an explicit, per-sample operator choice. Looking up
+  an existing public report by hash (stage 1) reveals nothing and is
+  always preferred.
 
 ## Data handling policy (breach and leak data)
 
@@ -2351,6 +2508,30 @@ Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
   as an index is not used: it needs a paid subscription; the XDB links
   inside KEV entries are free and stored. Data labelled "VulnCheck KEV"
   per VulnCheck's attribution request.
+- 2026-11-11: Supply chain tab sources settled: OSV bulk files and
+  change lists for everything in nine language ecosystems (not only the
+  watchlist), OpenSSF Malicious Packages through OSV, Datadog's package
+  name lists, GitHub malware advisories as a cross-check, deps.dev for
+  package context, OSM as a runtime lookup. Three tables (watchlist,
+  compromised packages, all advisories) and a package page modelled on
+  Checkmarx's package view. Aikido Intel dropped; Snyk is blog-only.
+- 2026-11-11: Supply chain storage: every malicious-package report and
+  every vulnerability advisory for the nine language ecosystems is stored
+  (about 305 MB zipped); advisories are shown on package and CVE pages,
+  not in the tab's main tables. Vendor write-ups appear
+  on package pages (from the reports' own references) and in a vendor
+  reports table fed by the first piece of the Phase 4 reader.
+- 2026-11-11: No LLM client before Phase 11 (an outside suggestion to
+  build one now was reviewed): nothing calls a model until then; the
+  client's design notes are in Phase 11.
+- 2026-11-11: Sandbox choice (CAPE, DRAKVUF Sandbox, Cuckoo3, or a hosted
+  service) deferred to the malware analysis module's own phase.
+- 2026-11-11: Malware samples may be stored outside the VM, but only as
+  encrypted archives; they are opened, parsed, or run only inside it.
+- 2026-11-11: Parked a malware research corpus and a staged malware
+  analysis module (public sandbox reports, then static analysis, then a
+  private or self-hosted sandbox). Samples only ever inside the isolated
+  VM.
 - 2026-11-11: OTX pulses and CISA SSVC on the CVE detail page. Pulses
   are context and never scored. SSVC "active" sets P1, "poc" counts as a
   proof of concept, and automatable plus total impact sets at least P4;

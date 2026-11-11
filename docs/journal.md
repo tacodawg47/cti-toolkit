@@ -166,6 +166,70 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-11: supply-chain sources for the Phase 2 Supply chain tab
+
+The operator proposed sources; each was checked for access, licence, and
+fit. Findings:
+
+- OSV.dev bulk data: per-ecosystem `all.zip` and `modified_id.csv`
+  (`<iso date>,<id>`, newest first) at
+  storage.googleapis.com/osv-vulnerabilities/; upstream licences listed
+  per source (GitHub Advisory Database CC-BY 4.0, OpenSSF Malicious
+  Packages Apache 2.0, Rust and Haskell CC0, Chainguard CC-BY-NC-ND).
+  https://google.github.io/osv.dev/data/
+- Change volume, measured 2026-11-11 from the `modified_id.csv` files over
+  7 days: npm 620 (MAL 538, GHSA 82), PyPI 112 (GHSA 65, MAL 41, PYSEC 6),
+  Go 208 (GHSA 127, GO 81), crates.io 97 (RUSTSEC 74, GHSA 21, MAL 2),
+  NuGet 48, Packagist 39 (DRUPAL 24, GHSA 15), Maven 36, RubyGems 26
+  (GHSA 19, MAL 7), GitHub Actions 7. These are changed records, not only
+  new ones.
+- OpenSSF malicious-packages: Apache-2.0 repository, OSV format, a live
+  counter rather than a fixed total (the 238,000 figure found by search
+  could not be confirmed). https://github.com/ossf/malicious-packages
+- GitHub Advisory Database REST: `GET /advisories?type=malware`,
+  ecosystem filter, cursor paging, up to 100 a page.
+  https://docs.github.com/en/rest/security-advisories/global-advisories
+- Datadog malicious-software-packages-dataset: Apache-2.0, `manifest.json`
+  per ecosystem (npm, PyPI, IDE extensions, AI skills), about 29,847
+  packages, samples in zip archives with the password "infected".
+  https://github.com/DataDog/malicious-software-packages-dataset
+- deps.dev API v3: Google API terms, caching expressly allowed, generated
+  data CC-BY 4.0; GetPackage (versions, publish dates), GetProject
+  (Scorecard), advisories. https://docs.deps.dev/api/v3/
+- Aikido Intel: described by Aikido as AGPL-licensed, free to browse at
+  intel.aikido.dev, product use needs a paid licence; no documented feed
+  URL found. Dropped.
+- Snyk: its API docs say most APIs are Enterprise-only; the free plan is
+  for scanning one's own projects. Blog only.
+  https://docs.snyk.io/snyk-api
+- Checkmarx: the AppSec Knowledge Center (commercial) searches by package
+  (every version, flagged vulnerable or not) or by vulnerability (details
+  and affected packages). The package view is the model for the Supply
+  chain tab's package page. Checkmarx Zero research posts are at
+  checkmarx.com/zero-post/.
+- Veracode bought Phylum's technology and team in January 2025, so
+  Phylum's research now appears on the Veracode blog.
+  https://www.veracode.com/press-release/veracode-acquires-phylum-inc-technology-to-transform-software-supply-chain-security/
+- Sonatype publishes a quarterly Open Source Malware Index (Q3 2026:
+  149,329 malicious packages logged, 1,960,846 since 2017). Its counting
+  differs from OSV's, so the numbers are context only.
+  https://www.sonatype.com/blog/q3-2026-open-source-malware-index-when-compromise-compounds
+- Backstabber's Knife Collection: access by request with an institutional
+  e-mail address; parked with the malware research corpus.
+  https://dasfreak.github.io/Backstabbers-Knife-Collection/
+- OSV bulk file sizes (HEAD requests, 2026-11-11): npm 220.5 MB, PyPI
+  37.8, Go 12.9, Packagist 11.1, Maven 10.5, RubyGems 5.3, crates.io 3.8,
+  NuGet 2.8, GitHub Actions 0.1; about 305 MB zipped in total.
+- Triage (tria.ge): free researcher accounts get an API key; every
+  submission to the free sandbox is public and cannot be deleted.
+  https://us-sandbox.recordedfuture.com/docs/faq
+- GitHub on a free personal account: secret scanning and push protection
+  on private repositories need the paid Secret Protection add-on; both are
+  free on public repositories, as are CodeQL and private vulnerability
+  reporting. Dependabot alerts were enabled by the operator on
+  2026-11-11.
+  https://docs.github.com/en/code-security/getting-started/github-security-features
+
 ### 2026-11-10: Kraven guides, AdversaryGraph, proxy and browser products
 
 Pages read in the browser; nothing installed or run.
@@ -516,6 +580,7 @@ deployment.
   before exposing it. Open questions to work through then, with first-cut
   first-cut notes as a starting point:
   - local AI model to analyze files (such as potential malware) and extract its configuration, metadata, hardcoded C2 information, loaded dlls, other relevant info, for tracking, correlation, research. 
+  - Lets exploire some ways to include the gui?
   - Login-only vs fully public: default to authenticated (even a single
     account, or basic auth at a reverse proxy). The app spends metered API
     keys and exposes `/health` (key presence, versions), so an open instance
