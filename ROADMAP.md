@@ -1357,6 +1357,19 @@ code may be copied.)
       not seen before.
     - Markers for an absent pivot: an HTML hash of 0 means the host
       served no HTML.
+  - Revisit when this phase is built (operator's note, 2026-11-10; not
+    yet read): Fox-IT's Cobalt Strike beacon corpus, released 2026-10-13.
+    Dataset: https://huggingface.co/datasets/fox-srt/cobaltstrike-beacon-corpus
+    Write-up: https://blog.fox-it.com/2026/10/13/releasing-the-cobalt-strike-beacon-corpus/
+    Questions for then: what each record holds (beacon config fields
+    such as C2 hosts, URIs, user agent, watermark, public key, sleep and
+    jitter, malleable profile values; collection dates), its licence and
+    terms, its size and update cadence, and whether it is safe to hold
+    locally (configs and metadata, or beacon payloads). Likely uses if it
+    fits: seed the Signatures library with observed non-default values,
+    cluster servers by shared watermark, public key, or profile, give a
+    "seen in the corpus" answer for an IP or domain under investigation,
+    and serve as test data for the pivot grid.
   - Recorded but not built: netflow and traffic pivots (no free source),
     active probing of hosts (out of scope for a passive tool), and calling
     a found Telegram bot token against the Bot API (extract and correlate
