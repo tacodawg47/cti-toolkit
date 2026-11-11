@@ -79,11 +79,18 @@ py -3.12 -m venv .venv-tools
 (no resolving, since the lock already holds the full tree) and refuse a lock
 file without hashes. Run it before any commit that changes
 `requirements.txt`, and now and then regardless, since advisories appear
-after the fact. Result on 2026-11-02: "No known vulnerabilities found".
+after the fact. Results: 2026-11-02 "No known vulnerabilities found";
+2026-11-11 (pip-audit 2.10.1, after commit 35159cb, requirements unchanged
+since the dependency trim) "No known vulnerabilities found".
 
 On GitHub, enable Dependabot alerts: repository Settings, then Security,
 then "Dependabot alerts". GitHub then emails you when a pinned version gets
-a published vulnerability. Free on private repositories.
+a published vulnerability. Free on private repositories. Enabled
+2026-11-11. Dependabot security updates (automatic fix pull requests) stay
+off: upgrades are vetted by hand and wait a week, so an alert is enough.
+Secret scanning, push protection, CodeQL and private vulnerability
+reporting need a paid add-on on a private repository and are free on a
+public one: turn them on when the repository goes public.
 
 ## 4. Upgrade deliberately
 
