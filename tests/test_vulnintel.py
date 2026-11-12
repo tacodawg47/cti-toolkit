@@ -419,13 +419,17 @@ class ServiceTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
                 return httpx.Response(200, json={"metadata": {"count": 0}, "data": []})
             if req.url.host == "services.nvd.nist.gov":
                 return httpx.Response(200, json={**NVD_DOC, "totalResults": 1})
+            if req.url.host == "docs.google.com":                    # Project Zero: one year tab with rows
+                return httpx.Response(200, text=GP0_CSV if req.url.params.get("sheet") == "2026" else GP0_INTRO)
+            if req.url.host == "raw.githubusercontent.com" and "Ransomware-Vulnerability-Matrix" in req.url.path:
+                return httpx.Response(200, text=RVM_EDGE)
             raise AssertionError(req.url.host)
         base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
         from app.modules.vulnerability_intelligence import feeds
         results = await feeds.refresh_all()
         failed = [r for r in results if not r["ok"] and r["feed"] != "vulnlookup_recent"]
         self.assertEqual(failed, [], results)                # chatter may be empty: no sightings in the mock
-        self.assertEqual(store.kev_count(), 4)                # 2 CISA + 2 EUVD (one overlaps by CVE? no: distinct)
+        self.assertEqual(store.kev_count(), 6)                # 2 CISA + 2 EUVD + 2 Project Zero, all distinct
         self.assertEqual(store.epss_count(), 1)
         self.assertEqual(store.feed_status()["cisa_kev"]["version"], "2026.11.03")
         self.assertEqual(store.exploit_counts(), {"exploitdb": 1, "metasploit": 1, "nuclei": 1})
@@ -477,8 +481,13 @@ class RouteTests(TempDbMixin, unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         for needle in ("P1 Emergency", "Sensitive information disclosure.", "7.5", "CWE-119",
                        "Known exploited", "someone/CVE-2023-4966", "Vendor advisory", "12.1-55.300",
-                       "patch tagged in NVD"):
+                       '<span class="ok">patch</span>',
+                       '<p class="cvetitle">Citrix NetScaler Buffer Overflow</p>',   # CISA's name as the title
+                       "<li>On a known-exploited list"):                          # bullets start with a capital
             self.assertIn(needle, r.text)
+        # CVSS and EPSS sit in the key figures, not in the bullet list
+        bullets = r.text.split("Based on:")[1].split("</ul>")[0]
+        self.assertNotIn("CVSS 7.5", bullets)
         r = self.client.get("/vulnerability-intelligence/cve/not-a-cve")
         self.assertIn("not a CVE identifier", r.text)
 
@@ -1124,16 +1133,28 @@ class TableHelperTests(unittest.TestCase):
     def test_parse(self):
         from starlette.datastructures import QueryParams
         f = tables.Filters.parse(QueryParams("x_vendor=Ivanti&x_tag=exploited&x_tag=bogus&x_epss=0.5&x_since=30&x_sort=cvss&x_dir=asc&x_page=3"), "x")
-        self.assertEqual((f.vendor, f.tags, f.epss, f.since, f.sort, f.desc, f.page), ("Ivanti", ["exploited"], 0.5, 30, "cvss", False, 3))
+        self.assertEqual((f.vendors, f.tags, f.epss, f.since, f.sort, f.desc, f.page), (["Ivanti"], ["exploited"], 0.5, 30, "cvss", False, 3))
         self.assertTrue(f.active)
         f = tables.Filters.parse(QueryParams("x_epss=0.3&x_since=5&x_sort=nope&x_page=-2"), "x", "date")
         self.assertEqual((f.epss, f.since, f.sort, f.desc, f.page), (None, None, "date", True, 1))
         self.assertFalse(f.active)
+        # several vendors at once; blanks dropped, duplicates folded
+        f = tables.Filters.parse(QueryParams("x_vendor=Ivanti&x_vendor=Citrix&x_vendor=&x_vendor=Citrix"), "x")
+        self.assertEqual(f.vendors, ["Citrix", "Ivanti"])
+        # a default window applies until the URL says otherwise; "all" means any time
+        f = tables.Filters.parse(QueryParams(""), "x", default_since=7)
+        self.assertEqual((f.since, f.active), (7, False))
+        f = tables.Filters.parse(QueryParams("x_since=all"), "x", default_since=7)
+        self.assertEqual((f.since, f.active), (None, True))
+        f = tables.Filters.parse(QueryParams("x_since=30"), "x", default_since=7)
+        self.assertEqual((f.since, f.active), (30, True))
 
     def test_apply_filters_and_sorts(self):
         rows = self._rows()
-        f = tables.Filters(vendor="ivanti")
+        f = tables.Filters(vendors=["ivanti"])
         self.assertEqual([r["cve_id"] for r in tables.apply(rows, f)], ["CVE-2026-1"])
+        f = tables.Filters(vendors=["Ivanti", "Citrix"], tags=["ransomware"])        # vendors OR'd, tags AND'd
+        self.assertEqual([r["cve_id"] for r in tables.apply(rows, f)], ["CVE-2026-2"])
         f = tables.Filters(tags=["code"])
         self.assertEqual([r["cve_id"] for r in tables.apply(rows, f)], ["CVE-2026-1", "CVE-2026-2"])
         f = tables.Filters(tags=["weaponised", "exploited"])
@@ -1202,50 +1223,54 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
         store.upsert_poc_repos(poc_feed.parse_items([gh_repo("CVE-2024-3400-poc", "2099-01-02", 3)]))
         store.set_feed_status("github_poc", entries=1, version="test")
         r = self.client.get("/vulnerability-intelligence")
-        self.assertNotIn("<h3>New exploit code", r.text)          # moved to the Exploits tab
+        self.assertNotIn("<h3>New exploit code", r.text)          # on the Exploit Code tab
         self.assertIn("New exploit code in the last 7 days for <strong>1</strong> CVE", r.text)
-        self.assertIn("/cve/CVE-2024-3400", r.text)
-        self.assertIn("Hottest right now", r.text)
-        self.assertIn("Ask your AI.", r.text)
-        self.assertNotIn("reveals nothing", r.text)
-        self.assertIn("- CVE-2024-3400 |", r.text)          # the brief lists it (PoC this week)
-        self.assertIn("Ransomware groups and the CVEs they exploit", r.text)
-        self.assertIn("show 30 days", r.text)
-        self.assertNotIn("Due", r.text.split("Trending")[0].split("Hottest")[1])   # no due-date column
-        self.assertIn("Exploit code available?", r.text)
-        self.assertIn('class="err" title="GitHub">Yes</a>', r.text)
-        self.assertIn("Why it's hot", r.text)
-        self.assertIn("Listed as exploited", r.text)
-        # every sort link returns to its table
-        self.assertIn('hot_sort=cvss&amp;hot_dir=desc#t-hot"', r.text)
-        self.assertIn('action="/vulnerability-intelligence#t-hot"', r.text)
-        # the vendor filter on the exploit-code table keeps the row for a non-matching vendor out
-        r = self.client.get("/vulnerability-intelligence/exploits?poc_vendor=Nobody")
-        self.assertIn("No new exploit code matches.", r.text)
-        self.assertIn("0 of 1 rows", r.text)
+        self.assertNotIn("Hottest right now", r.text)             # parked 2026-11-11
+        self.assertNotIn("Ask your AI.", r.text)
+        self.assertIn("CVEs Exploited by Ransomware Groups", r.text)
+        self.assertIn("Data sourced from", r.text)
+        self.assertIn("<h3>Newly Exploited</h3>", r.text)
+        # the exploited table has no "exploited" tick box; others keep theirs
+        self.assertNotIn('name="kev_tag" value="exploited"', r.text)
+        self.assertIn('name="kev_tag" value="code"', r.text)
+        self.assertIn("public exploit", r.text)                   # the "code" tag's label
+        # the filter form returns to its table and submits on change
+        self.assertIn('action="/vulnerability-intelligence#t-kev"', r.text)
+        self.assertIn("this.requestSubmit()", r.text)
         r = self.client.get("/vulnerability-intelligence/exploits")
-        self.assertIn("Recently published exploit code", r.text)
+        self.assertIn("Recently Published Exploit Code", r.text)
+        self.assertIn('>Exploit Code</a>', r.text)                # the tab's name
         self.assertIn("/cve/CVE-2024-3400", r.text)
+        self.assertIn('<span class="badge">GitHub</span>', r.text)   # the Source column
+        self.assertNotIn("Exploit code available?", r.text)
+        self.assertNotIn('name="poc_tag" value="code"', r.text)
+        self.assertIn('name="poc_sort"', r.text)                  # the sort dropdown
+        self.assertIn('poc_sort=cvss&amp;poc_dir=desc#t-poc"', r.text)   # header sort links return to the table
+        # the vendor filter keeps the row for a non-matching vendor out
+        r = self.client.get("/vulnerability-intelligence/exploits?poc_vendor=Nobody")
+        self.assertIn("No exploit code matches.", r.text)
+        self.assertIn("0 of 1 rows", r.text)
         r = self.client.get("/vulnerability-intelligence/exploits?poc_sort=heat")
-        self.assertIn("Why", r.text)
+        self.assertIn("Why it's hot", r.text)
 
     def test_dashboard_charts_and_groups(self):
         from datetime import datetime, timezone
         rows, _ = kev_feed.parse(json.dumps(KEV_DOC).encode())
         rows[0]["date_added"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         store.upsert_kev(rows, "cisa")
-        store.upsert_ransomware_cves([("CVE-2026-118527", "clop")])
+        store.upsert_ransomware_cves([("CVE-2026-118527", "clop"), ("CVE-2019-0001", "clop")]
+                                     + [(f"CVE-2025-{1000 + i}", "akira") for i in range(7)])
         r = self.client.get("/vulnerability-intelligence")
-        self.assertIn("Exploitation over the last 12 months", r.text)
+        self.assertIn("Newly Exploited CVEs per Month", r.text)
+        self.assertIn("Most-Exploited Vendors, Last 12 Months", r.text)
         self.assertIn("<svg", r.text)
         self.assertIn("Citrix", r.text)                        # vendor chart label
         self.assertIn("clop", r.text)
         self.assertIn("CVE-2026-118527", r.text)
+        self.assertIn("CVE-2019-0001", r.text)                 # all years, no year switch
         self.assertIn("Victims (all time)", r.text)
         self.assertIn("of which known ransomware use", r.text)   # chart legend
-        r = self.client.get("/vulnerability-intelligence?groups=all")
-        self.assertIn("CVE-2026-118527", r.text)
-        self.assertIn("CVE-2026 only", r.text)                   # the link back to the default view
+        self.assertIn("show 2 more", r.text)                   # akira: 5 shown, 2 behind "show more"
 
     def test_tables_filter_sort_and_page(self):
         from datetime import datetime, timezone
@@ -1260,18 +1285,27 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
         store.upsert_epss([(f"CVE-2026-{10000 + i}", 0.05 * i, 0.5) for i in range(12)], today)
         store.upsert_exploits("metasploit", [{"ref": "m", "cve_id": "CVE-2026-10003", "title": "t", "url": None,
                                               "date": None, "kind": "exploit", "platform": None, "verified": 1}])
+        store.upsert_kev([{**rows[0], "cve_id": "CVE-2020-9999", "date_added": "2020-01-01"}], "cisa")   # old listing
         r = self.client.get("/vulnerability-intelligence")
-        self.assertIn("rows 1–10 of 12", r.text)                 # newly known-exploited, paged
+        self.assertIn("rows 1–10 of 12", r.text)                 # newly exploited: the last 7 days by default
+        self.assertIn("12 of 13 rows", r.text)
         self.assertIn("next 10", r.text)
+        self.assertNotIn(">clear</a>", r.text.split("Newly Exploited")[1].split("</form>")[0])   # default window is not a filter
         r = self.client.get("/vulnerability-intelligence?kev_page=2")
         self.assertIn("rows 11–12 of 12", r.text)
+        r = self.client.get("/vulnerability-intelligence?kev_since=all&kev_page=2")
+        self.assertIn("rows 11–13 of 13", r.text)               # any time brings the 2020 listing in
+        self.assertIn("CVE-2020-9999", r.text)
         r = self.client.get("/vulnerability-intelligence?kev_vendor=Ivanti&kev_tag=ransomware&kev_tag=weaponised")
-        self.assertIn("1 of 12 rows", r.text)
+        self.assertIn("1 of 13 rows", r.text)
         self.assertIn("CVE-2026-10003", r.text)
+        r = self.client.get("/vulnerability-intelligence?kev_vendor=Ivanti&kev_vendor=Citrix")
+        self.assertIn("vendor: 2 selected", r.text)
+        self.assertIn("12 of 13 rows", r.text)
         r = self.client.get("/vulnerability-intelligence?kev_epss=0.5")
-        self.assertIn("2 of 12 rows", r.text)                    # 0.50 and 0.55
+        self.assertIn("2 of 13 rows", r.text)                    # 0.50 and 0.55
         r = self.client.get("/vulnerability-intelligence?kev_sort=epss&kev_dir=asc")
-        body = r.text.split("Newly known-exploited")[1]
+        body = r.text.split("Newly Exploited</h3>")[1]
         self.assertLess(body.index("CVE-2026-10000"), body.index("CVE-2026-10001"))
 
     def test_cve_page_shows_ransomware_groups(self):
@@ -1781,6 +1815,95 @@ class CveListTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
         self.assertIn("load the CVE List again", res["error"])
 
 
+class MoreViewTests(ViewTests):
+    """Views 5, 6, 9, 11 and 12, on top of ViewTests' fixture: Citrix
+    CVE-2023-4966 (CISA 2023-10-18 with ransomware, Shadowserver 2023-10-10),
+    Ivanti CVE-2026-118527 (CISA 2099-01-01), CVE-2025-1111 (Nuclei, EPSS
+    0.6) and CVE-2025-2222 (GitHub PoC, EPSS 0.2)."""
+
+    def _record(self, cve_id, published, cvss=None, state="PUBLISHED"):
+        from app.core.db import connect
+        with connect() as conn:
+            conn.execute("INSERT OR REPLACE INTO cve_records (cve_id, state, published, cvss_score) VALUES (?, ?, ?, ?)",
+                         (cve_id, state, published, cvss))
+            conn.commit()
+
+    def _ids(self, slug):
+        from app.modules.vulnerability_intelligence import views
+        v = views.BY_SLUG[slug]
+        rows = {r["cve_id"]: r for r in v.rows()}
+        self.assertEqual(v.count(), len(rows))           # the counter and the page agree
+        return rows
+
+    def test_new_and_severe(self):
+        from datetime import datetime, timedelta, timezone
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%dT10:00:00")
+        old = (datetime.now(timezone.utc) - timedelta(days=20)).strftime("%Y-%m-%dT10:00:00")
+        self._record("CVE-2026-50001", today, 9.8)                       # critical: in
+        self._record("CVE-2026-50002", today, 5.0)                       # SSVC automatable + total: in
+        store.save_ssvc("CVE-2026-50002", {"exploitation": "none", "automatable": "yes",
+                                           "technical_impact": "total", "timestamp": today[:10]})
+        self._record("CVE-2026-50003", today, 5.0)                       # medium: out
+        self._record("CVE-2026-50004", old, 9.8)                         # too old: out
+        self._record("CVE-2026-50005", today, 9.8, state="REJECTED")     # rejected: out
+        rows = self._ids("new-severe")
+        self.assertEqual(set(rows), {"CVE-2026-50001", "CVE-2026-50002"})
+        self.assertEqual(rows["CVE-2026-50001"]["date"], today[:10])
+        self.assertEqual(rows["CVE-2026-50001"]["cvss"], 9.8)
+
+    def test_likely_next(self):
+        store.upsert_epss([("CVE-2023-4966", 0.97, 0.99), ("CVE-2024-0009", 0.05, 0.9)], "2026-11-10")
+        rows = self._ids("likely")
+        # EPSS 0.6 and 0.2 are in; the exploited Citrix CVE and EPSS 0.05 are not.
+        self.assertEqual(set(rows), {"CVE-2025-1111", "CVE-2025-2222"})
+
+    def test_ransomware_linked(self):
+        store.upsert_ransomware_cves([("CVE-2025-2222", "akira"), ("CVE-2023-4966", "lockbit")])
+        rows = self._ids("ransomware")
+        self.assertEqual(set(rows), {"CVE-2023-4966", "CVE-2025-2222"})
+        self.assertEqual(rows["CVE-2025-2222"]["ransomware_groups"], ["akira"])
+        self.assertTrue(rows["CVE-2025-2222"]["ransomware"])            # a group link alone sets the flag
+        self.assertEqual(rows["CVE-2023-4966"]["date"], "2023-10-10")   # first seen exploited
+
+    def test_probable_zero_days(self):
+        self._record("CVE-2023-4966", "2023-10-10T14:15:00")            # first listed the same day: in
+        self._record("CVE-2026-118527", "2026-01-01T00:00:00")          # listed in 2099: out
+        self._record("CVE-2025-1111", "2026-11-08T09:00:00")            # SSVC active the day after: in
+        store.save_ssvc("CVE-2025-1111", {"exploitation": "active", "automatable": "no",
+                                          "technical_impact": "partial", "timestamp": "2026-11-09"})
+        self._record("CVE-2025-2222", "2026-11-01T09:00:00")            # not exploited: out
+        rows = self._ids("zero-day")
+        self.assertEqual(set(rows), {"CVE-2023-4966", "CVE-2025-1111"})
+        self.assertEqual(rows["CVE-2025-1111"]["date"], "2026-11-08")   # dated by publication
+
+    def test_exploitation_sightings(self):
+        from app.core.db import connect
+        with connect() as conn:
+            conn.executemany("INSERT INTO sightings_recent (cve_id, type, day, n) VALUES (?, ?, ?, ?)",
+                             [("CVE-2025-1111", "exploited", "2026-11-09", 1),
+                              ("CVE-2025-1111", "exploited", "2026-11-10", 2),
+                              ("CVE-2025-2222", "seen", "2026-11-10", 5)])
+            conn.commit()
+        rows = self._ids("sightings")
+        self.assertEqual(set(rows), {"CVE-2025-1111"})                  # "seen" is not "exploited"
+        self.assertEqual(rows["CVE-2025-1111"]["date"], "2026-11-10")
+        self.assertEqual(rows["CVE-2025-1111"]["sightings"], 3)
+
+    def test_pages_render(self):
+        from fastapi.testclient import TestClient
+        from app.main import app
+        from app.modules.vulnerability_intelligence import views
+        client = TestClient(app, base_url="http://127.0.0.1")
+        store.upsert_ransomware_cves([("CVE-2025-2222", "akira")])
+        listing = client.get("/vulnerability-intelligence/views").text
+        for v in views.VIEWS:
+            self.assertIn(v.title, listing)
+            r = client.get(f"/vulnerability-intelligence/views/{v.slug}")
+            self.assertEqual(r.status_code, 200, v.slug)
+        r = client.get("/vulnerability-intelligence/views/ransomware")
+        self.assertIn('title="known ransomware use: akira"', r.text)
+
+
 class SsvcActiveIsExploitedTests(ViewTests):
     def test_ssvc_active_cve_is_not_in_the_code_view(self):
         from app.modules.vulnerability_intelligence import views
@@ -1793,3 +1916,160 @@ class SsvcActiveIsExploitedTests(ViewTests):
         exploited = {r["cve_id"]: r for r in views.BY_SLUG["exploited"].rows()}
         self.assertEqual(exploited["CVE-2025-1111"]["sources"], ["ssvc"])
         self.assertEqual(views.BY_SLUG["exploited"].count(), 3)
+
+
+RVM_EDGE = """## Network Edge Devices
+- VPNs, firewalls
+
+### `Fortinet`
+| Product | CVE(s) | Ransomware Group(s) | Source(s) |
+|---|---|---|---|
+| FortiOS | CVE-2018-13379 | Conti, LockBit, Ghost/Cring | [cisa.gov](https://www.cisa.gov/a) / [tenable.com](https://www.tenable.com/b) |
+| FortiOS | CVE-2019-5591 | Nemesis Kitten+ | [secureworks.com](https://www.secureworks.com/c) |
+"""
+RVM_MS = """## Microsoft Products
+
+### `Windows`
+| Product | CVE(s) | Ransomware Group(s) | Source(s) |
+|---|---|---|---|
+| Print Spooler | CVE-2021-1675 and CVE-2021-34527 ("PrintNightmare") | *Prophet Spider, Vice Society, CosmicBeetle* | [x.test](https://x.test/1) |
+| PaperCut | CVE-2023\N{REPLACEMENT CHARACTER}27350 & CVE-2023\N{EN DASH}27351 | Black Basta, BlackBasta | [y.test](https://y.test/2) |
+"""
+
+
+class RvmParseTests(unittest.TestCase):
+    def test_parse_cells_markers_and_separators(self):
+        from app.modules.vulnerability_intelligence.feeds import rvm
+        rows = {(r["cve_id"], r["grp"]): r for r in rvm.parse({"NetworkEdge": RVM_EDGE, "Microsoft": RVM_MS})}
+        conti = rows[("CVE-2018-13379", "Conti")]
+        self.assertEqual((conti["category"], conti["vendor"], conti["product"], conti["role"]),
+                         ("Network Edge Devices", "Fortinet", "FortiOS", "gang"))
+        self.assertEqual([s["url"] for s in conti["sources"]], ["https://www.cisa.gov/a", "https://www.tenable.com/b"])
+        self.assertIn(("CVE-2018-13379", "Ghost/Cring"), rows)               # "/" is part of a name, not a separator
+        self.assertEqual(rows[("CVE-2019-5591", "Nemesis Kitten")]["role"], "state")
+        # "and" between CVEs, a nickname, and each marker:
+        self.assertEqual(rows[("CVE-2021-1675", "Prophet Spider")]["role"], "broker")
+        self.assertEqual(rows[("CVE-2021-34527", "CosmicBeetle")]["role"], "affiliate")
+        self.assertEqual(rows[("CVE-2021-34527", "Vice Society")]["vendor"], "Windows")
+        # A broken dash still yields the CVE; two spellings of one group become one.
+        self.assertIn(("CVE-2023-27350", "Black Basta"), rows)
+        self.assertIn(("CVE-2023-27351", "Black Basta"), rows)
+        self.assertNotIn(("CVE-2023-27350", "BlackBasta"), rows)
+
+    def test_empty_matrix_is_an_error(self):
+        from app.modules.vulnerability_intelligence.feeds import rvm
+        with self.assertRaises(ValueError):
+            rvm.parse({"x": "## Nothing here\n"})
+
+
+class RvmFeedTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
+    async def asyncTearDown(self):
+        await base.aclose()
+
+    async def test_refresh_replaces_rows_and_keeps_first_seen(self):
+        from app.modules.vulnerability_intelligence.feeds import rvm
+        files = {"NetworkEdge": RVM_EDGE, "Microsoft": RVM_MS}
+
+        def handler(req):
+            name = req.url.path.rsplit("/", 1)[-1].removesuffix(".md")
+            return httpx.Response(200, text=files.get(name, "## Empty\n"))
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        res = await rvm.refresh()
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(res["entries"], 6)                              # distinct CVEs
+        first = {r["grp"]: r["first_seen"] for r in store.rvm_for("CVE-2018-13379")}
+        files["NetworkEdge"] = RVM_EDGE.replace("Conti, ", "")           # the matrix drops one pair
+        res = await rvm.refresh()
+        again = {r["grp"]: r["first_seen"] for r in store.rvm_for("CVE-2018-13379")}
+        self.assertEqual(set(again), {"LockBit", "Ghost/Cring"})
+        self.assertEqual(again["LockBit"], first["LockBit"])
+
+    async def test_refresh_error(self):
+        from app.modules.vulnerability_intelligence.feeds import rvm
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(404))))
+        res = await rvm.refresh()
+        self.assertFalse(res["ok"])
+        self.assertIn("404", store.feed_status()["rvm"]["error"])
+
+
+GP0_CSV = (
+    '"CVE","Vendor","Product","Type","Description","Date Discovered","Date Patched","Advisory",'
+    '"Analysis URL","Root Cause Analysis","Reported By"\n'
+    '"CVE-2026-20805","Microsoft","Windows","Information Disclosure","DWM disclosure","???","2026-01-13",'
+    '"https://msrc.example/CVE-2026-20805","???","","MSTIC"\n'
+    '"CVE-2025-1111","Google","Chrome","Memory Corruption","V8 type confusion","2025-03-01","2025-03-05",'
+    '"https://chrome.example/1","https://analysis.example/1","","TAG"\n'
+    '"CVE-????","Acme","Thing","?","no CVE yet","???","???","","","",""\n'
+)
+GP0_INTRO = '"0day ""In the Wild"""\n"Last updated: 2023-04-20"\n'
+
+
+class Gp0Tests(unittest.TestCase):
+    def test_parse(self):
+        from app.modules.vulnerability_intelligence.feeds import gp0
+        rows = {r["cve_id"]: r for r in gp0.parse(GP0_CSV.encode())}
+        self.assertEqual(set(rows), {"CVE-2026-20805", "CVE-2025-1111"})     # the row without a CVE is skipped
+        dwm = rows["CVE-2026-20805"]
+        self.assertEqual(dwm["date_added"], "2026-01-13")                    # no discovery date: the patch date
+        self.assertEqual([c["url"] for c in dwm["citations"]], ["https://msrc.example/CVE-2026-20805"])
+        self.assertIn("reported by MSTIC", dwm["notes"])
+        self.assertEqual(rows["CVE-2025-1111"]["date_added"], "2025-03-01")  # discovery date when known
+        self.assertEqual(len(rows["CVE-2025-1111"]["citations"]), 2)
+
+    def test_intro_tab_is_not_a_year(self):
+        from app.modules.vulnerability_intelligence.feeds import gp0
+        self.assertIsNone(gp0.parse(GP0_INTRO.encode()))
+
+
+class Gp0FeedAndViewTests(ViewTests, unittest.IsolatedAsyncioTestCase):
+    async def asyncTearDown(self):
+        await base.aclose()
+
+    async def test_feed_loads_years_and_feeds_the_zero_day_view(self):
+        from app.modules.vulnerability_intelligence import views
+        from app.modules.vulnerability_intelligence.feeds import gp0
+        asked = []
+
+        def handler(req):
+            year = req.url.params.get("sheet")
+            asked.append(year)
+            return httpx.Response(200, text=GP0_CSV if year == "2026" else GP0_INTRO)
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        res = await gp0.refresh()
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(asked[0], "2014")
+        kev = {k["source"]: k for k in store.get_kev("CVE-2026-20805")}
+        self.assertEqual(kev["gp0"]["date_added"], "2026-01-13")
+        # Listed by Project Zero: a zero-day even with no publication date stored.
+        zero = {r["cve_id"]: r for r in views.BY_SLUG["zero-day"].rows()}
+        self.assertIn("CVE-2026-20805", zero)
+        self.assertEqual(zero["CVE-2026-20805"]["sources"], ["gp0"])
+        self.assertEqual(views.BY_SLUG["zero-day"].count(), len(zero))
+        self.assertEqual(priority.KEV_NAMES["gp0"], "Project Zero 0-day")
+
+
+class RvmViewAndPageTests(ViewTests):
+    def test_view_nine_and_cve_page(self):
+        from fastapi.testclient import TestClient
+        from app.main import app
+        from app.modules.vulnerability_intelligence import views
+        from app.modules.vulnerability_intelligence.feeds import rvm
+        store.replace_rvm(rvm.parse({"NetworkEdge": RVM_EDGE}))
+        rows = {r["cve_id"]: r for r in views.BY_SLUG["ransomware"].rows()}
+        self.assertIn("CVE-2019-5591", rows)                                  # matrix only
+        self.assertEqual(rows["CVE-2019-5591"]["ransomware_groups"], ["Nemesis Kitten"])
+        self.assertTrue(rows["CVE-2019-5591"]["ransomware"])
+        self.assertEqual(views.BY_SLUG["ransomware"].count(), len(rows))
+        pri = priority.compute(kev_sources=[], ransomware=False, epss=None, cvss=None, poc_count=0,
+                               watchlist_hits=[], matrix_groups=["Conti"])
+        self.assertEqual(pri.level, "P1")
+        self.assertTrue(any("Ransomware Vulnerability Matrix: Conti" in r for r in pri.reasons))
+        import asyncio
+        base.set_client(httpx.AsyncClient(transport=_transport()))       # the page's live lookups, mocked
+        client = TestClient(app, base_url="http://127.0.0.1")
+        page = client.get("/vulnerability-intelligence/cve/CVE-2019-5591")
+        asyncio.run(base.aclose())
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("Ransomware Vulnerability Matrix", page.text)
+        self.assertIn("suspected state-sponsored", page.text)
+        self.assertIn("https://www.secureworks.com/c", page.text)

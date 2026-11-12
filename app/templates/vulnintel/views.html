@@ -2,8 +2,8 @@
 {% block tab %}
 {% if error %}<div class="card"><p class="err">⚠ {{ error }}</p></div>{% endif %}
 <p class="muted">A view is a saved rule over the local store, with its own page, filters and paging. A CVE can sit in
-  several views at once. More views (Patch Tuesday, new and severe, likely next, edge and perimeter, and others)
-  are planned; see ROADMAP.md, Phase 2.</p>
+  several views at once. The numbers follow ROADMAP.md, Phase 2; the gaps (Patch Tuesday, exploited and unfixed,
+  edge and perimeter, AI and ML stack, OT and medical, trending) wait for feeds that are not wired yet.</p>
 <table>
   <tr><th>#</th><th>View</th><th>CVEs</th><th>Rule</th></tr>
   {% for v in views %}

@@ -1,6 +1,7 @@
 {# Expects `t` (a _table() dict), `date_label`, optional `show_heat`, `show_maturity`
    (replaces the yes/no exploit column with module / template / proof of concept),
-   `empty` (message).
+   `show_sources` (replaces it with where the exploit code was found, for tables where every
+   row has code), `empty` (message), and the filter bar's `hide_tags` and `allow_heat`.
    The wrapper's id is the anchor every sort, filter and page link returns to,
    so the browser lands back on this table instead of the top of the page. #}
 {% set f = t.filters %}
@@ -12,6 +13,7 @@
 {% if not t.rows %}
   <p class="muted">{{ empty or "Nothing matches." }}</p>
 {% else %}
+  <div class="tablescroll">
   <table>
     <tr>
       {{ th(t.key, f.sort, f.desc, "cve_id", "CVE") }}
@@ -20,6 +22,7 @@
       {{ th(t.key, f.sort, f.desc, "date", date_label) }}
       <th title="From NVD's reference tags: patch = a reference tagged Patch; advisory = only a Vendor Advisory (a fix or workaround may be described there, NVD has not tagged a patch); none = neither">Fix</th>
       {% if show_maturity %}<th title="module = Metasploit (packaged, point and run); template = Nuclei (a scanner check); proof of concept = Exploit-DB, VulnCheck XDB or GitHub">Exploit maturity</th>
+      {% elif show_sources %}<th>Source</th>
       {% else %}<th title="Yes when a Metasploit module, Exploit-DB entry, VulnCheck XDB entry, Nuclei template or GitHub repository exists. Open the CVE for the links.">Exploit code available?</th>{% endif %}
       {{ th(t.key, f.sort, f.desc, "cvss", "CVSS") }}
       {{ th(t.key, f.sort, f.desc, "epss", "EPSS") }}
@@ -28,10 +31,10 @@
     {% for r in t.rows %}
       {% set c = r.code %}
       <tr>
-        <td style="white-space: nowrap;">{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}
+        <td class="cvecell">{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}
           {% if r.sources or r.ransomware %}<div class="tagline">
             {%- for s in r.sources %}<span class="badge{% if s == 'cisa' %} badge-kev{% endif %}" title="listed as exploited">{{ kev_names.get(s, s) }}</span>{% endfor %}
-            {%- if r.ransomware %}<span class="badge badge-ransom" title="known ransomware campaign use">ransomware</span>{% endif -%}
+            {%- if r.ransomware %}<span class="badge badge-ransom" title="known ransomware use{% if r.ransomware_groups %}: {{ r.ransomware_groups | join(', ') }}{% endif %}">ransomware</span>{% endif -%}
           </div>{% endif %}</td>
         <td>{{ r.vendor or "—" }}</td>
         <td>{{ r.product or "—" }}</td>
@@ -44,6 +47,7 @@
         {% if c.nuclei %}{% set _ = where.append("Nuclei") %}{% endif %}
         {% if c.gh %}{% set _ = where.append("GitHub") %}{% endif %}
         {% if show_maturity %}<td style="white-space: nowrap;"><a href="{{ prefix }}/cve/{{ r.cve_id }}#exploits" {% if r.maturity == "module" %}class="err"{% endif %} title="{{ where | join(', ') }}">{{ r.maturity or "—" }}</a></td>
+        {% elif show_sources %}<td><a href="{{ prefix }}/cve/{{ r.cve_id }}#exploits" class="tagline">{% for w in where %}<span class="badge{% if w == 'Metasploit' %} badge-kev{% endif %}">{{ w }}</span>{% endfor %}</a></td>
         {% else %}<td>{% if where %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#exploits" class="err" title="{{ where | join(', ') }}">Yes</a>{% else %}<span class="muted">No</span>{% endif %}</td>{% endif %}
         <td>{{ r.cvss if r.cvss is not none else "—" }}</td>
         <td>{{ "%.2f" | format(r.epss) if r.epss is not none else "—" }}</td>
@@ -54,6 +58,7 @@
       </tr>
     {% endfor %}
   </table>
+  </div>
   {% include "vulnintel/_pager.html" %}
 {% endif %}
 </div>
