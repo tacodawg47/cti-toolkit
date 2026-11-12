@@ -2326,7 +2326,13 @@ this list and decide what to pull into active work. Keeps the project moving.
   drop-in vendor module. Note: Team Cymru IP-to-ASN adds little over the ASN /
   AS-owner that VirusTotal and AbuseIPDB already return for an IP, so it is
   not worth adding for Phase 1; its exact BGP prefix is more useful in Phase 6
-  pivoting (ASN / CIDR-neighbor pivots).
+  pivoting (ASN / CIDR-neighbor pivots). Add with it (agreed 2026-11-11):
+  the SANS ISC / DShield IP API (keyless JSON at
+  `https://isc.sans.edu/api/ip/{ip}?json`: reports, targets, first and last
+  seen; `/api/cloudips` and `/api/cloudcidrs` also serve the Phase 6 cloud
+  gate). Data is CC BY-NC-SA, fine for this local tool. The User-Agent must
+  carry the contact address the operator puts in .env (for example
+  `ISC_CONTACT_EMAIL`); the module refuses to run without it.
 - Censys (parked 2026-11-02): listed as "optional" in Phase 1 and not built.
   It needs an account and API key, and for single-IP enrichment it largely
   duplicates what Shodan InternetDB (free, keyless) and the keyed Shodan
@@ -3097,10 +3103,11 @@ feed-match module, not the vendor pattern). Malpedia last (vetted account).
   error rate before use.
 - GreyNoise: live with the 10/day community endpoint, or obtain a key later
   through a non-consumer email domain.
-- SANS ISC API: ISC asks every script to put a way to reach its owner (an
-  e-mail address) in the User-Agent header, so they can ask before
-  blocking a misbehaving client. Use a dedicated address kept in .env, or
-  skip the source?
+- SANS ISC API: RESOLVED 2026-11-11. ISC asks every script to put a way to
+  reach its owner (an e-mail address) in the User-Agent header, so they
+  can ask before blocking a misbehaving client. The source is added in the
+  Phase 1 enrichment expansion; the operator adds a dedicated contact
+  address to .env then (never committed, never hard-coded).
 
 ## Reference material
 

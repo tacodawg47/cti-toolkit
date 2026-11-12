@@ -6,6 +6,9 @@ web interface. Portfolio project and daily workflow aid.
 Read ROADMAP.md first. It holds the phases, stack, decisions log, and open
 questions. Work proceeds in the order given in its "Build order" section.
 
+AGENTS.md holds the same rules for other coding agents (Codex). When a rule
+changes, change it in both files.
+
 ## Working agreement
 
 - **Approval before side effects.** Before installing anything, running any
