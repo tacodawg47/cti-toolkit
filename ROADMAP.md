@@ -124,6 +124,16 @@ build sequence. Build in this order:
 - Bulk paste of many IOCs.
 - Allowlist filter: Tranco top sites and CIRCL hashlookup suppress obvious
   false positives before quota is spent.
+- abuse.ch terms (read 2026-11-11): Feodo Tracker, SSLBL and YARAify are
+  CC0-style; URLhaus, MalwareBazaar and ThreatFox are free for
+  not-for-profit use only, and section 7.3 forbids training AI models on
+  any abuse.ch data. The browse pages now sit behind a bot check, so the
+  API is the only route.
+- Optional keyless sources found 2026-11-11 (largely duplicate GreyNoise
+  and AbuseIPDB): the SANS ISC / DShield IP API (data CC BY-NC-SA; ISC asks
+  for a contact address in the User-Agent, which the operator must choose)
+  and CrowdSec CTI (free quota). Feodo Tracker is dropped (frozen since
+  2026-03-04, no API).
 
 ### Phase 2: IOC extraction and vulnerability intelligence
 
@@ -387,7 +397,9 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   say "n/a" for vendor and product, and the local NVD data covers only
   CVEs changed since 2026-11-04, so about 24,000 of view 3's 27,000 rows
   (mostly old Exploit-DB entries) show a dash. A one-off full NVD load
-  (about 125 API pages with the key, roughly 2 GB) would fill them.
+  (about 125 API pages with the key, roughly 2 GB) would fill them. View
+  6 (Likely next) has the same gap: its top rows by EPSS are mostly old
+  CVEs.
 - Partial table reloads with HTMX (sort, filter, and page without a full
   page load) when HTMX is vendored; the anchors cover the annoyance until
   then.
@@ -399,8 +411,10 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   which. The dashboard keeps the counters, the charts, and the top rows of
   the three or four views the operator pins. Views and their membership
   rules, in build order (1 to 3 built 2026-11-11: a Views tab, one page
-  per view, and a counter strip on the Dashboard; pinning waits until more
-  views exist):
+  per view, and a counter strip on the Dashboard; 5, 6, 9, 11 and 12
+  built the same day from data already stored, with the narrowings noted
+  under each; pinning is next; 3 does not yet take SSVC "poc", which
+  would add about 46,700 CVEs):
   1. Exploited: in CISA KEV, VulnCheck KEV, the EUVD exploited list, any
      catalogue in Vulnerability-Lookup's `/api/kev` (it aggregates CIRCL,
      CISA, ENISA, Shadowserver and others), Microsoft `Exploited:Yes`, or
@@ -437,9 +451,13 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
      Chrome release notes, CISA's CSAF feeds.
   5. New and severe: published in the last 7 days with CVSS 9.0 or
      higher, or SSVC Automatable = yes with Technical Impact = total.
+     Built 2026-11-11; rejected CVEs left out.
   6. Likely next: not in view 1 and EPSS at or above 0.10, or in the top
      5 percent, or risen by 0.10 in 7 days, or Microsoft "Exploitation
-     More Likely". Absorbs today's Trending section.
+     More Likely". Absorbs today's Trending section. Built 2026-11-11 as
+     EPSS 0.10 alone (the top 5% and the rise both fall inside it);
+     Microsoft joins with view 4; Trending stays on the Dashboard for
+     now.
   7. Exploited and unfixed: in view 1 and no vendor fix (vendor CSAF
      remediation of `none_available` or `no_fix_planned`, no OSV fixed
      version, or the affected release is end-of-life per the
@@ -449,7 +467,14 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
      (no official public list exists), seeded from the Ransomware
      Vulnerability Matrix categories.
   9. Ransomware-linked: KEV ransomware flag, a ransomware.live group
-     link, or a Ransomware Vulnerability Matrix row (CC BY 4.0).
+     link, or a Ransomware Vulnerability Matrix row (CC BY 4.0). Built
+     2026-11-11 without the Matrix (CISA and VulnCheck flags, and
+     ransomware.live links). Matrix checked 2026-11-11: 8 Markdown files
+     (Product | CVE(s) | Ransomware Group(s) | Source(s)), 165 CVEs in
+     287 CVE-to-group pairs, last commit 2026-08-30. Built 2026-11-11:
+     the `rvm` feed fills `rvm_cves` (group, role from the matrix's
+     markers, category, vendor, product, sources); the view, the CVE page
+     and the priority (P1, with its own reason) use it, with credit.
   10. AI and ML stack: a CVE or advisory whose package is on an
       `ai_packages` list (PyPI, npm, crates), whose vendor and product is
       on an `ai_products` list, or whose CVE record carries CWE-1427
@@ -465,8 +490,14 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
       (Microsoft Exploited:Yes at revision 1, KEV added within a day of
       publication, Chrome's "exists in the wild" wording, EUVD
       exploited-since on or before publication). Labelled "probable".
+      Built 2026-11-11 from the dates already stored: first seen
+      exploited (any list, or SSVC active) no later than the day after
+      publication. Microsoft, Chrome and EUVD exploited-since join later.
   12. Seen in honeypots: Vulnerability-Lookup sightings of type exploited
-      from Shadowserver in the last 7 days (already ingested).
+      from Shadowserver in the last 7 days (already ingested). Built
+      2026-11-11 as "Exploitation sightings": the stored sightings keep
+      no source and cover the refresh's 48-hour window, so the rule is
+      any "exploited" sighting in that window.
   13. OT, ICS, and medical: CVEs in CISA's CSAF OT feed (ICSA, ICSMA)
       and the Siemens and Schneider CSAF feeds.
   14. Trending attention: in Intruder's cvemon trending RSS or in the
@@ -478,8 +509,14 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   CSV parse with the standard library. Known dead ends, checked
   2026-11-09: the SANS ISC Patch Tuesday API ("no longer supported"),
   patchtuesdaydashboard.com (gone), KEVIntel (now Previdian, paid API),
-  huntr (no feed), Project Zero's in-the-wild sheet (freshness
-  unconfirmed).
+  huntr (no feed). Project Zero's in-the-wild sheet is not a dead end
+  (checked 2026-11-11: current, latest row patched 2026-11-09, keyless CSV
+  per year, no licence so facts re-keyed). Built 2026-11-11 as the `gp0`
+  feed: each row is an exploited-list entry ("Project Zero 0-day", 414
+  rows for 2014 to 2026) and puts the CVE in view 11 as a confirmed
+  zero-day. ZDI's
+  published and upcoming RSS feeds (keyless) are candidates for view 7:
+  "(0Day)" advisories are public with no vendor fix.
 - Include (2026-11-06; per-CVE part built 2026-11-11): CISA SSVC from Vulnrichment (CC0). The CVE records
   already fetched from Vulnerability-Lookup carry it in the CISA-ADP
   container, so no new source is needed. Store Exploitation (none / poc /
@@ -634,6 +671,30 @@ Three cheap signals (agreed 2026-11-03):
 - Deadlines (built on the detail page): CISA's KEV due date, a federal
   deadline that is a useful urgency proxy. It was dropped from the Dashboard
   on 2026-11-04.
+
+Sources review (2026-11-11; docs/research/2026-11-11-sources-review.md):
+- KEVScope (CyberMax-tools on Hugging Face) as a one-off offline
+  cross-check test of our KEV, EPSS and CVSS joins for one day. It is built
+  from the same three feeds, so it is a test fixture, not a source. Two
+  ideas from its card: a "days from publication to first exploitation"
+  measure (define it from the CVE List's published date as well as NVD's,
+  and expect negative values for CVEs listed before NVD published them),
+  and a daily "what changed since yesterday" digest (new exploited CVEs,
+  new code, EPSS jumps) built from our own first_seen columns.
+- Emerging Threats Open rules (`reference:cve`) could give a "network
+  detection exists" flag.
+- For the IOC extractor (from the Kraven downloads and saved reports
+  reviewed 2026-11-11; notes in docs/research/2026-11-11-sources/):
+  - A decode helper in the standard library: Base64 to UTF-16LE
+    (PowerShell `-enc`), Base64 plus inflate or gzip, character codes, and
+    JWT parts. Decoded text goes back through the extractor. Today the
+    encodings are only detected.
+  - PDF IOC tables: rejoin hashes that wrap onto two lines or across a page
+    break, and keep each row's context (section heading, detection name,
+    notes such as "(abused)"). Trend Micro's MuddyWater report shows every
+    case and makes a good offline test file.
+  - Browser and IDE extension IDs as an indicator type (the roadmap only
+    covers language package ecosystems through OSV).
 
 ### Phase 3: Digital risk protection
 
@@ -906,6 +967,19 @@ addresses)
     Aggressive/quota-spending tools (Amass, BBOT) appear as opt-in toggles
     with warnings. Mirrors the Phase 7 OSINT "one box, checkboxes for which
     tools run" pattern so the app stays consistent module to module.
+- Revisit when this phase is built (dataset research, 2026-11-11, checked
+  live that day): PhreshPhish on Hugging Face (phreshphish/phreshphish,
+  666,315 real phishing and benign URL plus HTML pairs, CC BY 4.0, card
+  says anti-phishing research only) as a test and evaluation set for the
+  phishing-page and brand-impersonation checks. A static snapshot, never a
+  live feed.
+- Revisit when this phase is built (sources review, 2026-11-11):
+  phishunt.io (CC0, keyless, hourly JSON, CSV and STIX feeds; its terms
+  ask hits to be labelled "suspicious") for the feed-match store; the
+  BushidoUK OSINT-SearchOperators appliance set (Shodan favicon,
+  `ssl:"{org}"` and title queries; no licence, so facts re-keyed) as
+  "our exposed services" templates; the HIBP keyless breach catalogue for
+  a daily diff; self-hosted Canarytokens feeding the Phase 5 alert inbox.
 
 ### Phase 4: News and topic search
 - Own RSS/report aggregator instead of Feedly (dropped 2026-11-03). Build on open-source libraries (feedparser for RSS/Atom,
@@ -989,6 +1063,15 @@ addresses)
   a feed; its counts run far above OSV's and are not comparable), Checkmarx
   Zero (checkmarx.com/zero-post/), Aikido, and Snyk. Each source's RSS or
   Atom URL is confirmed when the reader is built.
+- Starter feed list (verified keyless 2026-11-11, sources review):
+  BleepingComputer, The Record, The Hacker News, CyberScoop, The Register,
+  Risky.Biz, DataBreaches.net, Full Disclosure, CISA advisories, CCCS,
+  NCSC UK, HKCERT, IC3 PSA, the BushidoToken blog, Citizen Lab, Kaspersky
+  ICS-CERT, and YouTube channel Atom feeds for conference talks. Full
+  Disclosure, CCCS and HKCERT also feed the Phase 2 CVE-mention signal.
+  The BushidoUK search-operator file has 42 Google dorks for the dork
+  launcher (no licence: facts re-keyed). The 132 vendor research sites
+  cited by Kraven's hunting packages are another seed for the list.
 
 ### Phase 5: Collection infrastructure (collectors, scraping layer, scheduler, alerting)
 
@@ -1009,6 +1092,17 @@ they are.
   indicator to the document it came from, and the selector matcher. Phases 2,
   3, 4, 5, and 7 write to it or read from it; no single phase owns its
   schema.
+  - Revisit when the schema is designed (dataset research, 2026-11-11): a
+    five-part split worth testing against it: observable (IP, domain,
+    hash, certificate, package), entity (actor, malware family, framework,
+    product, CVE), artifact (sample, extracted config, PCAP, report),
+    observation (one source's sighting of any of those at a time, with the
+    collection method), and assessment (a conclusion with confidence,
+    evidence, and review status). The rule it encodes is already ours: a
+    domain from a malware config, a honeypot hit, a feed, and a scan are
+    four observations, never one merged indicator. Keep first_seen,
+    last_seen, observed_at, source_published_at and collected_at apart;
+    a feed's "published" date is not a first-seen date.
 - Source registry: one entry per source with its class (Principle 8), access
   method, rate limits, terms-review status and date, and a default
   reliability rating (the Admiralty A to F scale, Phase 9). A source without
@@ -1286,6 +1380,13 @@ code may be copied.)
   - Telethon: the GitHub repository was archived on 2026-02-21; upstream is
     https://codeberg.org/Lonami/Telethon (confirmed 2026-11-06). Pin from
     PyPI with hashes as usual and watch the Codeberg home for releases.
+- Revisit when this phase is built (sources review, 2026-11-11): keyless
+  bulk IOC feeds for feed matching: FireHOL blocklist-ipsets (each list
+  keeps its own terms), the CIRCL and Botvrij MISP OSINT feeds (MISP
+  manifest format, no licence, local use), and Spamhaus DROP JSON. Take
+  each list by one route only (FireHOL or direct). The MISP default feed
+  catalogue (108 feeds) is a discovery list with no licence data and some
+  dead entries (it still lists the deprecated SSLBL IP list).
 
 ### Phase 6: Infrastructure pivoting
 - Graph model: nodes are indicators, edges are pivots with a confidence label from the plugin's pivot quality table.
@@ -1422,7 +1523,30 @@ code may be copied.)
     nuclei C2 templates, SSLBL, C2IntelFeeds (CC BY-NC-SA: fetched at
     runtime, not shipped), and phish-report/IOK kit rules (ODbL). A match
     says "this is tool X with default settings", which identifies the tool
-    and not the operator, and the grid says so.
+    and not the operator, and the grid says so. Checked 2026-11-11: only
+    SSLBL's certificate SHA-1 list (and its Suricata rules) is live; its
+    C2 IP lists (deprecated 2025-01-03) and its JA3 list (frozen since
+    2021) are dropped. C2IntelFeeds moved its raw
+    data from Censys to Modat on 2026-05-01. The BushidoUK
+    OSINT-SearchOperators adversary set (38 Shodan queries and 3
+    certificate fingerprints for C2 frameworks and stealer panels; no
+    licence, facts re-keyed by hand) is another seed.
+  - Own C2 tracking (agreed 2026-11-11; research more when this phase is
+    built). Method and source: docs/research/2026-11-11-sources/
+    c2-tracking.md, section 7. Passive only (Shodan indexed search and
+    host lookups plus the C2 feeds; no probing, no contacting a hit).
+    Four tables: signatures (one fingerprint fact each, with framework,
+    component, feature class, source, licence, and a flag for facts that
+    only count in combination, such as Go-stack JARMs and bare ports),
+    hunts (signatures combined into a saved query), hunt runs, and
+    sightings (IP, port, signature, with the states unvalidated,
+    rechecked, corroborated, suppressed, stale). A hit names software and
+    at most a configuration, never an operator; low-confidence hits go to
+    a hunt list, never a blocklist. Runtime-only sources (no licence, or
+    NC terms) feed the sightings table and corroboration but are never
+    committed: C2IntelFeeds, ThreatFox, ViriBack, C2-Tracker and
+    Adversary-Hunter data. Copyable seeds: SSLBL certificate list,
+    awesome-censys-queries (CC0), nuclei `ssl/c2` values (MIT).
   - Suppression and rejection lists (local data), checked before any pivot
     is offered: MISP warninglists (CC0: sinkholes, parking domains and
     parking nameservers, dynamic DNS, Cloudflare, AWS, GCP, Azure, Fastly,
@@ -1451,6 +1575,21 @@ code may be copied.)
     list, never a blocklist), block (time-limited for IPs), share (STIX or
     MISP export with the limitations block). Attribution is a separate,
     optional step handled by the Phase 9 evidence gate.
+  - From curated-intel/Attribution-to-IP (sources review, 2026-11-11; it
+    is about finding an IP's owner, not an actor):
+    - Rule: the registered holder, routing origin, hosting provider and
+      geolocation are never operator evidence. The grid labels these
+      fields as such.
+    - An IP-type step comes before any pivot: residential, mobile, cloud,
+      hosting, CDN, VPN or Tor, and "likely compromised third party". The
+      last goes to hunt or notify and is left out of actor overlap scores.
+    - A "notify" outcome beside the ladder above: shows the RDAP abuse
+      contact (already built), the DNS `_security` TXT record,
+      security.txt from existing scans, and the national CERT. It never
+      sends anything.
+    - RIPEstat Data API (keyless, non-commercial terms) for "who announced
+      this prefix on that date"; bgp.tools as a link. Registered in the
+      source registry before use.
   - Naming (open, 2026-11-10): the phase stays "Infrastructure pivoting"
     in this document. Proposed name in the app: "Infrastructure Hunting",
     with sub-tabs Pivot (the grid for one indicator), Hunts (saved pivots
@@ -1472,7 +1611,12 @@ code may be copied.)
       dynamic address, few domains resolving to it, recent resolutions.
     - Saved hunts run daily where the source allows it (Shodan search by
       API needs the paid membership already on hand) and alert on hosts
-      not seen before.
+      not seen before. Shodan Membership limits (billing page,
+      2026-11-11): 100 query credits a month and no `tag` filter (so no
+      `tag:malware`; `product:` labels remain). `/shodan/host/count` is
+      free, so each hunt runs a free count first and spends a credit
+      (page 1 only, with a date filter) only when the count changed: at
+      most 3 credits a day, 30 a month held back for manual pivots.
     - Markers for an absent pivot: an HTML hash of 0 means the host
       served no HTML.
   - Revisit when this phase is built (operator's note, 2026-11-10; not
@@ -1488,6 +1632,53 @@ code may be copied.)
     cluster servers by shared watermark, public key, or profile, give a
     "seen in the corpus" answer for an IP or domain under investigation,
     and serve as test data for the pivot grid.
+    Checked 2026-11-11: the Hugging Face corpus is CC BY 4.0, Parquet, in
+    two subsets (about 190,000 sightings and 56,800 payloads) with config
+    JSON, TLS subject, issuer and SHA-256, ASN, country, watermark and
+    version; holding the payload subset means holding Cobalt Strike
+    beacons, so it follows the malware storage rule (encrypted archive,
+    parsed only in the VM). The 2022 predecessor (128,340 sightings, July
+    2018 to February 2022, configs only, no payloads) is at
+    github.com/fox-it/cobaltstrike-beacon-data; it has no licence file
+    (checked 2026-11-11), so only aggregate facts are used.
+  - Revisit when this phase is built (dataset research, 2026-11-11, each
+    checked live that day):
+    - C2 Hunter (c2-hunter.newtonpaul.com) and its GitHub CSV feed
+      (newtonpaul-hunting/c2-iocs). Dropped as a feed 2026-11-11: each row
+      is only IP, framework, port, country and publish date (no
+      certificate, JARM, beacon configuration or first/last seen), and the
+      feed stopped on 2026-08-02 although it is described as automatic.
+      Kept from it: the observed default ports per framework, as ranking
+      facts in the signature library. The site itself shows more (Cobalt
+      Strike configuration statistics, first and last seen) but renders
+      only in a browser; a link-out at most.
+    - Adversary-Hunter (cybersheepdog/Adversary-Hunter): builds on the
+      C2-Tracker queries, runs on Mondays; no licence stated (facts
+      re-keyed, not copied, as with C2-Tracker).
+    - The framework fingerprint half of the default-signature library:
+      public Malleable C2 profiles (Cobalt-Strike/Malleable-C2-Profiles,
+      BC-SECURITY/Malleable-C2-Profiles; neither has a licence file),
+      Havoc's default profile, Sliver, and Mythic's C2 profile
+      repositories. Store each with its framework, version or commit,
+      component (teamserver, listener, implant), and type (vendor default,
+      public profile, observed, confirmed); a teamserver port is not a
+      listener port. A default profile identifies the software, never the
+      operator. Havoc's shipped profiles are `profiles/havoc.yaotl` and
+      `profiles/http_smb.yaotl` (`havoc_default.yaotl` is a 404). The
+      Havoc, Sliver and Mythic repository pages could not be read by the
+      research tool on 2026-11-11 (its safety filter refused them), so
+      their defaults come from defender sources for now and are read by
+      hand when this phase is built.
+    - Not usable as described: Rapid7 Project Sonar is access-by-request
+      since 2022 (existing accounts only). Feodo Tracker: abuse.ch says
+      its datasets are empty after the takedowns; the files are frozen
+      since 2026-03-04 (1 IP on the recommended list, 5 on the 30-day
+      list, all stale; 4 first seen in 2026, all QakBot). It has no API.
+      Not a C2 source; at most a historical lookup.
+    - BinaryEdge has shut down; ThreatCrowd is gone.
+    - ThreatFox serves IOCs older than six months only in its web pages,
+      not its API or exports (since 2025-05-01), so anything the toolkit
+      relies on must be kept in its own store.
   - Recorded but not built: netflow and traffic pivots (no free source),
     active probing of hosts (out of scope for a passive tool), and calling
     a found Telegram bot token against the Bot API (extract and correlate
@@ -1547,8 +1738,12 @@ checker built for it also serves Phase 3 brand-handle checks.
 
 - Identity lookup (username or email as the seed), added 2026-10-27. Free building blocks:
   - Username enumeration across sites: WhatsMyName data file (open source
-    JSON used by whatsmyname.app), Maigret (3000+ sites, pulls profile
-    details and avatars), Sherlock as a cross-check.
+    JSON used by whatsmyname.app; the repository was archived on
+    2026-11-09, so check for a successor when this is built), Maigret
+    (3000+ sites, pulls profile details and avatars), Sherlock as a
+    cross-check. Also found 2026-11-11: spiderfoot.net now redirects to
+    Intel 471 (the MIT SpiderFoot code documents no REST API);
+    key-server.io is parked, so PGP lookups use keys.openpgp.org.
   - Email to services: holehe (which sites have an account for this email,
     without alerting the owner).
   - Breach association: HIBP (email in, breach names out), LeakCheck public
@@ -1941,6 +2136,71 @@ checker built for it also serves Phase 3 brand-handle checks.
 - Report builder.
 - IntelOwl as an optional enrichment backend connector.
 - MISP and OpenCTI push.
+- Revisit when this phase is built (dataset research, 2026-11-11): APT
+  Reports on Hugging Face (CZLi/apt-reports: 3,051 PDF threat reports,
+  10.7 GB, with the source URL of each) as a test corpus for the report
+  parser, alias resolution, and profile building. Research and
+  non-commercial use only, and the publishers keep their copyright, so it
+  stays a local test set and is never redistributed.
+- Revisit when this phase is built (sources review, 2026-11-11; details in
+  docs/research/2026-11-11-sources-review.md):
+  - Source lineage in the source registry: a "derived from / republishes"
+    field, so the existing "sources that cite each other count as one"
+    rule is applied automatically (ransomware.live, for one, republishes
+    community matrices).
+  - ATT&CK ID check on every imported technique against the local bundle:
+    remap revoked IDs, reject IDs that do not exist, flag ID and name
+    mismatches. The same check goes into the Phase 2 TTP-table extractor.
+  - Profile layout additions from curated-intel's Threat-Actor-Profile-
+    Guide: a dated executive summary (What / So what / What now) with a
+    "relevance to us" line, leadership and operations views, a campaigns
+    list, a Diamond Model card (attack vs support infrastructure,
+    targeted platforms), an Observable column per technique, an IN /
+    THROUGH / OUT grouping, dwell time, a stepping-stone targeting flag,
+    and a note where attribution is contested.
+  - Alias crosswalk sources beyond MISP: Florian Roth's APT Groups and
+    Operations sheet (CC BY 4.0, freshness to check), EternalLiberty (no
+    licence: runtime only), the ETDA MISP export (CC BY-NC-SA, so fetched
+    at runtime and never shipped; the operator asked on 2026-11-11 to
+    revisit the "link only" decision above when this is built), and BSI's
+    active APT group
+    list (re-keyed by hand).
+  - Ransomware Tool Matrix (CC BY 4.0): build the tool table from its 8
+    category files (351 rows), not the stale AllTools.csv; seed the
+    stop-list from MostUsedTools; its ThreatIntel tables give about 170
+    dated report links (the CISA list stops at 2025-07).
+  - Ransomwhere export (ransom payment addresses by family) for actor
+    pages and Phase 6 wallet pivots; the two research passes disagree on
+    its licence, so check it before storing anything.
+  - Virtual Routes Countermeasures Tracker (arrests, sanctions, takedowns
+    per group) as a link-out.
+- Revisit when this phase is built (Kraven downloads and saved reports,
+  reviewed 2026-11-11; notes in docs/research/2026-11-11-sources/):
+  - Hunting package template, shaped like Kraven's 561 report digests
+    (summary, IOC list, vendor queries and rules) plus what they lack:
+    hypothesis, required telemetry, provenance, limitations, and a hunt
+    log. Kraven's files have no licence and many lint errors, so they are
+    a model and an optional runtime import from the local copy, never
+    committed. IOC-to-query templates (Defender, Sentinel, Sigma, YARA,
+    Suricata) are written in-house with a linter (Phase 8).
+  - Hunt hypothesis records (UK "Detecting the Unknown" guide, OGL v3):
+    actor, tool or technique; a status lifecycle; an outcome that includes
+    "not proven", which records the missing data and sets a re-test date.
+  - A log-source visibility score per ATT&CK technique from the data the
+    operator collects (1 to 5), exported as a Navigator layer.
+  - A Unified Kill Chain phase table (18 phases, names only; the paper is
+    GPL v2) mapped to ATT&CK tactics, driving the IN / THROUGH / OUT
+    grouping above.
+  - From Heuer's "Psychology of Intelligence Analysis": record numeric
+    judgments unedited and score them against outcomes later (start with
+    the vulnerability views: did "Likely next" and P2 CVEs get
+    exploited?); separate "unproven" from "disproved" on the hypotheses
+    board; a "what would change my mind" list per hypothesis wired to
+    alerts; checks before a report is final (alternatives section, a
+    number range and a time frame on every likelihood word); flag every
+    judgment that cited a source later retracted.
+  - A known commodity tool name must not discount a modified build
+    (MuddyWater shipped a patched LaZagne).
 
 ### Phase 10: Documentation and runbooks
 - Documentation is written as we go: every approved action produces a runbook
@@ -2005,6 +2265,25 @@ checker built for it also serves Phase 3 brand-handle checks.
   text, case contents, and own-organisation selectors never leave the
   machine: local model only.
 - Cost reference: Haiku 5.5 is $0.10 per million input tokens and $0.50 per million output tokens; about 1,000 enrichment summaries per month costs roughly $0.65.
+- Revisit when this phase is built (dataset research, 2026-11-11):
+  evaluation sets to measure a model before any feature ships. ArcSpan
+  Cyber NER (chairulridjal/arcspan-cyber-ner: 61,212 labelled rows across
+  train, validation and test, partly LLM-labelled and synthetic) for
+  indicator and entity extraction. Its Apache-2.0 tag does not cover the
+  upstream rows (checked 2026-11-11): about 42% come from sets with no
+  licence and 10% is copyrighted report text. Decided 2026-11-11: use
+  only the clean subset (filter by source to cyner_train, mitre_attack*,
+  nvd*, cisa_advisories, synthetic* and securebert2), kept local and
+  never committed; the rest is in the parking lot. SecKnowledge-Eval
+  (cyber-pal-security: 4,142 items, CC BY-NC 4.0) for general CTI
+  questions; the Threat Intelligence Instruction Dataset
+  (reloading0101: about 13,800 examples, CC BY-NC-SA, templated and
+  LLM-rewritten) for task handling only. Scores on these are a floor, not
+  proof; extraction stays deterministic first. abuse.ch terms section 7.3
+  forbids training or improving AI models on abuse.ch data (ThreatFox,
+  MalwareBazaar, URLhaus and the rest) without Spamhaus consent: keep that
+  data out of any external-model prompt by default, and never fine-tune on
+  it.
 
 ## Parking lot (revisit after the final phase)
 
@@ -2188,7 +2467,10 @@ this list and decide what to pull into active work. Keeps the project moving.
   ship its logs there too, but the value here is GreyNoise's analysis and
   the API. Needs a GreyNoise account and the sensor terms checked first.
   Pricing as published 2026-11-03: a one-time $1 identity verification, no
-  subscription, no contract.
+  subscription, no contract. Checked again 2026-11-11: joining needs a free
+  GreyNoise account; a participant gets full session capture (PCAP,
+  payloads, headers, TLS) for their own sensors, search over the captured
+  fields, and a comparison with GreyNoise's global baseline.
   OPSEC AND PERSONAL SECURITY, non-negotiable when this is picked up:
   - Run the sensor on a cheap VPS and NEVER on the home network. A honeypot
     invites traffic by design; attackers who probe it will keep probing the
@@ -2203,6 +2485,84 @@ this list and decide what to pull into active work. Keeps the project moving.
     every payload as hostile input (the same rule as breach data).
   - Keep the toolkit integration read-only: it fetches sensor results, it
     never manages or reconfigures the sensor from the home host.
+
+- First-party exploitation sensing, Previdian-style (parked 2026-11-11;
+  revisit after v1). What the toolkit gets from Previdian today: its
+  public assertions as republished by CIRCL's KEV aggregation, 376 on
+  2026-11-11, almost all dated 2026: CVE, first-seen date, and a note
+  carrying title, affected product, CVSS, EPSS, "used in malware", and
+  "not yet in CISA KEV" or "listed N days ahead of CISA KEV". Previdian
+  was the earliest of our lists for 241 CVEs; of the 101 CVEs both it
+  and CISA list, it came first on 45, by 3.3 days on average. Its
+  sensor detail (attempt counts, source IPs, payloads, request paths) is
+  in its paid API, not in what CIRCL republishes. How it gets there, per
+  its methodology page (2026-11-11): its own honeypots and sensors
+  watching exploitation attempts against internet-facing services
+  (count and placement not published), plus vendor advisories that state
+  exploitation, official KEV catalogues, and high-trust reporting. Each
+  CVE gets a confidence level (confirmed, high, medium, low) from source
+  quality, endpoint specificity, payload fidelity, repeat sightings,
+  corroboration, and human review. An "exploitation activity" is an
+  attempt, not proof of a compromise; it positions itself as an early
+  layer over CISA KEV, not a replacement.
+  How to emulate, smallest first: (1) the GreyNoise Swarm sensor (above);
+  (2) one or two of our own sensors on cheap VPSs in different providers
+  and regions, running a multi-honeypot platform (T-Pot is the usual
+  candidate; check its current requirements and licence then), with
+  exploit attempts matched to CVEs through IDS rules that carry CVE IDs
+  and through request paths taken from Nuclei templates; (3) the matched
+  CVEs become a first-party exploited list ("own sensors") with
+  confidence, in the kev table like any other source. Hosting: a VPS,
+  never the home network, and not a second home internet line either:
+  a second line still ends at the house (same building, same router
+  closet) and puts one fixed IP in front of attackers, while a VPS is
+  disposable, rebuildable in minutes, and can be moved or multiplied
+  across providers, which is also what gives sensor coverage. Check each
+  VPS provider's acceptable-use policy for honeypots first. The home VM
+  lab is for analysing what the sensors catch, never for hosting them.
+  The OPSEC rules under GreyNoise Project Swarm apply unchanged.
+- Vulnerability module layout ideas, from Previdian's public pages
+  (parked 2026-11-11; the general GUI review is the operator's item
+  above). Take ideas, not the look:
+  - KEV feed page (previdian.com/feed): counters on top (total, beyond
+    CISA, seen on sensors this week, with exploit artefacts); quick tabs
+    (all, beyond CISA, observed, high confidence, with artefacts); one
+    row per CVE with confidence, "in CISA KEV" yes/no, sensors yes/no,
+    relative "added" time, and artefact tags (PoC, Nuclei). Our Newly
+    Exploited table and view 1 could take the quick tabs and the
+    "beyond CISA" counter directly.
+  - CVE page (previdian.com/CVE-…): status badges, a recommended-action
+    callout, a key-figures row, jump links (summary, evidence, detection,
+    risk, timeline), a four-question decision summary (what is it, is it
+    exploited, who is affected, what to do), an evidence section listing
+    each exploited source with its date, detection coverage (scanner
+    templates, WAF rules), and a timeline (reserved, published, listed).
+    The timeline and the per-source evidence table are the two to take
+    first.
+  - Stats page (previdian.com/stats): catalogue counters, a weekly
+    "ahead of CISA" table with lead times and the average and median
+    lead, top vendors, top vendors with edge-device KEVs, CVSS and EPSS
+    distributions, and time from publication to listing. We hold the
+    data for most of these already (first-seen dates per list).
+  - Methodology page (previdian.com/methodology): a plain statement of
+    what counts as exploited, how confidence is scored, and what the
+    data does not claim. The toolkit should have one for its views and
+    priority matrix.
+  - Further consolidation of the CVE page (the header card was merged
+    on 2026-11-11; the SSVC, per-list, sightings and OTX cards remain
+    separate) into a few sections along the lines above.
+- Hottest right now (parked 2026-11-11): taken off the Dashboard because,
+  without news and social attention, the heat score mostly re-ranked
+  what Newly Exploited, Likely next and the exploit-code table already
+  show. Trending lists elsewhere are driven by attention (mentions,
+  posts, reports). Revisit once Phase 4 news and the chatter brief give
+  an attention signal. The heat score stays as a sort on the Exploit Code
+  tab; service.hottest and the "Ask your AI" text brief are kept unused.
+- Faster tables (parked 2026-11-11; after v1): every sort, filter and page
+  reloads the whole page, and the larger tables take about a second each
+  (Exploit Code tab, view 3). Options: HTMX partial reloads (already
+  planned in Phase 2), caching a view's rows until a feed refreshes, and
+  paging in SQL instead of Python.
 
 - Malware research corpus (parked 2026-11-11). A module for tracking
   malware for research: per family and per sample, the metadata,
@@ -2228,6 +2588,28 @@ this list and decide what to pull into active work. Keeps the project moving.
   execution happen only in the isolated worker or VM. The archive keeps
   antivirus from quarantining it and stops an accidental double-click.
   The data folder must not sit inside a cloud-synced directory.
+  Config sources from the dataset research (2026-11-11, checked live that
+  day), for when this is picked up: MWDB (mwdb.cert.pl, CERT Polska's
+  public instance, which stores samples with their extracted configs;
+  access terms still to check); DC3-MWCP (the `mwcp` package, a config
+  parser framework with standard JSON and STIX output; licence file not
+  yet read); Elastic Security Labs' labs-releases extractors (Elastic
+  License 2.0, which is not open source: read for technique, do not
+  vendor); JR0driguezB/malware_configs (historical configs: TrickBot,
+  IcedID, Panda Banker and others; last pushed 2018, no licence);
+  rivitna/Malware (MIT: YARA rules and config and decryptor programs for
+  about 50 ransomware families, used only inside the analysis VM).
+  MalwareConfig.com is now an editorial site with no config data.
+  Modern config research (VMRay on
+  Lumma Stealer, February 2026; Proofpoint and IBM X-Force on StealC, June
+  2026) shows the method, but neither published its underlying configs.
+  Labelled traffic captures for testing the analysis pipeline: CTU-13,
+  IoT-23 and the CTU malware captures (Stratosphere), and
+  malware-traffic-analysis.net (checked 2026-11-11: pcaps with write-ups,
+  zip-protected). All historical, for
+  regression tests, not current infrastructure. Static feature sets (EMBER2024-capa: 16.4
+  million functions with capa capability labels, Apache-2.0, 23.8 GB) are
+  research material if a capability-to-ATT&CK mapping is ever built.
 - Malware analysis: static and dynamic (parked 2026-11-11), the analysis
   half of the corpus above. Staged, cheapest first:
   1. Read existing public sandbox reports by hash, with no submission:
@@ -2259,6 +2641,60 @@ this list and decide what to pull into active work. Keeps the project moving.
   public submission is an explicit, per-sample operator choice. Looking up
   an existing public report by hash (stage 1) reveals nothing and is
   always preferred.
+  Lab design from Kraven's testing-environments (reviewed 2026-11-11):
+  FLARE-VM and REMnux on an isolated network, rebuilt from master
+  templates rather than cleaned. On Windows 11 Pro, Hyper-V with a
+  Private switch gives the same isolation without a second server. Do
+  not copy its gateway VM, which bridges the home LAN and the lab.
+- Mobile malware basics (parked 2026-11-11, from the Lookout Pegasus and
+  CrowdStrike Fancy Bear Android reports): for an APK, store the package
+  name and the signing-certificate digest, use the signer as a pivot, and
+  flag the same app name with a different signer as likely repackaged.
+- Smaller ideas from the same review: due-by dates per priority level
+  with an overdue flag; "not checked" reasons on verdict cards (no key,
+  quota used, error); an e-mail header parser; exploit chains as their own
+  record; tracking when a vendor report is revised; expiry dates on
+  exported indicators.
+- C2 framework defaults from their own sources: Havoc, Sliver, Mythic
+  (parked 2026-11-11; also listed in Phase 6, kept here so it is not
+  lost). The research tool's safety filter refused the repositories and
+  docs, so they are read by hand (or in the in-app browser) when Phase 6
+  is built: github.com/HavocFramework/Havoc (teamserver
+  `pkg/handlers/http.go`, `profiles/havoc.yaotl`, `profiles/http_smb.yaotl`),
+  github.com/BishopFox/sliver and its multiplayer-mode docs, and
+  github.com/MythicC2Profiles (the `http` profile and its config). What to
+  take, each stored as a signature fact with framework, version or commit,
+  component (teamserver, operator port, listener, implant) and type
+  (vendor default or shipped profile): default ports per component, TLS
+  certificate fields the teamserver generates (subject, issuer, serial
+  pattern, validity), default HTTP response headers, status codes and
+  bodies for unmatched requests, default URIs, user agents, sleep and
+  jitter, and any banner or favicon. Then: how each default shows in
+  Shodan (which filters match it), which defaults operators commonly
+  change, and false-pivot traps (Go TLS stacks share JARM prefixes;
+  red teams and honeypots run the same defaults). Defensive use only:
+  identify and track infrastructure passively; never run the frameworks.
+- LeakRadar (parked 2026-11-11): leak and stealer-log search the operator
+  wants alongside the planned leak monitoring. Its site failed with TLS
+  errors on 2026-11-11, so it may be gone. When revisited: is it alive,
+  what it returns, its terms and price, and how it fits the data handling
+  policy (it returns plaintext passwords, which the policy drops by
+  default; a paid plan must not amount to buying stolen data).
+- ThreatSTOP Check IoC (parked 2026-11-11, from www.threatstop.com/
+  check-ioc): a web lookup for domains and IPs against ThreatSTOP's
+  blocking intelligence, returning listed or not, a category and a
+  reason. The embedded page uses a sample set; the full lookup is at
+  check-ioc.threatstop.com. No API, rate limit or terms are stated for
+  it. Revisit at the end of the project as a Phase 1 enrichment
+  candidate: check for an API, its terms, and whether its answers add
+  anything beyond the sources already wired.
+- ArcSpan Cyber NER, the rest of it (parked 2026-11-11). Phase 11 uses
+  only the clean subset (sources with an open licence or generated by
+  the author: cyner_train, mitre_attack*, nvd*, cisa_advisories,
+  synthetic*, securebert2) and nothing copyrighted. Revisit the rest
+  then: the APTNER, DNRTI and CyberNER rows (no licence), CyNER 2.0
+  (probably MIT, unconfirmed), and the report-text rows (publisher
+  copyright, left out).
 
 ## Data handling policy (breach and leak data)
 
@@ -2550,6 +2986,45 @@ Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
   "Exploitation: active" counts as exploited (view 1 badge "CISA SSVC:
   active", dated by CISA's assessment). The first load is a separate
   button because it downloads 660 MB; Refresh feeds applies the deltas.
+- 2026-11-11: JavaScript is allowed where it makes the tool better
+  (operator's call). The rule is no Node toolchain and no build step:
+  plain script files or small inline handlers, readable without a
+  bundler, and every page still works without them. Libraries are
+  vendored with pinned hashes like any dependency (HTMX, Cytoscape.js).
+- 2026-11-11: Operator's review of the vulnerability module. Hottest
+  right now leaves the Dashboard (parked). Newly Exploited shows every
+  exploited CVE and opens on the last 7 days; the Exploit Code tab
+  (renamed from Exploits) shows all dated exploit code and opens on 30
+  days. Filters: several vendors at once, tick boxes and dropdowns
+  submit on change, a sort dropdown, and tick boxes a table's rule
+  already decides are hidden. The "code" tag reads "public exploit" (it
+  covers Metasploit and Nuclei too, so not "PoC"). Table titles in title
+  case; the CVE page's header and facts cards are one. The watchlist
+  tables are "Exploited in Your Watchlist" and "New CVEs in Your
+  Watchlist".
+- 2026-11-11: Sources review of 11 repositories and the remaining handoff
+  links (docs/research/2026-11-11-sources-review.md). Rules applied: a
+  repository with no licence is read at runtime and never copied, and
+  single facts from it are re-keyed in our own words; NC and share-alike
+  data is fetched at runtime and never shipped; CC BY data may be stored
+  with credit. Leaked gang chats (BushidoUK/Ransomware-Leaks, Ransomchats)
+  and onion addresses are wanted as collection sources, under the data
+  handling policy and through the Phase 5 collectors (Tor for onion
+  services); research agents still never visit them. Never linked:
+  cuckoosandbox.org and apt-ecosystem.com (both now serve spam).
+- 2026-11-11: Operator's calls on the sources review. Use now: the
+  Ransomware Vulnerability Matrix (view 9) and Project Zero's in-the-wild
+  sheet (view 11), both built the same day. Use later: Ransomware Tool
+  Matrix, Attribution-to-IP rules, the profile guide additions, ETDA's
+  MISP export (revisit). Dropped: crocodyli/ThreatActors-TTPs, Feodo
+  Tracker, SSLBL's IP lists, the c2-iocs feed (static IP rows only, stale
+  since 2026-08-02).
+- 2026-11-11: Views 5, 6, 9, 11 and 12 are built from stored data and
+  keep the roadmap numbers, so the gaps stay visible. View 6 is EPSS 0.10
+  alone, because the top-5% and the rise rules never add a row. View 11
+  keeps CVEs listed long before publication, and the page explains them.
+  View counters are cached until a feed refresh, a watchlist change, or a
+  new day.
 - 2026-11-11: Sandbox choice (CAPE, DRAKVUF Sandbox, Cuckoo3, or a hosted
   service) deferred to the malware analysis module's own phase.
 - 2026-11-11: Malware samples may be stored outside the VM, but only as
@@ -2622,6 +3097,10 @@ feed-match module, not the vendor pattern). Malpedia last (vetted account).
   error rate before use.
 - GreyNoise: live with the 10/day community endpoint, or obtain a key later
   through a non-consumer email domain.
+- SANS ISC API: ISC asks every script to put a way to reach its owner (an
+  e-mail address) in the User-Agent header, so they can ask before
+  blocking a misbehaving client. Use a dedicated address kept in .env, or
+  skip the source?
 
 ## Reference material
 

@@ -166,6 +166,132 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-11: sources review (12 repositories and the rest of the handoff)
+
+- Full report: docs/research/2026-11-11-sources-review.md; the five
+  detailed note files are beside it in docs/research/2026-11-11-sources/.
+  Five research agents read about 1,300 links; each file ends with a list
+  of links not read and why.
+- The research tool's safety filter refused 11 URLs (Havoc and Sliver
+  repositories and docs, MythicC2Profiles, two newtonpaul.com C2 posts,
+  optiv/Freeze, one YouTube video). They were not retried another way.
+  Read them by hand when Phase 6 is built.
+- WebFetch saves any PDF it fetches to the session's tool-results folder
+  without asking. Eleven PDFs landed there this way, one of them a leaked
+  criminal manual (Bassterlord). None was opened. Lesson for future
+  research briefs: tell agents not to fetch .pdf links at all.
+- Two agents disagreed on the Ransomwhere export's licence (CC BY 4.0
+  against "none named"); recorded as unresolved.
+
+### 2026-11-11: operator's calls, RVM and Project Zero built, Kraven and PDFs
+
+- Built the Ransomware Vulnerability Matrix (`rvm`) and Project Zero
+  (`gp0`) feeds. First live run: 287 CVE-to-group pairs over 165 CVEs,
+  and 414 zero-day rows for 2014 to 2026. View 9 went to 646 CVEs; view
+  11 has 2,283 rows.
+- RVM parsing traps: CVE cells joined with ",", "&" or "and", nicknames in
+  brackets, and one row (CVE-2023-27350) whose dash is not valid UTF-8,
+  so the CVE pattern accepts any separator character. Two spellings of
+  one group ("Black Basta", "BlackBasta") are merged on a key without
+  spaces or case. "Ghost/Cring" is one name, so "/" is not a separator.
+- Project Zero trap: asking for a year tab that does not exist returns
+  the sheet's intro tab with HTTP 200, so the parser checks the header.
+  Date Discovered is "???" for every 2026 row; the patch date stands in.
+- c2-iocs carries only IP, framework, port, country and publish date: no
+  configurations. Dropped as a feed; the per-framework port observations
+  stay as facts in the research notes.
+- The research agents' "never ingest onion links and leaked chats" line
+  was wrong for this project: Phase 5 already plans Tor collection and
+  Phase 9 plans Ransomchats. Corrected in the decisions log. Agents still
+  do not visit them.
+- Deleted the Bassterlord PDF from the session's tool-results folder at
+  the operator's request. The other saved PDFs were read in full by two
+  agents: the UK "Detecting the Unknown" threat hunting guide (OGL v3),
+  the Unified Kill Chain paper (GPL v2), Lockheed Martin's "Gaining the
+  Advantage", CyberEdge's "Definitive Guide to Cyber Threat Intelligence"
+  (2015), Heuer's "Psychology of Intelligence Analysis" (1999), and the
+  CrowdStrike, Trend Micro and Lookout reports. One agent reported "no
+  text" for two PDFs whose text layer is fine: re-check before relying
+  on pypdf's first-page extraction as a "scanned" test.
+- Kraven downloads (`Documents\Kraven downloads`, five repositories, about
+  3,200 files) reviewed for the first time. None has a licence. The
+  testing-environments Terraform holds a hard-coded password and a
+  committed cluster join token (not copied anywhere).
+
+### 2026-11-11: operator review of the module, Previdian, dataset handoff
+
+- Overflow cause: the page was capped at 900 px and the CVE cell had
+  `white-space: nowrap`, so a CVE with seven source badges stretched the
+  Hottest table to 1,654 px and the stack table to 1,289 px. Fixed with a
+  1,280 px page for this module, badges that wrap, and sideways scrolling
+  inside a table's own box as the fallback (on the table, not the card:
+  scrolling the card would clip the vendor drop-down).
+- The roadmap's "Newly known-exploited (7 or 30 days)" needed its own
+  window links because its rows came pre-cut from the store. It now takes
+  view 1's rows and opens the "last" filter on 7 days; "any time" needed a
+  value of its own ("all"), since an empty value brings the default back.
+- Vendor chart fix found on the way: the vendor count took each CVE's
+  date only from lists that carry a vendor, so CVEs whose earliest listing
+  came from CIRCL's aggregation (no vendor) were dated later than in the
+  monthly chart above it.
+- Previdian through CIRCL: 376 assertions, all but one dated 2026. The
+  note field carries title, affected product, CVSS, EPSS, "used in
+  malware", and "listed N days ahead of CISA KEV". Earliest of our lists
+  on 241 CVEs; ahead of CISA on 45 of the 101 both list, by 3.3 days on
+  average. Only 4 CVEs come from Previdian alone.
+- Research handoff (ChatGPT, 2026-11-11) checked by a research agent the
+  same day. Corrections to the handoff: Fox-IT's 2022 dataset is on
+  GitHub (fox-it/cobaltstrike-beacon-data); the Hugging Face corpus gives
+  about 190,000 sightings and 56,800 payloads (rounded on the card);
+  Project Sonar is access-by-request, not public; Feodo Tracker's datasets
+  were empty (corrected the same day: frozen since 2026-03-04, not
+  empty; see the sources review entry); ThreatFox's six-month cut applies
+  to the API and exports, not the web pages; ArcSpan is 61,212 rows in all
+  (50,600 is two overlapping train versions); joyce8/EMBER2024's preview
+  showed Android samples, not the Windows set the name suggests; the
+  domain-intelligence graph is 186 GB on the Hub (about 1 TB is the
+  uncompressed source). KEVScope was first set aside for "future dates and
+  negative days-to-KEV" without reading its card; that was wrong. The
+  card defines days-to-KEV as KEV listing minus NVD publication, so a
+  negative value means CISA listed the CVE before NVD published it, and
+  the late dates are CISA due dates. Most of the C2 material (C2 Hunter,
+  c2-iocs, C2-Tracker, Adversary-Hunter, both Malleable profile
+  repositories) states no licence; Elastic's extractors are under the
+  Elastic License 2.0. Left unchecked by that first pass (picked up in the
+  sources review): Havoc and Mythic profiles, CyberSet, and about half the
+  handoff's links. MWDB's access terms are still unchecked.
+
+### 2026-11-11: views 5, 6, 9, 11 and 12
+
+- Sized each rule on the live store before building: new and severe 354
+  (347 by CVSS 9.0+, 146 by SSVC automatable plus total, overlapping);
+  likely next 14,509; ransomware-linked 641 (CISA flags 361, VulnCheck
+  630, ransomware.live adds 11); probable zero-days 2,270; exploitation
+  sightings 21.
+- Likely next: the roadmap's three EPSS clauses collapse into one. EPSS
+  0.10 was already above the 95th percentile (the percentile clause added
+  2,470 CVEs below 0.10, which is the opposite of "likely"). A rise of
+  0.10 cannot end below 0.10. Kept the absolute line, which also matches
+  the EPSS filter.
+- Probable zero-days by how early the first listing came: 1,392 within a
+  day of publication, 498 two to 30 days earlier, 380 more than 30 days
+  earlier. The early ones are almost all VulnCheck, and samples were
+  WordPress plugin CVEs assigned years after VulnCheck's first
+  evidence (CVE-2015-9499 ShowBiz Pro, CVE-2020-36720 Kali Forms,
+  CVE-2021-4380 Pinterest Automatic, CVE-2017-18580 Shortcodes Ultimate;
+  1.7 to 4.9 years). Left in, explained on the page.
+  The same-day ones include the November Patch Tuesday zero-days (Office,
+  Chrome).
+- Sightings: the store keeps only type, day and count per CVE, not the
+  sighting's source, and only the 48-hour window, so "from Shadowserver in
+  the last 7 days" became "any exploited sighting in the window".
+- Ransomware.live links now set the ransomware badge in views (they did
+  only through KEV before), and the badge's tooltip names the groups.
+- Counters: the five new ones added about 0.3 s to every Dashboard load;
+  with the watchlist's 0.66 s, the Views tab took 1 s. Cached until a
+  feed refresh, a watchlist change, or a new day: Views tab 8 ms warm,
+  Dashboard 1.4 s.
+
 ### 2026-11-11: the CVE List feed (cvelistV5)
 
 - Release layout checked on GitHub: every hourly release carries that
