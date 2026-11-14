@@ -1931,6 +1931,116 @@ class ActionAndReviewTests(TempDbMixin, unittest.TestCase):
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM vuln_review_events").fetchone()[0], 0)
 
 
+class SupplyChainTests(TempDbMixin, unittest.TestCase):
+    def test_refresh_merges_aliases_and_retains_withdrawn_sources(self):
+        from io import BytesIO
+        from unittest.mock import patch
+        from zipfile import ZipFile
+
+        from fastapi.testclient import TestClient
+
+        from app.main import app
+        from app.modules.vulnerability_intelligence import supply_chain
+        from app.modules.vulnerability_intelligence.feeds import supply
+
+        mal, ghsa, action_id = "MAL-2026-1", "GHSA-aaaa-bbbb-cccc", "GHSA-dddd-eeee-ffff"
+        day = "2026-11-14T00:00:00Z"
+        newer = "2026-11-15T00:00:00Z"
+        package = {"ecosystem": "npm", "name": "@demo/package"}
+        osv = {"id": mal, "aliases": [ghsa], "published": day, "modified": day,
+               "affected": [{"package": package, "versions": ["1.0.0"]}]}
+        action = {"id": action_id, "published": "2025-03-19T15:19:12Z", "modified": day,
+                  "summary": "Workflow tags were compromised",
+                  "affected": [{"package": {"ecosystem": "GitHub Actions", "name": "demo/setup"}, "versions": ["v1"]}]}
+        gh = {"ghsa_id": ghsa, "published_at": day, "updated_at": day,
+              "vulnerabilities": [{"package": package, "vulnerable_version_range": "= 1.0.0"}]}
+        extra = {**gh, "ghsa_id": "GHSA-gggg-hhhh-jjjj",
+                 "vulnerabilities": [{"package": {"ecosystem": "pip", "name": "another-package"}}]}
+        archive = BytesIO()
+        with ZipFile(archive, "w") as zf:
+            zf.writestr(action_id + ".json", json.dumps(action))
+        calls = []
+        revision = 0
+
+        def handle(req):
+            calls.append(req.url.path)
+            if req.url.host == "api.github.com":
+                if req.url.params.get("after"):
+                    return httpx.Response(200, json=[extra])
+                return httpx.Response(200, json=[gh], headers={
+                    "Link": '<https://api.github.com/advisories?after=next>; rel="next"'})
+            if req.url.path.endswith("/npm/modified_id.csv"):
+                csv = f"{newer if revision else day},{ghsa if revision == 2 else mal}\n"
+                return httpx.Response(200, content=csv)
+            if req.url.path.endswith("/[EMPTY]/modified_id.csv"):
+                return httpx.Response(200, content=f"2026-11-16T00:00:00Z,{mal}\n" if revision == 2 else "")
+            if req.url.path.endswith("/GitHub Actions/modified_id.csv"):
+                return httpx.Response(200, content=f"{day},{action_id}\n")
+            if req.url.path.endswith("/all.zip"):
+                return httpx.Response(200, content=archive.getvalue())
+            if revision == 1:
+                return httpx.Response(200, json={**osv, "modified": newer, "affected": [
+                    {"package": package, "versions": ["1.0.1"]}]})
+            if revision == 2:
+                return httpx.Response(200, json={**osv, "withdrawn": "2026-11-16T00:00:00Z", "affected": []})
+            return httpx.Response(200, json=osv)
+
+        import asyncio
+
+        async def run():
+            async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as http:
+                with patch.object(base, "get_client", return_value=http):
+                    await supply.refresh()
+
+        store.set_sync("supply_osv_first_date", "2026-10-01")
+        asyncio.run(run())
+        initial = supply_chain.page(1, "npm", "", "")["rows"]
+        self.assertEqual(len(initial), 1)
+        self.assertEqual({report["advisory"] for report in initial[0]["reports"]}, {mal, ghsa})
+        self.assertEqual(supply_chain.page(1, "", "", "lead")["total"], 1)
+        self.assertEqual(supply_chain.page(1, "GitHub Actions", "", "")["total"], 1)
+        first_seen = initial[0]["first_seen"]
+        revision = 1
+        asyncio.run(run())
+        changed = supply_chain.page(1, "", "", "changed")["rows"]
+        corrected = next(r for r in changed[0]["reports"] if r["advisory"] == mal)
+        self.assertEqual(corrected["previous_affected"], ["1.0.0"])
+        self.assertEqual(corrected["versions"], ["1.0.1"])
+        calls.clear()
+        revision = 2
+        asyncio.run(run())
+        self.assertFalse(any(path.endswith("/all.zip") for path in calls))
+        self.assertTrue(any("/[EMPTY]/" in path and path.endswith(".json") for path in calls))
+        changed = supply_chain.page(1, "", "", "changed")["rows"]
+        self.assertEqual(changed[0]["first_seen"], first_seen)
+        self.assertEqual({report["status"] for report in changed[0]["reports"]}, {"Reported", "Withdrawn"})
+        client = TestClient(app, base_url="http://127.0.0.1")
+        page = client.get("/vulnerability-intelligence/supply-chain?supply_status=changed")
+        self.assertIn("Newly Reported Malicious Packages", page.text)
+        self.assertIn("@demo/package", page.text)
+        self.assertIn("Previously listed", page.text)
+        self.assertIn("1.0.0", page.text)
+        self.assertIn("1.0.1", page.text)
+        self.assertNotIn("demo/setup", page.text)
+        response = client.post("/vulnerability-intelligence/supply-chain/refresh",
+                               headers={"Sec-Fetch-Site": "cross-site"})
+        self.assertEqual(response.status_code, 403)
+
+    def test_action_parser_does_not_treat_possible_execution_as_a_compromise(self):
+        from app.modules.vulnerability_intelligence.feeds import supply
+
+        advisory = "GHSA-aaaa-bbbb-cccc"
+        doc = {"id": advisory, "modified": "2026-11-14T00:00:00Z", "summary": "Script injection in an action",
+               "details": "An attacker could inject malicious code.",
+               "affected": [{"package": {"ecosystem": "GitHub Actions", "name": "demo/action"}}]}
+        self.assertEqual(supply.parse_osv(doc, advisory)[1], [])
+        doc["details"] = "A supply chain attack compromised the action."
+        doc["affected"][0]["ranges"] = [{"type": "SEMVER", "events": [{"introduced": "1.0.0"}, {"fixed": "1.1.0"}]}]
+        row = supply.parse_osv(doc, advisory)[1][0]
+        self.assertEqual(row["status"], "reported")
+        self.assertEqual(row["ranges"], ["SEMVER introduced 1.0.0", "SEMVER fixed 1.1.0"])
+
+
 class MicrosoftAdvisoryTests(TempDbMixin, unittest.TestCase):
     def test_refresh_retries_missing_advisories_and_feeds_the_views(self):
         import asyncio

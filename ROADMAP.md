@@ -556,7 +556,7 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   (Track / Track* / Attend / Act) needs two organisation-specific inputs;
   derive mission prevalence from the technology watchlist and make the
   well-being impact a setting.
-- The Supply chain tab (below).
+- Supply Chain first delivery is built. See the remaining work below.
 - Scheduled feed refresh (waits for the Phase 5 scheduler).
 - Include: an alert when new exploit code appears for a CVE matching the
   technology watchlist (P1 alert; needs the Phase 5 alert inbox). Exploit
@@ -588,8 +588,8 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   as a dashboard filter: KEV, EPSS, CVSS, and SSVC side by side, with the
   score-disagreement rule (below) highlighted when they pull apart.
 
-**Supply chain tab** (decided 2026-11-04, sixth tab of this module, to
-build next; sources settled 2026-11-11): "is a library, package or
+**Supply Chain tab** (decided 2026-11-04, sources settled 2026-11-11):
+"is a library, package or
 repository I depend on vulnerable or compromised?", and, for intelligence,
 "what is being planted or hijacked in the open-source ecosystems right
 now?". The data is package-level advisories per ecosystem (npm, PyPI,
@@ -653,6 +653,15 @@ coverage. Keep public reporting about other ecosystems as sourced leads. Show
 affected versions when known, source publication date, first seen here, and
 corrections or withdrawals. A watchlist is optional. Defer the bulk advisory
 backfill and remaining ecosystems and repositories until after v1.
+
+Built 2026-11-14: The first import reads 30 days of changed npm malware
+reports and the GitHub Actions advisory archive. Later refreshes fetch
+new and revised records. GitHub's malware endpoint supplements OSV and
+adds cross-ecosystem leads. Actions advisories can report an incident
+under GitHub Reviewed, so the parser also checks the Actions archive for
+reported compromises. Combine reports by an explicit GHSA alias and
+package. Keep each source's affected versions and withdrawal status.
+Broader reporting from vendor research feeds follows with Phase 4.
 
 Longer-term presentation: three tables
 plus a package page, all on the shared table renderer (filters, sort,

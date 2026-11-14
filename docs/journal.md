@@ -46,6 +46,25 @@ The vetting record is in docs/runbooks/vetting-a-dependency.md.
 
 ## Build narrative
 
+### 2026-11-14: First Supply Chain feed
+
+The GitHub malware endpoint returned no results for the Actions ecosystem.
+The OSV Actions archive contained 64 advisories. The incident filter
+selected four advisories covering five packages, including Reviewdog and
+tj-actions. Generic code-injection descriptions were excluded from that
+selection.
+
+The npm index had 1,978 malware records changed in the first 30-day
+window. Two OpenSSF records were checked against their OSV exports. Their
+package names, affected versions, aliases, and published dates matched.
+OSV added source metadata inside the affected records. This supports
+using OSV for the primary feed.
+
+A full keyless refresh in a temporary database loaded both sources
+without errors. The table showed 2,528 npm report rows, five Actions
+rows, and 285 leads. A separate route check rendered the Actions
+results with HTTP 200. The running app's data was left in place.
+
 ### 2026-11-13: Vulnerability actions and review history
 
 Microsoft remediation and explicit NVD and CNA references support the

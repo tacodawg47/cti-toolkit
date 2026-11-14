@@ -1,0 +1,100 @@
+{% extends "vulnintel/layout.html" %}
+{% block title %}Supply Chain | CTI Toolkit{% endblock %}
+{% block tab %}
+<section class="card" id="t-supply">
+  <h2>Newly Reported Malicious Packages</h2>
+  <p class="muted">npm malware and GitHub Actions compromises. Reports for other ecosystems and possible Actions compromises appear as leads.</p>
+  <form method="post" action="{{ prefix }}/supply-chain/refresh">
+    <button type="submit" class="small">Refresh Supply Chain</button>
+    <small class="muted">The initial npm import covers 30 days of changes and may take several minutes.</small>
+  </form>
+  <ul class="plain">
+    {% for key, label in sources.items() %}
+    {% set f = feed_status.get(key, {}) %}
+    <li><small><strong>{{ label }}</strong>
+      {% if f.fetched_at %} · Last refreshed {{ f.fetched_at | day }}{% else %} · Awaiting first refresh{% endif %}
+      {% if f.error %}<span class="err"> · {{ f.error }}</span>{% endif %}</small></li>
+    {% endfor %}
+  </ul>
+  <form method="get" action="{{ prefix }}/supply-chain#t-supply" class="filterbar">
+    <label>Package <input type="search" name="supply_query" value="{{ query }}"></label>
+    <label>Ecosystem
+      <select name="supply_ecosystem">
+        <option value="">All Ecosystems</option>
+        {% for name in t.ecosystems %}
+        <option value="{{ name }}"{% if ecosystem == name %} selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Status
+      <select name="supply_status">
+        <option value="">All Statuses</option>
+        {% for value, label in [("reported", "Reported"), ("lead", "Lead"), ("changed", "Corrections and Withdrawals")] %}
+        <option value="{{ value }}"{% if value == status %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="small">Filter</button>
+    {% if query or ecosystem or status %}<a href="{{ prefix }}/supply-chain">Clear</a>{% endif %}
+    <small>{{ "{:,}".format(t.total) }} {{ "report" if t.total == 1 else "reports" }}</small>
+  </form>
+  {% if t.rows %}
+  <div class="tablescroll">
+    <table>
+      <tr><th>Package</th><th>Ecosystem</th><th>Affected Versions or Refs</th>
+          <th>Published</th><th>First Seen Here</th><th>Status and Sources</th></tr>
+      {% for row in t.rows %}
+      <tr>
+        <td><code>{{ row.package }}</code></td>
+        <td>{{ row.ecosystem }}</td>
+        <td>
+          {% for report in row.reports %}
+          <div>
+            {% if row.reports | length > 1 %}<small>{{ report.advisory }}</small><br>{% endif %}
+            {% if report.status in ("Withdrawn", "Removed from Report") %}<small class="muted">Previously listed</small><br>{% endif %}
+            {% set affected = report.versions + report.ranges %}
+            {% if affected %}
+              {% for version in affected[:4] %}<code>{{ version }}</code>{{ ", " if not loop.last else "" }}{% endfor %}
+              {% if affected | length > 4 %}
+                <details><summary>{{ affected | length - 4 }} more</summary>
+                  {% for version in affected[4:] %}<code>{{ version }}</code>{{ ", " if not loop.last else "" }}{% endfor %}
+                </details>
+              {% endif %}
+            {% else %}<span class="muted">Unknown</span>{% endif %}
+          </div>
+          {% endfor %}
+        </td>
+        <td>{{ (row.published | day) if row.published else "Unknown" }}</td>
+        <td>{{ row.first_seen | day }}</td>
+        <td><strong>{{ row.status }}</strong>
+          {% for report in row.reports %}
+          <details><summary>{{ report.advisory }} · {{ report.status }}{% if report.revised %} · Updated{% endif %}</summary>
+            <p>{{ report.summary }}</p>
+            <p><small>{% if report.published %}Published {{ report.published | day }} · {% endif %}Source Updated {{ report.modified | day }}{% if report.withdrawn %} · Withdrawn {{ report.withdrawn | day }}{% endif %}</small></p>
+            {% if report.previous_affected is not none %}
+            <p><small>Affected versions or refs before the last correction</small><br>
+              {% for version in report.previous_affected %}<code>{{ version }}</code>{{ ", " if not loop.last else "" }}
+              {% else %}<small>Unknown</small>{% endfor %}</p>
+            {% endif %}
+            {% if report.reporters %}<p><small>Reported by {{ report.reporters | join(", ") }}</small></p>{% endif %}
+            <a href="{{ report.url }}" rel="noopener noreferrer nofollow" target="_blank">Source Advisory</a>
+            {% if report.references %}
+            <ul class="plain">
+              {% for link in report.references %}
+              <li><a href="{{ link }}" rel="noopener noreferrer nofollow" target="_blank">{{ link | truncate(85, true) }}</a></li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </details>
+          {% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% include "vulnintel/_pager.html" %}
+  {% else %}
+    <p class="muted">No reports match. Refresh the sources or clear the filters.</p>
+  {% endif %}
+</section>
+{% endblock %}
