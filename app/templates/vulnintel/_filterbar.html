@@ -8,6 +8,11 @@
 <form method="get" action="{{ request.url.path }}#t-{{ t.key }}" class="filterbar"
       onchange="if (!event.target.closest('.multi')) this.requestSubmit()">
   {% for k, v in other_params(t.key) %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  {% if t.vendor_search %}
+    {% for v in f.vendors %}<input type="hidden" name="{{ t.key }}_vendor" value="{{ v }}">{% endfor %}
+    <label>Vendor Contains <input type="search" name="{{ t.key }}_vendor_query" value="{{ f.vendor_query }}"></label>
+    <button type="submit" class="small">Filter</button>
+  {% else %}
   <details class="multi">
     <summary>vendor: {% if not f.vendors %}all{% elif f.vendors | length == 1 %}{{ f.vendors[0] }}{% else %}{{ f.vendors | length }} selected{% endif %}</summary>
     <div class="multi-list">
@@ -16,6 +21,7 @@
       <button type="submit" class="small apply">Apply</button>
     </div>
   </details>
+  {% endif %}
   {% for tag in tags if tag not in (hide_tags or ()) %}
     <label><input type="checkbox" name="{{ t.key }}_tag" value="{{ tag }}" {% if tag in f.tags %}checked{% endif %}> {{ tag_labels[tag] }}</label>
   {% endfor %}
@@ -40,7 +46,7 @@
       {% if allow_heat %}<option value="heat" {% if f.sort == "heat" %}selected{% endif %}>heat</option>{% endif %}
       {% if f.sort not in ("date", "cvss", "epss", "vendor", "heat") %}<option value="{{ f.sort }}" selected>{{ f.sort | replace("_", " ") }}</option>{% endif %}
     </select></label>
-  <noscript><button type="submit" class="small">Filter</button></noscript>
-  {% if f.active %}<a href="{{ tlink(t.key, vendor=None, tag=None, epss=None, cvss=None, since=None) }}" class="muted">clear</a>{% endif %}
+  {% if not t.vendor_search %}<noscript><button type="submit" class="small">Filter</button></noscript>{% endif %}
+  {% if f.active %}<a href="{{ tlink(t.key, vendor=None, vendor_query=None, tag=None, epss=None, cvss=None, since=None) }}" class="muted">clear</a>{% endif %}
   <small class="muted">{{ "{:,}".format(t.total) }}{% if t.total != t.unfiltered %} of {{ "{:,}".format(t.unfiltered) }}{% endif %} rows</small>
 </form>

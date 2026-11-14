@@ -1,4 +1,4 @@
-{# Expects `t` (a _table() dict), `date_label`, optional `show_heat`, `show_maturity`
+{# Expects `t` (a _table() dict), `date_label`, optional `preview`, `show_heat`, `show_maturity`
    (replaces the yes/no exploit column with module / template / proof of concept),
    `show_sources` (replaces it with where the exploit code was found, for tables where every
    row has code), `empty` (message), and the filter bar's `hide_tags` and `allow_heat`.
@@ -6,10 +6,10 @@
    so the browser lands back on this table instead of the top of the page. #}
 {% set f = t.filters %}
 {% macro th(tkey, fsort, fdesc, key, label) -%}
-  <th><a href="{{ tlink(tkey, sort=key, dir=('asc' if (fsort == key and fdesc) else 'desc')) }}" class="sortlink">{{ label }}{% if fsort == key %} {{ '▼' if fdesc else '▲' }}{% endif %}</a></th>
+  <th>{% if preview %}{{ label }}{% else %}<a href="{{ tlink(tkey, sort=key, dir=('asc' if (fsort == key and fdesc) else 'desc')) }}" class="sortlink">{{ label }}{% if fsort == key %} {{ '▼' if fdesc else '▲' }}{% endif %}</a>{% endif %}</th>
 {%- endmacro %}
 <div id="t-{{ t.key }}" class="tablewrap">
-{% include "vulnintel/_filterbar.html" %}
+{% if not preview %}{% include "vulnintel/_filterbar.html" %}{% endif %}
 {% if not t.rows %}
   <p class="muted">{{ empty or "Nothing matches." }}</p>
 {% else %}
@@ -20,7 +20,7 @@
       {{ th(t.key, f.sort, f.desc, "vendor", "Vendor") }}
       {{ th(t.key, f.sort, f.desc, "product", "Product") }}
       {{ th(t.key, f.sort, f.desc, "date", date_label) }}
-      <th title="Patch references and vendor advisories come from NVD">Patch Status</th>
+      <th>Patch Status</th>
       {% if show_maturity %}<th>Exploit Evidence</th>
       {% elif show_sources %}<th>Source</th>
       {% else %}<th>Exploit and Detection Evidence</th>{% endif %}
@@ -41,7 +41,7 @@
         <td>{{ r.vendor or "—" }}</td>
         <td>{{ r.product or "—" }}</td>
         <td>{{ r.date or "—" }}</td>
-        <td>{% if r.fix == "patch" %}<span class="ok">Patch Reference</span>{% elif r.fix == "advisory" %}<span class="muted">Unknown · Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}</td>
+        <td>{% if r.fix == "vendor_fix" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#microsoft-advisory">Microsoft Fix</a>{% elif r.fix == "patch" %}<span class="ok">Patch Reference</span>{% elif r.fix == "advisory" %}<span class="muted">Unknown · Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}</td>
         {% set where = [] %}
         {% if c.msf %}{% set _ = where.append("Metasploit Exploit") %}{% endif %}
         {% if c.msf_other %}{% set _ = where.append("Other Metasploit Module") %}{% endif %}
@@ -58,7 +58,9 @@
           {% if c.msf_other %}<span class="badge">Other Metasploit Module</span>{% endif %}
           </a>{% else %}<span class="muted">None Indexed</span>{% endif %}</td>{% endif %}
         <td>{{ r.cvss if r.cvss is not none else "—" }}</td>
-        <td>{{ ("%.2f%%" | format(r.epss * 100)) if r.epss is not none else "—" }}</td>
+        <td>{% if r.epss is not none %}{{ "%.2f%%" | format(r.epss * 100) }}<br>
+          <small class="muted">{{ (r.epss_date | day) if r.epss_date else "Date Unknown" }}</small>
+          {% else %}—{% endif %}</td>
         {% if show_heat %}
           <td style="white-space: nowrap;"><strong>{{ r.heat }}</strong><span class="barwrap"><span class="bar" style="width: {{ (r.heat / 133 * 100) | round | int }}%"></span></span></td>
           <td><small>{{ r.parts | join(", ") }}</small></td>
@@ -67,6 +69,6 @@
     {% endfor %}
   </table>
   </div>
-  {% include "vulnintel/_pager.html" %}
+  {% if not preview %}{% include "vulnintel/_pager.html" %}{% endif %}
 {% endif %}
 </div>

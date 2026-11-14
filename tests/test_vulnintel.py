@@ -1729,7 +1729,84 @@ class ViewRouteTests(ViewTests):
 
     def test_dashboard_counters(self):
         r = self.client.get("/vulnerability-intelligence")
-        self.assertIn('href="/vulnerability-intelligence/views/exploited" class="viewcount"><strong>2</strong> Exploited', r.text)
+        self.assertIn('href="/vulnerability-intelligence/views/exploited" class="viewcount"><strong>2</strong> Known Exploited', r.text)
+        self.assertIn('href="/vulnerability-intelligence/views/all" class="viewcount"><strong>4</strong> All Vulnerabilities', r.text)
+
+    def test_watchlist_filter_on_both_views(self):
+        from app.modules.vulnerability_intelligence.feeds import cvelist
+
+        cve_id = "CVE-2026-12400"
+        store.save_cve_records([cvelist.parse_record(cve5(cve_id, vendor="Acme", product="Connect Secure"))])
+        store.add_watchlist("", "Connect Secure")
+        dashboard = self.client.get("/vulnerability-intelligence").text
+        self.assertIn('/views/all?v_tag=watchlist', dashboard)
+        self.assertIn('/views/exploited?v_tag=watchlist', dashboard)
+        for slug in ("all", "exploited"):
+            result = self.client.get(f"/vulnerability-intelligence/views/{slug}?v_tag=watchlist")
+            self.assertEqual(result.status_code, 200)
+            self.assertIn('value="watchlist" checked> Watchlist', result.text)
+            self.assertIn("Product Match", result.text)
+            self.assertIn("CVE-2026-118527", result.text)
+            self.assertNotIn("CVE-2023-4966", result.text)
+            self.assertEqual(cve_id in result.text, slug == "all")
+
+    def test_catalog_pages_filtered_results_and_can_be_pinned(self):
+        from app.modules.vulnerability_intelligence.feeds import cvelist
+
+        store.save_cve_records([
+            cvelist.parse_record(cve5(f"CVE-2026-{7000 + i}", vendor="Acme",
+                                      published=f"2026-11-{i + 1:02d}T00:00:00Z")) for i in range(12)
+        ] + [cvelist.parse_record(cve5("CVE-2026-7999", vendor="Acme", state="REJECTED"))])
+        store.upsert_epss([("CVE-2026-7999", 0.9, 0.9)], "2026-11-10")
+        url = "/vulnerability-intelligence/views/all"
+        result = self.client.get(url, params={"v_vendor_query": "ACME", "v_page": "999"})
+        self.assertIn("12 of 16 rows", result.text)
+        self.assertIn("rows 11–12 of 12", result.text)
+        self.assertLess(result.text.index("CVE-2026-7001"), result.text.index("CVE-2026-7000"))
+        self.assertNotIn("CVE-2026-7011", result.text)
+        self.assertNotIn("CVE-2026-7999", result.text)
+        result = self.client.get(url, params={"v_tag": ["exploited", "code"], "v_vendor_query": "citrix"})
+        self.assertIn("1 of 16 rows", result.text)
+        self.assertIn("CVE-2023-4966", result.text)
+        self.assertNotIn("CVE-2026-118527", result.text)
+        self.client.post("/vulnerability-intelligence/views/pins", data={"pinned": "all"})
+        dashboard = self.client.get("/vulnerability-intelligence").text
+        preview = dashboard.split('id="t-pin-all"', 1)[1].split("</table>", 1)[0]
+        self.assertEqual(preview.count('<td class="cvecell">'), 5)
+        self.assertIn("CVE-2026-7011", preview)
+        self.assertNotIn("CVE-2026-7006", preview)
+
+    def test_dashboard_pins_show_first_five_and_survive_schema_init(self):
+        store.upsert_epss([(f"CVE-2026-{6000 + i}", (i + 1) / 10, 0.9) for i in range(7)], "2026-11-10")
+        response = self.client.post("/vulnerability-intelligence/views/pins",
+                                    data={"pinned": ["likely", "watchlist"]}, follow_redirects=False)
+        self.assertEqual(response.status_code, 303)
+        self.assertEqual(response.headers["location"], "/vulnerability-intelligence#pinned-views")
+        store.init_schema()
+        self.assertEqual(store.dashboard_view_pins(), {"likely", "watchlist"})
+        dashboard = self.client.get("/vulnerability-intelligence").text
+        pinned = dashboard.split('<section id="pinned-views"', 1)[1].split("</section>", 1)[0]
+        self.assertIn('id="t-pin-watchlist"', pinned)
+        self.assertIn("No CVEs in this view yet.", pinned)
+        self.assertIn('href="/vulnerability-intelligence/views/likely"', pinned)
+        self.assertEqual(pinned.count("<td class=\"cvecell\">"), 5)
+        self.assertIn("CVE-2026-6006", pinned)
+        self.assertNotIn("CVE-2026-6000", pinned)
+        self.assertNotIn('name="pin-likely_tag"', pinned)
+        self.client.post("/vulnerability-intelligence/views/pins", data={})
+        self.assertFalse(store.dashboard_view_pins())
+        self.assertNotIn('id="t-pin-likely"', self.client.get("/vulnerability-intelligence").text)
+
+    def test_invalid_pin_submissions_keep_saved_selection(self):
+        url = "/vulnerability-intelligence/views/pins"
+        store.save_dashboard_view_pins({"ransomware"})
+        response = self.client.post(url, data={"pinned": ["exploited", "watchlist", "code", "likely", "ransomware"]})
+        self.assertIn("Choose up to 4 views.", response.text)
+        response = self.client.post(url, data={"pinned": "missing"})
+        self.assertIn("Choose only views shown on this page.", response.text)
+        response = self.client.post(url, data={"pinned": "code"}, headers={"Sec-Fetch-Site": "cross-site"})
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(store.dashboard_view_pins(), {"ransomware"})
 
 
 class FirstSeenTests(TempDbMixin, unittest.TestCase):
@@ -1744,6 +1821,90 @@ class FirstSeenTests(TempDbMixin, unittest.TestCase):
         hot = {r["cve_id"]: r for r in service.hottest(10)}["CVE-2023-4966"]
         self.assertEqual(hot["first_exploited"], "2023-10-18")
         self.assertTrue(any(p.startswith("listed ") and p.endswith("y ago") for p in hot["parts"]), hot["parts"])
+
+
+class MicrosoftAdvisoryTests(TempDbMixin, unittest.TestCase):
+    def test_refresh_retries_missing_advisories_and_feeds_the_views(self):
+        import asyncio
+        from unittest.mock import patch
+
+        from fastapi.testclient import TestClient
+
+        from app.main import app
+        from app.modules.vulnerability_intelligence.feeds import msrc
+
+        ids = [f"CVE-2026-{9010 + i}" for i in range(4)]
+        paths = {cve: f"2026/msrc_{cve.lower()}.json" for cve in ids}
+
+        def advisory(cve, released, severity, exploited="No", cna="Microsoft"):
+            return {"document": {"tracking": {"initial_release_date": released,
+                                              "current_release_date": "2026-11-13T08:00:00Z"}},
+                    "product_tree": {"branches": [{"category": "product_name", "name": "Windows Widget",
+                                                  "product": {"product_id": "1", "name": "Windows Widget"}}]},
+                    "vulnerabilities": [{"cve": cve, "title": f"{cna} Widget Vulnerability",
+                                         "notes": [{"title": "Assigning CNA", "text": cna}],
+                                         "product_status": {"known_affected": ["1"]},
+                                         "scores": [{"cvss_v3": {"baseScore": 7.0, "baseSeverity": severity}}],
+                                         "threats": [{"category": "exploit_status", "details":
+                                                      f"Publicly Disclosed:Yes;Exploited:{exploited};"
+                                                      "Latest Software Release:Exploitation More Likely"}],
+                                         "remediations": [{"category": "vendor_fix", "product_ids": ["1"],
+                                                           "details": "10.0.9:Security Update:https://support.microsoft.com/help/1234",
+                                                           "url": "https://support.microsoft.com/help/1234"}]}]}
+
+        docs = {paths[ids[0]]: advisory(ids[0], "2026-11-10", "HIGH", "Yes"),
+                paths[ids[1]]: advisory(ids[1], "2026-11-10", "MEDIUM"),
+                paths[ids[2]]: advisory(ids[2], "2026-11-10", "HIGH", cna="Chromium"),
+                paths[ids[3]]: advisory(ids[3], "2026-11-12", "HIGH")}
+        calls = []
+        fail = {paths[ids[1]]}
+
+        def handle(req):
+            path = req.url.path.removeprefix("/csaf/advisories/")
+            if path == "changes.csv":
+                content = "".join(f'"{name}","2026-11-13T08:00:00Z"\n' for name in docs)
+                return httpx.Response(200, content=content)
+            calls.append(path)
+            return httpx.Response(503) if path in fail else httpx.Response(200, json=docs[path])
+
+        store.set_sync(msrc.SYNC_KEY, "2026-10-01")
+
+        async def load():
+            async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+                with patch.object(base, "get_client", return_value=client):
+                    self.assertFalse((await msrc.refresh())["ok"])
+                    self.assertIn("1 Microsoft advisories failed", store.feed_status()[msrc.FEED]["error"])
+                    fail.clear()
+                    calls.clear()
+                    self.assertEqual((await msrc.refresh())["entries"], 4)
+                    self.assertEqual(calls, [paths[ids[1]]])
+                    self.assertIsNone(store.feed_status()[msrc.FEED]["error"])
+
+        asyncio.run(load())
+        self.assertEqual(store.get_kev(ids[0])[0]["date_added"], "2026-11-13")
+        client = TestClient(app, base_url="http://127.0.0.1")
+        url = "/vulnerability-intelligence/views/patch-tuesday"
+        triage = client.get(url)
+        self.assertEqual(triage.status_code, 200)
+        self.assertIn(ids[0], triage.text)
+        self.assertIn("Windows Widget", triage.text)
+        self.assertIn("10.0.9", triage.text)
+        self.assertNotIn(ids[1], triage.text)
+        self.assertIn(ids[1], client.get(url, params={"v_focus": "all"}).text)
+        self.assertIn(ids[2], client.get(url, params={"v_cycle": "also"}).text)
+        self.assertIn(ids[3], client.get(url, params={"v_cycle": "out-of-band"}).text)
+        known = client.get("/vulnerability-intelligence/views/exploited")
+        self.assertIn(ids[0], known.text)
+        self.assertIn("Microsoft Reported Exploitation</span>", known.text)
+        catalog = client.get("/vulnerability-intelligence/views/all")
+        self.assertIn(ids[3], catalog.text)
+        self.assertIn(f'/cve/{ids[3]}#microsoft-advisory">Microsoft Fix</a>', catalog.text)
+        store.add_watchlist("", "Windows Widget")
+        watched = client.get("/vulnerability-intelligence/views/all?v_tag=watchlist")
+        self.assertIn(ids[3], watched.text)
+        self.assertIn("Product Match", watched.text)
+        denied = client.post("/vulnerability-intelligence/refresh-msrc", headers={"Sec-Fetch-Site": "cross-site"})
+        self.assertEqual(denied.status_code, 403)
 
 
 def cve5(cve_id, vendor="Acme", product="Widget", published="2026-11-10T00:00:00Z", ssvc=None, state="PUBLISHED"):

@@ -37,6 +37,10 @@
       second. The first run reads all 400-odd profiles (about seven minutes); later runs re-read only groups whose
       victim count changed (seconds). Needs <code>RANSOMWARELIVE_API_KEY</code>. Once a day is plenty.</small>
   </form>
+  <form method="post" action="{{ prefix }}/refresh-msrc" style="margin-top: 8px;">
+    <button type="submit" class="small">Refresh Microsoft Advisories</button>
+    <small>The first load downloads advisories changed in the last 45 days. Later runs fetch new or revised documents. No key is required.</small>
+  </form>
 </div>
 
 <div class="card">

@@ -46,6 +46,21 @@ The vetting record is in docs/runbooks/vetting-a-dependency.md.
 
 ## Build narrative
 
+### 2026-11-13: Local catalog and Microsoft release triage
+
+The first All Vulnerabilities query took about 15 seconds on 404,849
+local CVEs. It calculated every display field before paging. The revised
+query selects the page of CVE IDs first, then fetches the complete display
+fields for those rows. The default query took 2.7 seconds and the
+Watchlist query took 1.3 seconds in a read-only check of the local store.
+
+Microsoft's index uses the date a document changed. The advisory for
+CVE-2026-94522 had a 2026-11-13 index date and a 2026-11-10 initial
+release. That initial date puts it in November's Patch Tuesday. The
+verified index held 10,146 advisories, with 2,754 changed in the initial
+45-day window. A separate Feeds button lets the operator choose when to
+run that first download.
+
 ### Phase 2 progress log (2026-11-03)
 
 ~~~text

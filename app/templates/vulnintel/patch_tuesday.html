@@ -1,0 +1,38 @@
+{% extends "vulnintel/layout.html" %}
+{% block title %}Patch Tuesday | CTI Toolkit{% endblock %}
+{% block tab %}
+<div class="card" id="t-v">
+  <h2>Patch Tuesday</h2>
+  <p class="muted">Microsoft advisories grouped by initial release date. Also Released covers Azure Linux and Chromium advisories published on the same day.</p>
+  {% if feed.error %}<p class="err">{{ feed.error }}</p>{% endif %}
+  {% if months or feed.fetched_at %}
+    <form method="get" class="filterbar" action="{{ prefix }}/views/patch-tuesday#t-v">
+      <label>Release Month
+        <select name="v_month">{% for m in months %}<option value="{{ m }}"{% if month == m %} selected{% endif %}>{{ m }}</option>{% else %}<option value="">No Releases</option>{% endfor %}</select>
+      </label>
+      <label>Release Type
+        <select name="v_cycle">{% for key, label in cycles.items() %}<option value="{{ key }}"{% if cycle == key %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      </label>
+      <label>Focus
+        <select name="v_focus">
+          <option value="triage"{% if focus == "triage" %} selected{% endif %}>Triage</option>
+          <option value="all"{% if focus == "all" %} selected{% endif %}>Show All</option>
+          {% for key, label in focus_options.items() %}<option value="{{ key }}"{% if focus == key %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="small" type="submit">Filter</button>
+      <small class="muted">{{ t.total }} of {{ unfiltered }} advisories</small>
+    </form>
+    {% if focus == "triage" %}<p class="muted"><small>Triage shows High, Important or Critical advisories, public exploit code and reported exploitation.</small></p>{% endif %}
+    {% if t.rows %}
+      {% include "vulnintel/_patch_rows.html" %}
+      {% include "vulnintel/_pager.html" %}
+    {% else %}
+      <p class="muted">No advisories match these filters.</p>
+    {% endif %}
+  {% else %}
+    <p class="muted">Load Microsoft advisories from the <a href="{{ prefix }}/feeds">Feeds</a> tab.</p>
+  {% endif %}
+  <p><a href="{{ prefix }}/views">All Views</a> · <a href="{{ prefix }}/feeds">Feeds</a></p>
+</div>
+{% endblock %}

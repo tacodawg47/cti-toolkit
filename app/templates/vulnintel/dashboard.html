@@ -15,6 +15,26 @@
   <a href="{{ prefix }}/views" class="muted"><small>all views</small></a>
 </p>
 
+<section id="pinned-views" aria-labelledby="pinned-views-heading">
+  <h2 id="pinned-views-heading">Pinned Views</h2>
+  <p><a href="{{ prefix }}/views">{% if pinned_previews %}Manage Pins{% else %}Choose Views to Pin{% endif %}</a></p>
+  {% for view, t in pinned_previews %}
+  <div class="card">
+    <h3><a href="{{ prefix }}/views/{{ view.slug }}">{{ view.title }}</a></h3>
+    {% if view.slug == "patch-tuesday" %}
+      <div id="t-pin-patch-tuesday">
+        {% if t.rows %}{% include "vulnintel/_patch_rows.html" %}{% else %}<p class="muted">No advisories in this view yet.</p>{% endif %}
+      </div>
+    {% else %}
+    {% with preview = true, date_label = view.date_label, show_maturity = view.show_maturity,
+            empty = "No CVEs in this view yet." %}
+      {% include "vulnintel/_cve_table.html" %}
+    {% endwith %}
+    {% endif %}
+  </div>
+  {% endfor %}
+</section>
+
 {% if chart_monthly or chart_vendors %}
 <div class="card">
   <h3>Newly Exploited CVEs per Month</h3>
@@ -35,17 +55,13 @@
 </div>
 
 <div class="card">
-  <h3>Exploited in Your Watchlist</h3>
+  <h3>Watchlist Shortcuts</h3>
   {% if watchlist_count == 0 %}
-    <p class="muted">The watchlist is empty. Add the vendors and products you run on the
-      <a href="{{ prefix }}/watchlist">Watchlist</a> tab and this section fills in.</p>
+    <p class="muted">The watchlist is empty. Add a vendor or product on the <a href="{{ prefix }}/watchlist">Watchlist</a> tab to track related CVEs.</p>
   {% else %}
-    <p class="sub">Exploited CVEs for the vendors and products on your watchlist.</p>
-    {% with t = stack, date_label = "First seen exploited", hide_tags = ("exploited",),
-            empty = "No exploited CVE matches the watchlist." %}{% include "vulnintel/_cve_table.html" %}{% endwith %}
-    <h3 style="margin-top: 14px;">New CVEs in Your Watchlist</h3>
-    <p class="sub">Published in the last 7 days for watched products, exploited or not.</p>
-    {% with t = stack_new, date_label = "Published", empty = "None" ~ (" (the NVD recent-changes feed has not run yet)" if not feeds.get("nvd_recent") or not feeds.get("nvd_recent").fetched_at else "") ~ "." %}{% include "vulnintel/_cve_table.html" %}{% endwith %}
+    <a href="{{ prefix }}/views/all?v_tag=watchlist">All Vulnerabilities</a> ·
+    <a href="{{ prefix }}/views/exploited?v_tag=watchlist">Known Exploited</a> ·
+    <a href="{{ prefix }}/watchlist">Manage Watchlist</a>
   {% endif %}
 </div>
 

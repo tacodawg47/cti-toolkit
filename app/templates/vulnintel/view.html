@@ -2,9 +2,10 @@
 {% block title %}{{ view.title }} — CTI Toolkit{% endblock %}
 {% block tab %}
 <div class="card">
-  <h2 style="margin: 0 0 6px;">{{ view.title }} <small class="muted">view {{ view.number }} · {{ "{:,}".format(t.unfiltered) }} CVEs</small></h2>
+  <h2 style="margin: 0 0 6px;">{{ view.title }} <small class="muted">{{ "{:,}".format(t.unfiltered) }} CVEs</small></h2>
   <p><small>{{ view.rule }}</small></p>
   {% for n in view.notes %}<p class="muted"><small>{{ n }}</small></p>{% endfor %}
+  <p class="muted"><small>EPSS estimates the probability of exploitation activity in the next 30 days as of the score date.</small></p>
   {% with date_label = view.date_label, show_maturity = view.show_maturity, hide_tags = view.hide_tags,
           empty = ("The watchlist is empty: add vendors and products on the Watchlist tab." if view.slug == "watchlist" and t.unfiltered == 0
                    else "Nothing matches." if t.unfiltered else "Nothing in this view yet: load the feeds on the Feeds tab.") %}

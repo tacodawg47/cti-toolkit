@@ -38,7 +38,7 @@
       {% else %}<span class="muted">no score{% if not rep.feeds.get("epss") %} (feed not loaded){% endif %}</span>{% endif %}</div>
     <div><small>Published</small>{% if cve and cve.published %}{{ cve.published | day }}{% else %}<span class="muted">—</span>{% endif %}</div>
     <div><small>Weakness</small>{% if cve and cve.cwe %}{{ cve.cwe }}{% elif rep.cwe_fallback %}{{ rep.cwe_fallback }} <small>from the CVE record</small>{% else %}<span class="muted">—</span>{% endif %}</div>
-    <div><small>Patch Status</small>{% if rep.fix_status == "patch" %}<span class="ok">Patch Reference</span>{% elif rep.fix_status == "advisory" %}<span class="muted">Unknown · Vendor Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}</div>
+    <div><small>Patch Status</small>{% if microsoft and microsoft.vendor_fix %}<a href="#microsoft-advisory">Microsoft Fix</a>{% elif rep.fix_status == "patch" %}<span class="ok">Patch Reference</span>{% elif rep.fix_status == "advisory" %}<span class="muted">Unknown · Vendor Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}</div>
   </div>
 
   {% if rep.nvd.error %}<p class="err">⚠ {{ rep.nvd.error }}{% if rep.nvd.stale %} — showing the stored copy from {{ cve.fetched_at | ago }}{% endif %}</p>
@@ -61,6 +61,14 @@
     {% if rep.kev | selectattr("source", "equalto", "cisa") | list %}· <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog?field_cve={{ rep.cve_id }}" rel="noopener noreferrer" target="_blank">CISA KEV</a>{% endif %}
   </p>
 </div>
+
+{% if microsoft %}
+<div class="card" id="microsoft-advisory">
+  <h3>Microsoft Security Advisory</h3>
+  <p class="muted">Initial release {{ microsoft.released }} · Last revised {{ microsoft.revised }}</p>
+  {% with t = {"rows": [microsoft]} %}{% include "vulnintel/_patch_rows.html" %}{% endwith %}
+</div>
+{% endif %}
 
 {% set s = rep.ssvc %}
 <div class="card">

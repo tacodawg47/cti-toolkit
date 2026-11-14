@@ -1,0 +1,28 @@
+<div class="tablescroll">
+<table>
+  <tr><th>CVE and Advisory</th><th>Released</th><th>Impact</th><th>Severity / CVSS</th>
+      <th>Microsoft Assessment</th><th>Remediation</th></tr>
+  {% for r in t.rows %}
+    <tr>
+      <td>{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}<br>
+        <a href="{{ r.url }}" target="_blank" rel="noopener noreferrer">{{ r.title }}</a>
+        {% if r.products %}<details><summary>Affected Products</summary><small>{{ r.products | join(", ") }}</small></details>{% endif %}</td>
+      <td>{{ r.released }}</td>
+      <td>{{ r.impact or "Unknown" }}</td>
+      <td>{{ (r.severity | title) if r.severity else "Unknown" }}{% if r.cvss is not none %} · {{ r.cvss }}{% endif %}</td>
+      <td><small>Exploited {{ r.exploited or "Unknown" }}<br>
+        Publicly disclosed {{ r.disclosed or "Unknown" }}{% if r.exploitability %}<br>{{ r.exploitability }}{% endif %}</small></td>
+      <td>{% if r.fixes %}
+        <details><summary>{{ r.fixes | length }} remediation {{ "entry" if r.fixes | length == 1 else "entries" }}</summary>
+          <ul class="plain">{% for fix in r.fixes %}<li>
+            {{ {"vendor_fix": "Vendor Fix", "mitigation": "Mitigation", "workaround": "Workaround"}[fix.kind] }}
+            {% if fix.url %}<a href="{{ fix.url }}" target="_blank" rel="noopener noreferrer">{{ fix.label or "Microsoft Reference" }}</a>
+            {% else %}{{ fix.label }}{% endif %}
+            {% if fix.products %}<br><small class="muted">{{ fix.products | join(", ") }}</small>{% endif %}
+          </li>{% endfor %}</ul>
+        </details>
+        {% else %}Unknown{% endif %}</td>
+    </tr>
+  {% endfor %}
+</table>
+</div>

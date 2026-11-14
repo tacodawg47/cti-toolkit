@@ -392,13 +392,15 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   inthewild.io (API down; RSS and database frozen since January 2025).
 
 **Still to wire**
-- Include All Vulnerabilities and Known Exploited views. Both use the same
-  table renderer and offer a Watchlist filter. Known Exploited includes
-  historical exploitation reports. A recent observation filter can narrow
-  that view once observation dates are available. Keep watchlist management
-  on its own tab. A vendor, a product, or both can be watched. Version,
-  exposure, business importance, owner, and last confirmation are optional
-  private details. Show Product Match on matching rows.
+- Built 2026-11-13: All Vulnerabilities and Known Exploited use the shared
+  table and offer a Watchlist filter. All Vulnerabilities pages the local
+  catalog in SQLite and excludes rejected CVEs. Known Exploited includes
+  historical exploitation reports. The dashboard links to both filtered
+  views. Watchlist management stays on its own tab. A vendor, a product,
+  or both can be watched. Matching rows show Product Match.
+- Add a recent observation filter once observation dates are available.
+  Add optional private watchlist details for version, exposure, business
+  importance, owner, and last confirmation.
 - Show independent action badges. Patch means a fix is available for the
   affected product or version. Mitigate means a documented workaround or
   compensating control is available. Show both when both options exist and
@@ -440,14 +442,16 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   with its own URL, a counter on the dashboard, and the shared table
   renderer (filter bar, sort, pager). A view is a rule, not a second
   table in the database, so a CVE can sit in several and its badges show
-  which. The dashboard keeps the counters, the charts, and the top rows of
-  the three or four views the operator pins. Views and their membership
+  which. The dashboard keeps the counters and charts. Built 2026-11-13:
+  pin up to four views from the Views tab. SQLite saves the selection.
+  The dashboard previews the first five rows of each pinned view in its
+  default order. Open the full view for filters and paging. Views and their membership
   rules, in build order (1 to 3 built 2026-11-11: a Views tab, one page
   per view, and a counter strip on the Dashboard; 5, 6, 9, 11 and 12
   built the same day from data already stored, with the narrowings noted
-  under each; pinning is next; 3 does not yet take SSVC "poc", which
+  under each; 3 does not yet take SSVC "poc", which
   would add about 46,700 CVEs):
-  1. Exploited: in CISA KEV, VulnCheck KEV, the EUVD exploited list, any
+  1. Known Exploited: in CISA KEV, VulnCheck KEV, the EUVD exploited list, any
      catalogue in Vulnerability-Lookup's `/api/kev` (it aggregates CIRCL,
      CISA, ENISA, Shadowserver and others), Microsoft `Exploited:Yes`, or
      CISA SSVC Exploitation = active. One badge per source and the
@@ -458,27 +462,20 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
      module, Nuclei template, Exploit-DB entry, VulnCheck XDB entry,
      GitHub PoC, or SSVC Exploitation = poc. A maturity column (module,
      template, proof of concept).
-  4. Patch Tuesday (Microsoft): MSRC's per-CVE CSAF files, driven from
-     `msrc.microsoft.com/csaf/advisories/changes.csv` (keyless; the
-     monthly CVRF document is over 10 MB). Membership: initial release on
-     the second Tuesday of the month, excluding Azure Linux ("Mariner")
-     and Chromium-assigned entries, which go under an "also released"
-     filter; any other date is out-of-band. Columns: CVE, title,
-     component, impact, severity, CVSS, publicly disclosed, exploited,
-     exploitability assessment, customer action required, KB or fixed
-     build. Sub-filters: exploited, publicly disclosed, "Exploitation
-     More Likely", critical. October 2026 carried about 1,400 CVEs, so
-     the view opens on the sub-filters, not the full list. Default
-     filter for Microsoft rows (operator's rule, 2026-11-10; to refine in
-     the working session): show only high or critical severity, or
-     exploit code available, or exploited. Everything is still ingested
-     (the "ingest everything, surface selectively" decision stands); the
-     rest sits behind a "show all" toggle. Two things to check against
-     real data then: most Microsoft CVEs score 7.0 or higher, so "high"
-     alone may keep most of the list, and "publicly disclosed" and
-     "Exploitation More Likely" are worth adding to the default because
-     they are Microsoft's own early-warning flags. Other vendors'
-     cycles join as tagged rows where a keyless feed exists: Fortinet
+  4. Patch Tuesday (Microsoft), built 2026-11-13. MSRC's keyless per-CVE
+     CSAF index drives a separate refresh. First load fetches the last
+     45 days of changed advisories. Later runs fetch new revisions and
+     retry failed downloads. Group by initial release date. Azure Linux
+     and Chromium advisories released on Patch Tuesday go under Also
+     Released. Other dates go under Out-of-Band. Show affected products,
+     impact, severity, CVSS, Microsoft's disclosure and exploitation
+     assessments, and its remediation entries. Triage opens on High,
+     Important, Critical, public exploit code, or reported exploitation.
+     Show All and the individual Microsoft signal filters are available.
+     Add a customer-action field when a source supplies that assessment.
+     Review the default on a full monthly release. Consider whether to
+     include Publicly Disclosed and Exploitation More Likely by default.
+     Other vendors' cycles join as tagged rows where a keyless feed exists: Fortinet
      PSIRT RSS, Palo Alto's JSON API, Cisco, Red Hat, and SUSE CSAF,
      Chrome release notes, CISA's CSAF feeds.
   5. New and severe: published in the last 7 days with CVSS 9.0 or
