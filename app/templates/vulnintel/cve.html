@@ -12,16 +12,17 @@
 {% for r in pri.reasons if not (r.startswith("CVSS ") or r.startswith("EPSS ")) %}{% set _ = reasons.append(r) %}{% endfor %}
 <div class="card">
   <h2 style="margin: 0 0 4px;">{{ rep.cve_id }}
-    <span class="pri pri-{{ pri.level }}">{{ pri.level }} {{ pri.label }}</span></h2>
+    <span class="pri{% if pri.level != 'N/A' %} pri-{{ pri.level }}{% endif %}">{{ pri.level }}{% if pri.label %} {{ pri.label }}{% endif %}</span></h2>
   {% if rep.title %}<p class="cvetitle">{{ rep.title }}</p>{% endif %}
   <div class="tagline">
+    {%- if rep.cited_github_exploits or rep.exploits.get("exploitdb") or rep.exploits.get("xdb") or rep.exploits.get("metasploit", []) | selectattr("kind", "equalto", "exploit") | list %}<span class="badge">Public Exploit Code</span>{% endif %}
     {%- for k in rep.kev %}<span class="badge badge-kev" title="listed as exploited">{{ kev_names.get(k.source, k.source) }}</span>{% endfor %}
     {%- if rep.ssvc and rep.ssvc.exploitation == "active" %}<span class="badge badge-kev">{{ kev_names.ssvc }}</span>{% endif %}
     {%- if (rep.kev and rep.kev | selectattr("ransomware") | list) or rep.ransomware_groups or rep.rvm %}<span class="badge badge-ransom">ransomware</span>{% endif %}
-    {%- if rep.watchlist_hits %}<span class="badge badge-stack">your stack</span>{% endif %}
-    {%- if rep.exploits.get("metasploit") %}<span class="badge badge-kev" title="Metasploit module">Metasploit</span>{% endif %}
+    {%- if rep.watchlist_hits %}<span class="badge badge-stack" title="{{ rep.watchlist_hits | join(', ') }}">Product Match</span>{% endif %}
+    {%- if rep.exploits.get("metasploit") %}<span class="badge" title="See module types below">Metasploit</span>{% endif %}
     {%- if rep.exploits.get("exploitdb") %}<span class="badge">Exploit-DB</span>{% endif %}
-    {%- if rep.exploits.get("nuclei") %}<span class="badge">Nuclei</span>{% endif %}
+    {%- if rep.exploits.get("nuclei") %}<span class="badge">Nuclei Check Available</span>{% endif %}
     {%- if rep.exploits.get("xdb") %}<span class="badge">VulnCheck XDB</span>{% endif %}
   </div>
   {% if rep.aliases %}<p class="muted">Also known as: {{ rep.aliases | join(", ") }}</p>{% endif %}
@@ -33,18 +34,17 @@
         {% if not (cve and cve.cvss_score is not none) %}<small>from {{ rep.cvss_fallback.source }}</small>{% elif cve.cvss_version %}<small>v{{ cve.cvss_version }}</small>{% endif %}
       {% else %}<span class="muted">not scored</span>{% endif %}</div>
     <div><small>EPSS</small>
-      {% if rep.epss %}<strong>{{ "%.2f" | format(rep.epss.epss) }}</strong> <small>{{ "%.0f" | format(rep.epss.percentile * 100) }}th percentile{% if rep.epss.prev_epss is not none %}, was {{ "%.2f" | format(rep.epss.prev_epss) }}{% endif %}</small>
+      {% if rep.epss %}<strong>{{ "%.2f" | format(rep.epss.epss * 100) }}%</strong> <small>30-day estimate · {{ "%.0f" | format(rep.epss.percentile * 100) }}th percentile</small>
       {% else %}<span class="muted">no score{% if not rep.feeds.get("epss") %} (feed not loaded){% endif %}</span>{% endif %}</div>
     <div><small>Published</small>{% if cve and cve.published %}{{ cve.published | day }}{% else %}<span class="muted">—</span>{% endif %}</div>
     <div><small>Weakness</small>{% if cve and cve.cwe %}{{ cve.cwe }}{% elif rep.cwe_fallback %}{{ rep.cwe_fallback }} <small>from the CVE record</small>{% else %}<span class="muted">—</span>{% endif %}</div>
-    <div><small>Fix reference</small>{% if rep.fix_status == "patch" %}<span class="ok">patch</span>{% elif rep.fix_status == "advisory" %}<span class="ok">vendor advisory</span>{% else %}<span class="no">none tagged</span>{% endif %}</div>
+    <div><small>Patch Status</small>{% if rep.fix_status == "patch" %}<span class="ok">Patch Reference</span>{% elif rep.fix_status == "advisory" %}<span class="muted">Unknown · Vendor Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}</div>
   </div>
 
   {% if rep.nvd.error %}<p class="err">⚠ {{ rep.nvd.error }}{% if rep.nvd.stale %} — showing the stored copy from {{ cve.fetched_at | ago }}{% endif %}</p>
   {% elif rep.nvd.status == "not_found" %}<p class="muted">NVD has no record for this ID. It may be reserved but not yet published, or rejected.</p>{% endif %}
   {% if rep.description %}<p>{{ rep.description }}</p>{% endif %}
 
-  <p><strong>{{ pri.action }}.</strong>{% if reasons %} Based on:{% else %} Based on the scores above.{% endif %}</p>
   {% if reasons %}<ul>{% for r in reasons %}<li>{{ r[:1] | upper }}{{ r[1:] }}</li>{% endfor %}</ul>{% endif %}
   <p class="muted"><small>The matrix cannot see your exposure. An internet-facing instance moves a P3 up;
     a well-isolated one with compensating controls can move a P2 down. Your call, this is the evidence.</small></p>
@@ -93,7 +93,6 @@
     <tr><th>Name</th><td>{{ k.name }}</td></tr>
     <tr><th>Vendor / product</th><td>{{ k.vendor }} {{ k.product }}</td></tr>
     <tr><th>Added</th><td>{{ k.date_added }}</td></tr>
-    {% if k.due_date %}<tr><th>Due date</th><td>{{ k.due_date }} <small>(US federal remediation deadline; a useful urgency proxy)</small></td></tr>{% endif %}
     <tr><th>Ransomware use</th><td>{% if k.ransomware %}<span class="verdict-malicious">known</span>{% else %}unknown{% endif %}</td></tr>
     {% if k.required_action %}<tr><th>Required action</th><td>{{ k.required_action }}</td></tr>{% endif %}
     {% if k.cwes %}<tr><th>CWEs</th><td>{{ k.cwes | join(", ") }}</td></tr>{% endif %}
@@ -213,17 +212,13 @@
 </div>
 
 <div class="card" id="exploits">
-  <h3>Exploit code <small>(Metasploit, Exploit-DB, Nuclei and VulnCheck XDB indexes)</small></h3>
+  <h3>Exploits &amp; Detection</h3>
   {% with exploits = rep.exploits %}{% include "vulnintel/_exploit_lists.html" %}{% endwith %}
 </div>
 
 <div class="card">
-  <h3>Public proof-of-concept code <small>(GitHub)</small></h3>
-  {% with github = rep.github, cve = rep.cve_id %}{% include "vulnintel/_github_table.html" %}{% endwith %}
-  {% if rep.stored_pocs %}
-    <p class="muted"><small>The exploit-code feed first recorded a repository for this CVE on {{ rep.stored_pocs[-1].first_seen | day }}
-      ({{ rep.stored_pocs | length }} repositor{{ "y" if rep.stored_pocs | length == 1 else "ies" }} so far).</small></p>
-  {% endif %}
+  <h3>GitHub Repository Leads</h3>
+  {% with github = rep.github, cve = rep.cve_id, stored = rep.stored_pocs %}{% include "vulnintel/_github_table.html" %}{% endwith %}
 </div>
 
 <details class="card">

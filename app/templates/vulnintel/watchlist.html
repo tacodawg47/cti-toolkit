@@ -4,16 +4,14 @@
 
 <div class="card">
   <h3>Technology watchlist <small>({{ entries | length }})</small></h3>
-  <p class="muted">Vendors and products you run. Matched case-insensitively, as a substring, against the
-    vendor and product fields of CISA KEV and NVD's CPE data, so "Citrix" matches every Citrix product and
-    "NetScaler" matches "NetScaler ADC". Leave product blank to watch a whole vendor. Stored in the local
-    database only (git-ignored).</p>
+  <p class="muted">Follow a vendor, a product, or both. Matching ignores case. For example, "NetScaler" matches
+    "NetScaler ADC". Entries are stored in the local database.</p>
   {% if entries %}
     <table>
       <tr><th>Vendor</th><th>Product</th><th>Note</th><th>Added</th><th></th></tr>
       {% for e in entries %}
         <tr>
-          <td>{{ e.vendor }}</td><td>{{ e.product or "<em>any</em>" | safe }}</td><td><small>{{ e.note }}</small></td>
+          <td>{{ e.vendor or "Any" }}</td><td>{{ e.product or "Any" }}</td><td><small>{{ e.note }}</small></td>
           <td><small>{{ e.added_at | day }}</small></td>
           <td style="text-align: right;">
             <form class="inline-form" method="post" action="{{ prefix }}/watchlist/delete">
@@ -28,7 +26,7 @@
   <form method="post" action="{{ prefix }}/watchlist/add" style="margin-top: 10px;">
     <table>
       <tr>
-        <td style="border: 0;"><input type="text" name="vendor" placeholder="vendor (required), e.g. Fortinet" maxlength="100"></td>
+        <td style="border: 0;"><input type="text" name="vendor" placeholder="Vendor, e.g. Fortinet" maxlength="100"></td>
         <td style="border: 0;"><input type="text" name="product" placeholder="product (optional), e.g. FortiOS" maxlength="100"></td>
         <td style="border: 0;"><input type="text" name="note" placeholder="note (optional), e.g. edge firewalls" maxlength="200"></td>
         <td style="border: 0; width: 1%;"><button type="submit" class="small">Add</button></td>

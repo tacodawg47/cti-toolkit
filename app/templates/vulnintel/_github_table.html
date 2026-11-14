@@ -1,4 +1,4 @@
-{# Expects `github` (the sources.github result) and `cve` (the ID). #}
+{# Expects `github`, `cve`, and optionally `stored` from the local feed. #}
 {% if github.status == "quota" %}
   <p class="err">⚠ {{ github.error }}</p>
 {% elif github.status == "error" %}
@@ -6,13 +6,13 @@
 {% else %}
   <p>
     <strong>{{ github.total }}</strong> repositor{{ "y" if github.total == 1 else "ies" }} mention
-    <code>{{ cve }}</code> in their name or description.
+    <code>{{ cve }}</code> in their name, description or README.
     {%- if github.cached %} <small>(cached)</small>{% endif %}
     {%- if github.incomplete %} <small>(GitHub returned a partial result)</small>{% endif %}
   </p>
   {% if github.repos %}
     <table>
-      <tr><th>Repository</th><th>Stars</th><th>Created</th><th>Last push</th><th>Description</th></tr>
+      <tr><th>Repository</th><th>Stars</th><th>Created</th><th>Last push</th><th>Description</th><th>Evidence</th></tr>
       {% for r in github.repos %}
         <tr{% if r.archived %} class="dim"{% endif %}>
           <td><a href="{{ r.url }}" rel="noopener noreferrer nofollow" target="_blank">{{ r.full_name }}</a>
@@ -22,6 +22,8 @@
           <td>{{ r.created }}</td>
           <td>{{ r.pushed }}</td>
           <td>{{ r.description }}</td>
+          <td>{% if r.exploit_reference %}<strong>Public Exploit Code</strong><br><small>NVD tags this repository as an exploit reference.</small>
+              {% elif r.claim %}<strong>Claimed PoC</strong><br><small>{{ r.claim }}</small>{% else %}<small>Repository Lead</small>{% endif %}</td>
         </tr>
       {% endfor %}
     </table>
@@ -29,8 +31,17 @@
       <small>Showing the {{ github.repos | length }} most recently updated.</small>
     {% endif %}
   {% endif %}
-  <p class="muted"><small>Links only, nothing is downloaded. A repository that claims to be a proof of
-    concept can be a working exploit, a scanner, a write-up, an empty placeholder, or malware aimed at
-    researchers. A brand-new account, no stars and a single commit is the usual shape of the last one.
-    Read before you run anything, and only in a VM.</small></p>
+  <p class="muted"><small>Claimed PoC means a keyword matched near the CVE ID. README checks cover up to five additional
+    results per lookup. Repository files and payloads are never run.</small></p>
+{% endif %}
+{% set live_names = github.repos | map(attribute='full_name') | list %}
+{% set local = stored | default([]) | rejectattr('full_name', 'in', live_names) | list %}
+{% if local %}
+  <h4>Other Leads From the Local Feed</h4>
+  <ul>
+    {% for r in local %}
+      <li><a href="{{ r.url }}" rel="noopener noreferrer nofollow" target="_blank">{{ r.full_name }}</a>
+        {% if r.claim %}<strong>Claimed PoC</strong> <small>{{ r.claim }}</small>{% endif %}</li>
+    {% endfor %}
+  </ul>
 {% endif %}

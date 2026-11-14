@@ -8,9 +8,9 @@ host as bad, in which case it is nudged to "suspicious". CVEs are shown for
 context but do not set the verdict. The real value is the summary (ports, org,
 vulns).
 
-Note: Shodan host lookups also consume query credits on your plan, which this
-toolkit does not track; the rpm cap just paces requests. Docs:
-https://developer.shodan.io/
+Shodan's IP host lookup uses no query credits. Filtered searches and active
+scans use separate budgets. The rpm cap paces host lookups. Docs:
+https://book.shodan.io/developer-apis/shodan-api/
 """
 
 from ...core import cache

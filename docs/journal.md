@@ -166,6 +166,23 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-12: HEARTH and candidate detections
+
+- The HEARTH site and README describe a CTI-to-hunt drafting workflow.
+  Its schema includes a hypothesis, data sources, false positives, and
+  optional queries. The operator's test was issue 467 and the corresponding
+  Keep Me Signed In draft. Both URLs returned cache misses, including an
+  attempt to read the raw draft. The specific output was not verified.
+- Use the format as inspiration. Start with a cited hypothesis and required
+  telemetry. Add candidate pseudocode or queries that name the fields they
+  need. A Sigma rule can describe log events. A YARA rule needs a relevant
+  file or memory artifact. Keep the candidate label until validated.
+- A useful cloud hunt draft should name the sign-in or audit records it needs,
+  the behavior those records can test, and likely benign explanations.
+  Identify gaps where telemetry cannot show the hypothesized behavior.
+  Sigma conversion is a later feature. Query syntax, log mappings, and field
+  names all need validation against the intended SIEM or EDR.
+
 ### 2026-11-11: sources review (12 repositories and the rest of the handoff)
 
 - Full report: docs/research/2026-11-11-sources-review.md; the five

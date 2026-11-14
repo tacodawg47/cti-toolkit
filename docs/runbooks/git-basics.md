@@ -99,6 +99,23 @@ git show --stat HEAD       # what the last commit contained
 git remote -v              # where "origin" points
 ```
 
+### Stage one edit in a shared file
+
+When the journal has separate edits, stage the section for the current
+commit. From the project root:
+
+```bash
+git diff -- docs/journal.md
+git add -p -- docs/journal.md
+git diff --cached -- docs/journal.md
+git diff -- docs/journal.md
+```
+
+In `git add -p`, answer `y` for the section you want in the commit and `n`
+for the others. The first diff after staging shows what the commit will
+contain. The second shows what is still in your working folder. Review the
+full staged file list with `git diff --cached --stat` before committing.
+
 ## Undo cheat sheet
 
 ```bash

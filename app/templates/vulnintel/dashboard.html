@@ -8,7 +8,7 @@
     Feeds: {{ summary.loaded }} of {{ summary.total }} loaded{% if summary.newest %}, newest {{ summary.newest | ago }}{% endif %}{% if summary.failing %}, <span class="err">{{ summary.failing | length }} failing ({{ summary.failing | join(", ") }})</span>{% endif %}
     · <a href="{{ prefix }}/feeds">Feeds tab</a>
   {% endif %}
-  {% if new_code %}<br>New exploit code in the last 7 days for <strong>{{ new_code }}</strong> CVE{{ "" if new_code == 1 else "s" }} · <a href="{{ prefix }}/exploits">Exploit Code tab</a>{% endif %}
+  {% if new_code %}<br>New exploit reports or claimed PoCs in the last 7 days for <strong>{{ new_code }}</strong> CVE{{ "" if new_code == 1 else "s" }} · <a href="{{ prefix }}/exploits">Exploits &amp; Detection</a>{% endif %}
 </p>
 <p class="viewstrip">
   {% for c in view_counts %}<a href="{{ prefix }}/views/{{ c.slug }}" class="viewcount"><strong>{{ "{:,}".format(c.count) }}</strong> {{ c.title }}</a>{% endfor %}

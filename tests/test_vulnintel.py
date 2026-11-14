@@ -166,16 +166,13 @@ class PriorityTests(unittest.TestCase):
 
     def test_p5_and_no_data(self):
         p = self._p()
-        self.assertEqual(p.level, "P5")
-        self.assertIn("no scoring data yet", p.reasons)
+        self.assertEqual(p.level, "N/A")
+        self.assertIn("insufficient evidence to assign a priority", p.reasons)
         self.assertEqual(self._p(cvss=4.0, epss=0.01).level, "P5")
 
-    def test_reasons_mention_ransomware_and_missing_fix(self):
-        p = self._p(kev_sources=["cisa"], ransomware=True, fix_status="none")
+    def test_reasons_mention_ransomware(self):
+        p = self._p(kev_sources=["cisa"], ransomware=True)
         self.assertIn("known ransomware campaign use", p.reasons)
-        self.assertTrue(any(r.startswith("no patch or vendor advisory") for r in p.reasons))
-        p = self._p(kev_sources=["cisa"], fix_status="advisory")
-        self.assertFalse(any(r.startswith("no patch") for r in p.reasons))
 
 
 class KevParseTests(unittest.TestCase):
@@ -240,6 +237,13 @@ class GithubSummariseTests(unittest.TestCase):
         self.assertEqual(s["repos"][0]["created"], "2023-10-25")
         self.assertTrue(s["repos"][1]["archived"])
         self.assertEqual(s["repos"][1]["description"], "")
+
+    def test_claim_requires_matching_cve_and_nearby_keyword(self):
+        cve = "CVE-2024-3400"
+        self.assertTrue(github.claim(cve, "someone/CVE_2024_3400-proof-of-concept"))
+        self.assertTrue(github.claim(cve, "someone/research", "Exploit code for CVE-2024-3400"))
+        self.assertIsNone(github.claim(cve, "someone/CVE-2024-34000-poc"))
+        self.assertIsNone(github.claim(cve, "someone/research", readme=f"{cve}\nUnrelated PoC"))
 
 
 class RouteHelperTests(unittest.TestCase):
@@ -387,7 +391,7 @@ class ServiceTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
         rep = await service.report("CVE-2099-9999")
         self.assertEqual(rep["nvd"]["status"], "not_found")
         self.assertIsNone(rep["cve"])
-        self.assertEqual(rep["priority"].level, "P5")
+        self.assertEqual(rep["priority"].level, "N/A")
 
     async def test_github_quota_and_feed_errors(self):
         base.set_client(httpx.AsyncClient(transport=_transport(github_status=403)))
@@ -481,12 +485,12 @@ class RouteTests(TempDbMixin, unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         for needle in ("P1 Emergency", "Sensitive information disclosure.", "7.5", "CWE-119",
                        "Known exploited", "someone/CVE-2023-4966", "Vendor advisory", "12.1-55.300",
-                       '<span class="ok">patch</span>',
+                       '<span class="ok">Patch Reference</span>',
                        '<p class="cvetitle">Citrix NetScaler Buffer Overflow</p>',   # CISA's name as the title
                        "<li>On a known-exploited list"):                          # bullets start with a capital
             self.assertIn(needle, r.text)
         # CVSS and EPSS sit in the key figures, not in the bullet list
-        bullets = r.text.split("Based on:")[1].split("</ul>")[0]
+        bullets = r.text.split("<li>On a known-exploited list")[1].split("</ul>")[0]
         self.assertNotIn("CVSS 7.5", bullets)
         r = self.client.get("/vulnerability-intelligence/cve/not-a-cve")
         self.assertIn("not a CVE identifier", r.text)
@@ -507,7 +511,9 @@ class RouteTests(TempDbMixin, unittest.TestCase):
         self.client.post("/vulnerability-intelligence/watchlist/delete", data={"entry_id": entry["id"]})
         self.assertEqual(store.list_watchlist(), [])
         r = self.client.post("/vulnerability-intelligence/watchlist/add", data={"vendor": "  "}, follow_redirects=False)
-        self.assertIn("vendor+is+required", r.headers["location"])
+        self.assertIn("enter+a+vendor+or+product", r.headers["location"])
+        self.client.post("/vulnerability-intelligence/watchlist/add", data={"product": "FortiOS"})
+        self.assertEqual([(e["vendor"], e["product"]) for e in store.list_watchlist()], [("", "FortiOS")])
         self.client.post("/vulnerability-intelligence/aliases/add", data={"alias": "TestBug", "cve_id": "cve-2024-1234"})
         self.assertEqual(store.resolve_alias("testbug"), ["CVE-2024-1234"])
         r = self.client.post("/vulnerability-intelligence/aliases/add", data={"alias": "x", "cve_id": "nope"}, follow_redirects=False)
@@ -624,7 +630,7 @@ class PocStoreTests(TempDbMixin, unittest.TestCase):
         self.assertEqual(again[0]["stars"], 10)
         self.assertEqual(again[0]["first_seen"], first_seen)
         recent = store.recent_poc(7)
-        self.assertEqual([(r["cve_id"], r["repos"], r["max_stars"]) for r in recent], [("CVE-2024-3400", 2, 10)])
+        self.assertEqual([(r["cve_id"], r["repos"], r["max_stars"]) for r in recent], [("CVE-2024-3400", 1, 10)])
         # stack_only: nothing matches until the watchlist and KEV/NVD know the vendor
         self.assertEqual(store.recent_poc(7, stack_only=True), [])
         store.add_watchlist("Palo Alto")
@@ -644,6 +650,30 @@ class PocStoreTests(TempDbMixin, unittest.TestCase):
 class PocAndRansomwareFeedTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         await base.aclose()
+
+    async def test_github_readme_claim_is_distinct_from_repository_mention(self):
+        from base64 import b64encode
+        cve = "CVE-2024-3400"
+        checked = []
+
+        def handler(req):
+            if req.url.path == "/search/repositories":
+                items = [gh_repo(f"{cve}-report", "2024-04-12"), gh_repo("notes", "2024-04-12")]
+                for item in items:
+                    item["description"] = "Research notes"
+                return httpx.Response(200, json={"total_count": 2, "items": items})
+            checked.append(req.url.path)
+            if req.url.path == "/repos/user/notes/readme":
+                encoded = b64encode(f"# Proof of concept for {cve}".encode()).decode()
+                return httpx.Response(200, json={"encoding": "base64", "content": encoded})
+            return httpx.Response(404)
+
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        result = await github.search(cve)
+        self.assertEqual(set(checked), {f"/repos/user/{cve}-report/readme", "/repos/user/notes/readme"})
+        self.assertIsNone(result["repos"][0]["claim"])
+        self.assertTrue(result["repos"][1]["claim"].startswith("README mentions"))
+        self.assertTrue((await github.search(cve))["cached"])
 
     async def test_poc_feed_pages_until_short_page(self):
         calls = []
@@ -823,7 +853,7 @@ class ExploitStoreTests(TempDbMixin, unittest.TestCase):
         self.assertEqual(len(rows), 1)
         r = rows[0]
         self.assertEqual((r["cve_id"], r["repos"], r["edb"], bool(r["msf"]), bool(r["nuclei"])),
-                         ("CVE-2023-4966", 0, 1, True, True))
+                         ("CVE-2023-4966", 0, 1, False, True))
         # a GitHub repo for the same CVE merges into the same row
         store.upsert_poc_repos(poc_feed.parse_items([gh_repo("CVE-2023-4966-poc", "2099-01-05", 4)]))
         r = store.recent_poc(7)[0]
@@ -880,7 +910,8 @@ class HotnessAndBriefTests(unittest.TestCase):
                  "kev": False, "ransomware": False, "msf": False, "poc": True, "due_date": None}]
         text = brief.render(rows, counts={"kev": 1767})
         self.assertIn("1,767 known-exploited CVEs tracked", text)
-        self.assertIn("- CVE-2024-3400 | Palo Alto Networks PAN-OS | CVSS 10.0 | EPSS 100% | EXPLOITED RANSOMWARE METASPLOIT | CISA due 2024-04-19", text)
+        self.assertIn("- CVE-2024-3400 | Palo Alto Networks PAN-OS | CVSS 10.0 | EPSS 100% | EXPLOITED RANSOMWARE METASPLOIT", text)
+        self.assertNotIn("CISA due", text)
         self.assertIn("- CVE-2026-1 | vendor unknown | CVSS n/a | EPSS n/a | POC", text)
         self.assertNotIn("watchlist", text)
 
@@ -929,7 +960,7 @@ class HottestStoreTests(TempDbMixin, unittest.TestCase):
         # the EUVD one was listed (the recency bonus decays), so assert the pair.
         self.assertEqual(set(ids[:2]), {"CVE-2023-4966", "CVE-2026-119977"})
         citrix = next(r for r in top if r["cve_id"] == "CVE-2023-4966")
-        self.assertEqual(citrix["heat"], 69.7)                 # 40 + 10 ransomware + 29.7 EPSS + 5 MSF - 15 (listed 2023)
+        self.assertEqual(citrix["heat"], 64.7)                 # auxiliary module adds no exploit weight
         self.assertTrue(all(h >= 0 for h in (r["heat"] for r in top)))
         self.assertEqual(ids, sorted(ids, key=lambda i: (-next(r["heat"] for r in top if r["cve_id"] == i), i)))
         wp = next(r for r in top if r["cve_id"] == "CVE-2026-119977")
@@ -1224,7 +1255,7 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
         store.set_feed_status("github_poc", entries=1, version="test")
         r = self.client.get("/vulnerability-intelligence")
         self.assertNotIn("<h3>New exploit code", r.text)          # on the Exploit Code tab
-        self.assertIn("New exploit code in the last 7 days for <strong>1</strong> CVE", r.text)
+        self.assertIn("New exploit reports or claimed PoCs in the last 7 days for <strong>1</strong> CVE", r.text)
         self.assertNotIn("Hottest right now", r.text)             # parked 2026-11-11
         self.assertNotIn("Ask your AI.", r.text)
         self.assertIn("CVEs Exploited by Ransomware Groups", r.text)
@@ -1233,22 +1264,22 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
         # the exploited table has no "exploited" tick box; others keep theirs
         self.assertNotIn('name="kev_tag" value="exploited"', r.text)
         self.assertIn('name="kev_tag" value="code"', r.text)
-        self.assertIn("public exploit", r.text)                   # the "code" tag's label
+        self.assertIn("Public Exploit Code", r.text)
         # the filter form returns to its table and submits on change
         self.assertIn('action="/vulnerability-intelligence#t-kev"', r.text)
         self.assertIn("this.requestSubmit()", r.text)
         r = self.client.get("/vulnerability-intelligence/exploits")
-        self.assertIn("Recently Published Exploit Code", r.text)
-        self.assertIn('>Exploit Code</a>', r.text)                # the tab's name
+        self.assertIn("Recent Exploit Reports and Claimed PoCs", r.text)
+        self.assertIn('>Exploits &amp; Detection</a>', r.text)
         self.assertIn("/cve/CVE-2024-3400", r.text)
-        self.assertIn('<span class="badge">GitHub</span>', r.text)   # the Source column
+        self.assertIn('<span class="badge">Claimed PoC (GitHub)</span>', r.text)
         self.assertNotIn("Exploit code available?", r.text)
-        self.assertNotIn('name="poc_tag" value="code"', r.text)
+        self.assertIn('name="poc_tag" value="code"', r.text)
         self.assertIn('name="poc_sort"', r.text)                  # the sort dropdown
         self.assertIn('poc_sort=cvss&amp;poc_dir=desc#t-poc"', r.text)   # header sort links return to the table
         # the vendor filter keeps the row for a non-matching vendor out
         r = self.client.get("/vulnerability-intelligence/exploits?poc_vendor=Nobody")
-        self.assertIn("No exploit code matches.", r.text)
+        self.assertIn("No recent exploit reports or claimed PoCs match.", r.text)
         self.assertIn("0 of 1 rows", r.text)
         r = self.client.get("/vulnerability-intelligence/exploits?poc_sort=heat")
         self.assertIn("Why it's hot", r.text)
@@ -1320,11 +1351,11 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
         store.upsert_exploits("metasploit", msf_feed.parse(json.dumps(MSF_DOC).encode()))
         store.upsert_exploits("exploitdb", edb_feed.parse(EDB_CSV))
         r = self.client.get("/vulnerability-intelligence/cve/CVE-2023-4966")
-        for needle in ("weaponised", "citrix_netscaler_adc_bleed", "Exploit-DB", "51600",
+        for needle in ("auxiliary", "citrix_netscaler_adc_bleed", "Exploit-DB", "51600",
                        "Exploitation sightings", "dl.shadowserver.org", "2 exploitation sightings", "P1 Emergency"):
             self.assertIn(needle, r.text)
         r = self.client.get("/vulnerability-intelligence/exploits", params={"cve": "CVE-2023-4966"})
-        self.assertIn("Metasploit modules", r.text)
+        self.assertIn("Metasploit Modules", r.text)
         self.assertIn("51600", r.text)
 
 
@@ -1470,7 +1501,7 @@ class SsvcTests(unittest.TestCase):
         # a stale "none" never lowers what other evidence set
         kev = priority.compute(**{**base_args, "kev_sources": ["cisa"]}, ssvc={"exploitation": "none"})
         self.assertEqual(kev.level, "P1")
-        self.assertEqual(priority.compute(**base_args).level, "P5")
+        self.assertEqual(priority.compute(**base_args).level, "N/A")
 
 
 class OtxCveTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
@@ -1654,18 +1685,17 @@ class ViewTests(TempDbMixin, unittest.TestCase):
         self.assertEqual(citrix["sources"], ["cisa", "shadowserver"])
         self.assertEqual(citrix["date"], "2023-10-10")                   # earliest listing = first seen exploited
         self.assertTrue(citrix["ransomware"])
-        self.assertEqual(citrix["maturity"], "module")
+        self.assertEqual(citrix["maturity"], "Exploit Module")
         self.assertEqual(views.BY_SLUG["exploited"].count(), 2)
 
     def test_code_not_exploited_view(self):
         from app.modules.vulnerability_intelligence import views
         v = views.BY_SLUG["code"]
         rows = {r["cve_id"]: r for r in v.rows()}
-        self.assertEqual(set(rows), {"CVE-2025-1111", "CVE-2025-2222"})   # the Metasploit CVE is exploited, so not here
-        self.assertEqual(rows["CVE-2025-1111"]["maturity"], "template")
-        self.assertEqual(rows["CVE-2025-2222"]["maturity"], "proof of concept")
+        self.assertEqual(set(rows), {"CVE-2025-2222"})   # Nuclei-only and already exploited CVEs stay out
+        self.assertEqual(rows["CVE-2025-2222"]["maturity"], "Claimed PoC")
         self.assertEqual(rows["CVE-2025-2222"]["date"], "2026-11-01")
-        self.assertEqual(v.count(), 2)
+        self.assertEqual(v.count(), 1)
 
     def test_watchlist_view(self):
         from app.modules.vulnerability_intelligence import views
@@ -1685,15 +1715,13 @@ class ViewRouteTests(ViewTests):
 
     def test_views_pages(self):
         r = self.client.get("/vulnerability-intelligence/views")
-        self.assertIn("Exploit code, not yet exploited", r.text)
+        self.assertIn("Exploit Leads Without Reported Exploitation", r.text)
         r = self.client.get("/vulnerability-intelligence/views/code")
         self.assertEqual(r.status_code, 200)
-        self.assertIn("Exploit maturity", r.text)
-        self.assertIn(">template</a>", r.text)
-        # default sort is newest code first: the GitHub PoC has a date, the Nuclei-only row does not
-        self.assertLess(r.text.index("CVE-2025-2222"), r.text.index("CVE-2025-1111"))
-        r = self.client.get("/vulnerability-intelligence/views/code?v_sort=epss&v_dir=desc")
-        self.assertLess(r.text.index("CVE-2025-1111"), r.text.index("CVE-2025-2222"))
+        self.assertIn("Exploit Evidence", r.text)
+        self.assertIn(">Claimed PoC</a>", r.text)
+        self.assertIn("CVE-2025-2222", r.text)
+        self.assertNotIn("CVE-2025-1111", r.text)
         r = self.client.get("/vulnerability-intelligence/views/exploited?v_tag=ransomware")
         self.assertIn("CVE-2023-4966", r.text)
         self.assertNotIn("CVE-2026-118527</code>", r.text)
@@ -1865,16 +1893,16 @@ class MoreViewTests(ViewTests):
         self.assertTrue(rows["CVE-2025-2222"]["ransomware"])            # a group link alone sets the flag
         self.assertEqual(rows["CVE-2023-4966"]["date"], "2023-10-10")   # first seen exploited
 
-    def test_probable_zero_days(self):
+    def test_possible_zero_days(self):
         self._record("CVE-2023-4966", "2023-10-10T14:15:00")            # first listed the same day: in
         self._record("CVE-2026-118527", "2026-01-01T00:00:00")          # listed in 2099: out
-        self._record("CVE-2025-1111", "2026-11-08T09:00:00")            # SSVC active the day after: in
+        self._record("CVE-2025-1111", "2026-11-08T09:00:00")            # SSVC active the day after: out
         store.save_ssvc("CVE-2025-1111", {"exploitation": "active", "automatable": "no",
                                           "technical_impact": "partial", "timestamp": "2026-11-09"})
         self._record("CVE-2025-2222", "2026-11-01T09:00:00")            # not exploited: out
         rows = self._ids("zero-day")
-        self.assertEqual(set(rows), {"CVE-2023-4966", "CVE-2025-1111"})
-        self.assertEqual(rows["CVE-2025-1111"]["date"], "2026-11-08")   # dated by publication
+        self.assertEqual(set(rows), {"CVE-2023-4966"})
+        self.assertEqual(rows["CVE-2023-4966"]["zero_day"], "Possible Zero-Day")
 
     def test_exploitation_sightings(self):
         from app.core.db import connect

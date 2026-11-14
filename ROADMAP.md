@@ -106,6 +106,15 @@ build sequence. Build in this order:
    and 8.
 10. Phase 6, the rest of Phase 7, then Phases 8 to 11.
 
+The first usable release includes the planned Phase 7 OSINT workflows. Start
+with username investigation, then cover the planned identity, domain,
+organization, and other lookups. Keep source results together and allow saving
+evidence to a case. Start dark web collection with one isolated source.
+Prioritize browser challenge handling when a priority source needs it.
+Telegram, paste sites, and GitHub keyword monitoring follow through reviewed
+collection routes. Evaluate Discord keyword monitoring only through an
+authorized integration in permitted channels under its developer policy.
+
 ### Phase 1: Skeleton and IOC enrichment
 - Project layout, config, key vault, SQLite cache with TTL, rate limiter per vendor, job runner, base UI shell.
 - Input: hash, IP, domain, URL. Auto-detect type, defang/refang.
@@ -383,6 +392,29 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   inthewild.io (API down; RSS and database frozen since January 2025).
 
 **Still to wire**
+- Include All Vulnerabilities and Known Exploited views. Both use the same
+  table renderer and offer a Watchlist filter. Known Exploited includes
+  historical exploitation reports. A recent observation filter can narrow
+  that view once observation dates are available. Keep watchlist management
+  on its own tab. A vendor, a product, or both can be watched. Version,
+  exposure, business importance, owner, and last confirmation are optional
+  private details. Show Product Match on matching rows.
+- Show independent action badges. Patch means a fix is available for the
+  affected product or version. Mitigate means a documented workaround or
+  compensating control is available. Show both when both options exist and
+  explain that mitigation can be used while patching is delayed. Hunt means
+  public exploit code or reported exploitation warrants a hunt lead. Monitor
+  means watch for a change that could affect the response. Investigate
+  Applicability applies in a watchlist view when exposure is still unknown.
+  A missing patch reference leaves patch status unknown.
+- Include a Since Last Review panel with material exploitation, fix, exploit
+  evidence, and watchlist changes. Use a checkmark per item and a Mark All
+  Reviewed control. Keep 90 days of history initially and retain case links.
+- Support reports without a CVE. Confirm a zero-day when a tracked source
+  establishes active exploitation while a vendor patch, a public vendor
+  advisory, and a CVE are all absent. Record the evidence and date. Give it
+  a source identifier and link the CVE if one appears. Unknown patch or
+  disclosure status leaves a Possible Zero-Day lead.
 - VulnCheck KEV (built 2026-11-10; the XDB index is paid, see above) and
   OTX pulses by CVE (built 2026-11-11) are done. AttackerKB is dropped:
   Rapid7 retired the public platform and API on 2026-08-18.
@@ -619,7 +651,14 @@ names the records created or edited, so a refresh fetches only those.
   it is a runtime lookup here, never vendored. The bulk feed and STIX
   export are paid.
 
-Presentation: comprehensive underneath, readable on top. Three tables
+First delivery (2026-11-12): open on Newly Reported Malicious Packages. Start
+with npm and GitHub Actions and use GitHub malware advisories where they add
+coverage. Keep public reporting about other ecosystems as sourced leads. Show
+affected versions when known, source publication date, first seen here, and
+corrections or withdrawals. A watchlist is optional. Defer the bulk advisory
+backfill and remaining ecosystems and repositories until after v1.
+
+Longer-term presentation: three tables
 plus a package page, all on the shared table renderer (filters, sort,
 paging, anchors):
 1. Watchlist: a packages watchlist (ecosystem, name, optional version)
@@ -850,10 +889,9 @@ addresses)
     from the cases reviewed, not a measurement.
   Paste sites are a low-yield venue now; most leak distribution has moved
   to Telegram and forums.
-- Repeat-leak detection for watched own-organisation selectors: store a keyed
-  hash (HMAC with a local secret) of a leaked credential so a repeat of a known
-  leak can be told from a new one. Never store the value, and never test a
-  credential against a live service.
+- Repeat-leak detection for watched own-organisation selectors uses the
+  local breach index's repeat status. See Phase 7 for how the import checks
+  newly received passwords against prior salted hashes for the same account.
 - GitHub secret and credential leaks for watched domains and organization
   names. CVE and exploit content on GitHub stays in Phase 2.
 - Exposed public cloud assets tied to the organization, found through search
@@ -1261,6 +1299,15 @@ they are.
 - Automated CAPTCHA solver APIs (CapSolver, NopeCHA): parking lot.
 
 **Collectors**
+- First pilot (2026-11-13): use RansomLook's recent-post API as the first
+  ransomware metadata input. In the isolated worker, use the Tor Project's
+  official public onion mirror to test Tor connectivity and change detection.
+  First direct leak-site candidate: Akira's public listing, if a fresh check
+  of the source registry and independent directory reports identifies a
+  working mirror. Collect listing metadata as actor claims. Leave file
+  servers and negotiation portals outside this pilot. If that listing is
+  unavailable, pick another verified public listing from RansomLook and
+  deepdarkCTI. Record challenge behavior before choosing a browser adapter.
 - Telegram: Telethon read-only monitor, channel catalog seeded from the plugin's 30+ channel list, snowball discovery queue (new links found in collected messages, joined manually per OPSEC), local full-text search over everything collected.
 - Telegram without an account: public channels expose a web preview at
   t.me/s/<channel> that can be read with plain HTTP. Use it to preview a
@@ -1614,9 +1661,11 @@ code may be copied.)
       not seen before. Shodan Membership limits (billing page,
       2026-11-11): 100 query credits a month and no `tag` filter (so no
       `tag:malware`; `product:` labels remain). `/shodan/host/count` is
-      free, so each hunt runs a free count first and spends a credit
-      (page 1 only, with a date filter) only when the count changed: at
-      most 3 credits a day, 30 a month held back for manual pivots.
+      free. A count change can trigger an early search. Each hunt also has
+      a maximum interval between actual searches. Compare IP, port and
+      transport. Mark first-page comparisons as samples and save observation
+      times. Budget at most 3 credits a day, with 30 a month held back for
+      manual pivots.
     - Markers for an absent pivot: an HTML hash of 0 means the host
       served no HTML.
   - Revisit when this phase is built (operator's note, 2026-11-10; not
@@ -1716,8 +1765,8 @@ code may be copied.)
 - Cases (decided 2026-11-06; the name replaces "investigations"): a case has
   an objective, a time window, stop rules, members (indicators, documents,
   actors), the pivot log, notes, and a status. Built in this phase with the
-  graph. An indicator in an open case is pinned: it never decays and never
-  retires.
+  graph. Pinning preserves the indicator's relationship to the case and its
+  relevant time window. Its operational validity can still age.
 - Indicator retention (decided 2026-11-06): nothing is deleted. Every
   indicator keeps its sightings, composite attributes (registrar,
   certificate, JARM, ASN, nameservers) and history forever, because the
@@ -1774,9 +1823,9 @@ checker built for it also serves Phase 3 brand-handle checks.
     local corpus as Phase 3 credential monitoring. Phase 3 asks "any new hits
     for the selectors I watch?" on a schedule; this phase asks "what is linked
     to this seed?" on demand.
-- Local breach index (username <-> email correlation), added 2026-10-27.
-  A personal research index over breach compilations the operator has
-  lawfully obtained from public sources, for legitimate OSINT/CTI casework.
+- Local breach index (identity and exposure correlation), added 2026-10-27.
+  A private research index over breach and infostealer datasets obtained
+  from lawful public sources for legitimate OSINT and CTI casework.
   - Scope: this is a personal analyst tool, not a public lookup service and
     not for targeting private individuals outside legitimate casework.
   - Acquisition is out of band and the operator's responsibility: download
@@ -1784,13 +1833,23 @@ checker built for it also serves Phase 3 brand-handle checks.
     darkweb-collection posture where the skill provides the matcher and the
     analyst does the collection off-host). The toolkit ingests from a local
     quarantine path; it does not fetch dumps itself.
-  - Minimize at ingest: parse combolist (email:pass, user:pass), CSV, JSON,
-    and SQL-dump formats; store username, email, and source only. Drop
-    passwords (optional: keep a present/absent flag and hash type, never the
-    value). For watched own-organisation selectors only, a keyed hash
-    supports the Phase 3 repeat-leak detection.
-  - Provenance per record: source name, date added, file SHA-256, record
-    count. Every answer cites its source dump.
+  - Parse combolist, CSV, JSON, and SQL-dump formats as data. Index the
+    username, e-mail, phone number, affected service or provider, service
+    hostname, and device hostname where present. Keep the service and device
+    hostnames distinct. Label provider names inferred from a domain. Keep
+    source dates when supplied and distinguish them from import dates.
+  - Preserve source row associations and provenance. Store the dataset name,
+    file SHA-256, and import record count. A handle shared across records is
+    a lead for correlation. Do not merge identities based on that alone.
+  - Derive a salted password hash locally for each password present during
+    import. Use a password hashing algorithm with a unique random salt per
+    hash and a separate local secret. Discard the plaintext at import.
+    Exclude session cookies, tokens, and other authentication secrets.
+  - For repeat detection, check a newly imported password against previous
+    hashes for the same service account using each prior salt. Store the
+    result as Same Password Seen Before. Keep hashes out of lookup results
+    and exports. Leave repeat status unknown when the importer has only an
+    upstream hash and cannot make the comparison.
   - Malware hygiene: hash each file and optionally check VirusTotal before
     opening; open only in the VM.
   - Governance: suppression/deletion list to honor removal requests; local
@@ -1798,8 +1857,9 @@ checker built for it also serves Phase 3 brand-handle checks.
     drive). Store never leaves the machine; never committed to git.
   - Storage: SQLite with indexes (and FTS where useful). Start with a couple
     of major compilations, measure, then decide on scale.
-  - Search: username -> associated emails and the reverse, with source
-    attribution and a confidence note.
+  - Support local lookup by username, e-mail, phone, service, and hostname.
+    Show linked fields, dates, and provenance in the operator's authenticated
+    workspace when identity and access management is available.
 - One search box with input-type detection (domain, IP, email, username, organization) showing which tools will run as checkboxes.
 - Source picker (agreed in principle 2026-11-09, details when built): every
   search and every scheduled watch shows its sources as a checklist the
@@ -2029,6 +2089,11 @@ checker built for it also serves Phase 3 brand-handle checks.
     technique profiles of about 0.07, only a third of groups with any
     group-specific technique, and about two thirds with no specific
     behaviour at all once tools and CVEs are added.
+    First release: show sourced attribution claims and a Potential Links view
+    with matching evidence, dates, citations, and conflicts. Combine citations
+    that share an upstream source. Leave inferred links as leads until the
+    operator confirms them for use or sharing. The advanced comparisons below
+    are post-v1 candidates in the parking lot.
     - Guard-rails first (these ship before any comparison feature):
       - Commodity and shared-tool stop-list, three tiers: commodity or
         open source (Mimikatz, Cobalt Strike, RMM tools, LOLBins: counts
@@ -2286,6 +2351,53 @@ checker built for it also serves Phase 3 brand-handle checks.
   it.
 
 ## Parking lot (revisit after the final phase)
+
+- Revisit after v1 (2026-11-13): add CVE-linked Sigma rules to Exploits &
+  Detection. Start with SigmaHQ's emerging-threat rules. Review each additional
+  rule repository's licence and link to source revisions. Match explicit CVE
+  references and record the log source, required fields, and rule status.
+  Show Sigma Rule Available alongside Metasploit Exploit and Nuclei Check
+  Available. Describe exploit attempts and post-exploitation activity
+  separately when the rule supports the distinction. Keep deployment and
+  validation status separate from rule availability. Reuse the detection
+  index for actor profiles and hunt packages. Evaluate Emerging Threats Open
+  network signatures as a later source.
+- Revisit during Phase 1 enrichment expansion (2026-11-13): use the existing
+  keyless InternetDB lookup for routine IP ports and indexed product hints.
+  Offer keyed Shodan host detail on demand for service identification and
+  infrastructure pivots. Shodan documents that IP lookups use no query credits.
+  Budget filtered search separately for targeted hunts. Keep InternetDB's
+  index age and lack of service banners visible.
+
+- Revisit after v1 (2026-11-12, clarified 2026-11-13): expand Supply Chain
+  to PyPI, Maven, Go, crates.io, RubyGems, NuGet, and Packagist. Revisit the
+  Datadog manifests, deps.dev package history, Open Source Malware runtime
+  lookups, and the direct OpenSSF source check. Review what the npm and
+  GitHub Actions slice missed. Add the ordinary advisory backfill, package
+  watchlist and lockfile checks, and the compromised-package view described
+  in Phase 2. Keep cross-ecosystem reporting in the first slice.
+- Carry forward the staged Phase 5 collectors after the first pilot. Keep
+  Telegram, paste sites, and GitHub keyword monitoring in the build plan.
+  Revisit permitted Discord collection and broader source coverage once the
+  initial pipeline has been tested. At the v1 review, check every phase for
+  deferred work and record the next review point before closing it.
+- Revisit Shodan scheduling after v1 (2026-11-12). Replay two search samples
+  with the same count and different services, a truncated first page, and a
+  delayed refresh. Review whether the scheduled search found the new service,
+  whether the UI describes sample gaps correctly, and how many credits and
+  how much review time the cadence costs.
+- Revisit actor similarity scores, ordered technique sequences, and technique
+  co-occurrence after v1 and during optional Phase 11 design. Assess whether
+  they generate useful leads and how they handle shared tools.
+- Build a basic evidence-backed hunt package first. Revisit HEARTH-inspired
+  drafting after the basics and with optional Phase 11 AI. Accept source URLs
+  and pasted text. Draft hypotheses, expected observations, telemetry and
+  fields, benign explanations, and Candidate Detections. Use pseudocode or a
+  query, Sigma for event data, or YARA for suitable file or memory artifacts.
+  Later, evaluate Sigma conversion with each SIEM or EDR's field mappings.
+- Phase 11: revisit GitHub PoC classification. Review repository text and
+  bounded code as data. Log the revision, evidence, and reason for inclusion,
+  exclusion, or insufficient information. Keep the deterministic keyword rule.
 
 Added 2026-10-29. Ideas we were unsure about or deferred on purpose, parked
 here so they do not block progress. Once the core phases are complete, review
@@ -2709,19 +2821,31 @@ Adopted 2026-10-27.
 - Purpose limit: breach/leak data is used for legitimate OSINT/CTI casework
   (personal and professional), not a public service, not arbitrary targeting
   of private individuals.
+- Use the local breach index for authorized identity and exposure correlation.
+  Show associations as dated claims from their sources. Common usernames and
+  old records need corroboration before an identity conclusion. Prove the
+  import and lookup workflow with synthetic records before using live data.
 - Lawful public sources only. No unauthorized access, no purchase of stolen
   data, no criminal-market engagement to acquire it.
+- Review each breach dataset for access terms, applicable privacy obligations,
+  and fit for the stated casework purpose. Public availability can help locate
+  a source. Use the source review to decide whether to collect or retain it.
 - Acquisition and first-touch happen off-host in a VM. The toolkit ingests
-  from a local quarantine path and never fetches dumps itself.
-- Minimize: keep username, email, and provenance; drop passwords by default.
-  One exception: for watched own-organisation selectors, a keyed hash (HMAC
-  with a local secret) may be kept to tell a repeat leak from a new one. No
-  password value is stored, and no credential is tested against a live
-  service.
+  from a local quarantine path. Keep any retained source files in the
+  operator's private quarantine archive, separate from the searchable index.
+- The index can retain usernames, e-mail addresses, phone numbers, service
+  or provider names, service and device hostnames, dates, and provenance.
+  For lawful imports, derive salted password hashes as described in Phase 7
+  and keep them in private storage. Show only the repeat-match status. Drop
+  plaintext passwords and other authentication secrets at import. Password
+  checks are performed locally against prior hashes for the same service
+  account.
 - Accounts: no impersonation accounts. Research-persona logins are created
   by hand, are read-only, and are stored as credentials.
 - The store lives on local/external disk, is git-ignored, may be encrypted
   at rest, and never leaves the machine.
+- Identity and access management can expose indexed records to the operator
+  in the private workspace. Public pages use synthetic data for this feature.
 - Keep a query audit log and a suppression list (honor deletion requests).
 - Phase 3 seeds are limited to selectors the operator owns or is authorised
   to monitor; executive or employee monitoring requires consent. Arbitrary
@@ -2729,9 +2853,10 @@ Adopted 2026-10-27.
 - Phase 3 and Phase 7 read one shared local corpus under this one policy.
 - Scraping session files (cookies, tokens) are credentials: stored in the
   git-ignored data folder, optionally encrypted, never committed.
-- Jurisdiction note: if the corpus includes EU/UK residents, the operator is
-  a data controller; "legitimate interest for security research" is the basis
-  and carries security + data-subject-request obligations.
+- Where EU or UK data protection rules apply, determine the applicable lawful
+  basis and obligations for the specific processing. If relying on legitimate
+  interests, document the purpose, necessity, and balance against the rights
+  of the people whose information is in the dataset.
 
 ## Dependency and supply-chain policy
 
@@ -2757,6 +2882,30 @@ Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
    container, and a VM when the target source is untrusted.
 
 ## Decisions log
+
+- 2026-11-13: Derive private salted password hashes at import for the local
+  breach index. This supersedes the watched-account-only HMAC decision.
+  A repeat indicator is computed during import and displayed without the
+  hash. Keep raw source files in quarantine under the data handling policy.
+
+- 2026-11-13: Both All Vulnerabilities and Known Exploited get a Watchlist
+  filter. Show Patch and Mitigate together when the evidence supports both.
+  The CVE detail explains when a workaround can be used while patching is
+  delayed. Park CVE-linked Sigma rules for the detection index.
+- 2026-11-13: Start ransomware metadata ingestion with RansomLook's API.
+  Prove Tor connectivity with a Tor Project mirror, then test one verified
+  public leak listing in the isolated worker. Directory entries are leads.
+
+- 2026-11-12: Rename Exploit Code to Exploits & Detection. A CVE and exploit
+  keyword near each other in a repository name, description, or checked README
+  make a Claimed PoC. Count typed Metasploit exploit modules as exploit code.
+  Label Nuclei checks and other module types separately. Use N/A for an
+  unassessed priority, omit patch deadlines, and show EPSS as a dated 30-day
+  estimate. Missing patch references leave Patch Status Unknown.
+- 2026-11-12: A case holds a scoped investigation. Evidence can appear in
+  several cases. Pinning preserves its relationship to the case over time.
+  Phase 1 enrichment should show a compact summary, dated evidence, and
+  coverage gaps, with expandable vendor details.
 
 - 2026-10-12: App form over CLI. Local web app, not remotely accessible.
 - 2026-10-12: Build own enrichment core; IntelOwl optional later. Reason: IntelOwl is heavy and would make the project a thin wrapper.

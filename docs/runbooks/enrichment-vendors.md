@@ -133,8 +133,10 @@ vendor could not answer.
   unknown.
 - Shodan InternetDB: the free, keyless subset of Shodan (ports, hostnames,
   CPEs, CVEs, tags). Same rule as Shodan: unknown unless a bad tag is present.
-  Use it as the everyday IP recon; the keyed Shodan call adds banners and
-  certificates when you need them.
+  Use it for routine IP context. Shodan's keyed IP lookup can return banners
+  and certificates, and the current enrichment card shows a summary. The IP
+  lookup does not spend query credits. Filtered Shodan searches can spend
+  query credits, and on-demand scans use scan credits.
 - RDAP: the official WHOIS replacement. Domains: registrar, registration and
   expiry dates, nameservers, status; a domain registered in the last 30 days is
   nudged to suspicious (new domains are a cheap phishing signal). IPs: the
