@@ -1,7 +1,7 @@
 <div class="tablescroll">
 <table>
   <tr><th>CVE and Advisory</th><th>Released</th><th>Impact</th><th>Severity / CVSS</th>
-      <th>Microsoft Assessment</th><th>Remediation</th></tr>
+      <th>Microsoft Assessment</th><th>Remediation</th>{% if t.rows[0].actions is defined %}<th>Actions</th>{% endif %}</tr>
   {% for r in t.rows %}
     <tr>
       <td>{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}<br>
@@ -22,6 +22,7 @@
           </li>{% endfor %}</ul>
         </details>
         {% else %}Unknown{% endif %}</td>
+      {% if r.actions is defined %}<td>{% with actions = r.actions %}{% include "vulnintel/_action_badges.html" %}{% endwith %}</td>{% endif %}
     </tr>
   {% endfor %}
 </table>

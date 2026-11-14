@@ -38,8 +38,15 @@
       {% else %}<span class="muted">no score{% if not rep.feeds.get("epss") %} (feed not loaded){% endif %}</span>{% endif %}</div>
     <div><small>Published</small>{% if cve and cve.published %}{{ cve.published | day }}{% else %}<span class="muted">—</span>{% endif %}</div>
     <div><small>Weakness</small>{% if cve and cve.cwe %}{{ cve.cwe }}{% elif rep.cwe_fallback %}{{ rep.cwe_fallback }} <small>from the CVE record</small>{% else %}<span class="muted">—</span>{% endif %}</div>
-    <div><small>Patch Status</small>{% if microsoft and microsoft.vendor_fix %}<a href="#microsoft-advisory">Microsoft Fix</a>{% elif rep.fix_status == "patch" %}<span class="ok">Patch Reference</span>{% elif rep.fix_status == "advisory" %}<span class="muted">Unknown · Vendor Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}</div>
+    <div><small>Patch Status</small>{% if rep.fix_status == "vendor_fix" %}<a href="#microsoft-advisory">Microsoft Fix</a>{% elif rep.fix_status == "patch" %}<a href="#references">Patch Reference</a>{% elif rep.fix_status == "cna_patch" %}<a href="#remediation">CNA Patch Reference</a>{% elif rep.fix_status == "advisory" %}<span class="muted">Unknown · Vendor Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}</div>
   </div>
+  <h3>Actions</h3>
+  <ul class="plain">
+    {% for action in rep.actions %}<li><strong>{{ action.label }}</strong> <small>{{ action.reason }}</small></li>{% endfor %}
+  </ul>
+  {% if rep.actions | selectattr("label", "equalto", "Patch") | list and rep.actions | selectattr("label", "equalto", "Mitigate") | list %}
+    <p class="muted"><small>Use an applicable workaround while patching is delayed.</small></p>
+  {% endif %}
 
   {% if rep.nvd.error %}<p class="err">⚠ {{ rep.nvd.error }}{% if rep.nvd.stale %} — showing the stored copy from {{ cve.fetched_at | ago }}{% endif %}</p>
   {% elif rep.nvd.status == "not_found" %}<p class="muted">NVD has no record for this ID. It may be reserved but not yet published, or rejected.</p>{% endif %}
@@ -67,6 +74,18 @@
   <h3>Microsoft Security Advisory</h3>
   <p class="muted">Initial release {{ microsoft.released }} · Last revised {{ microsoft.revised }}</p>
   {% with t = {"rows": [microsoft]} %}{% include "vulnintel/_patch_rows.html" %}{% endwith %}
+</div>
+{% endif %}
+
+{% if rep.cna_remediation %}
+<div class="card" id="remediation">
+  <h3>CVE Record Remediation</h3>
+  <ul class="plain">
+    {% for item in rep.cna_remediation %}
+      <li><strong>{{ "Patch" if item.kind == "patch" else "Mitigation" }}</strong>
+      {% if item.url %}<a href="{{ item.url }}" rel="noopener noreferrer nofollow" target="_blank">{{ item.url }}</a>{% else %}{{ item.text }}{% endif %}</li>
+    {% endfor %}
+  </ul>
 </div>
 {% endif %}
 
@@ -153,7 +172,7 @@
 {% endif %}
 
 {% if references %}
-<div class="card">
+<div class="card" id="references">
   <h3>References</h3>
   {% for name, items in references %}
     <p><strong>{{ name }}</strong></p>

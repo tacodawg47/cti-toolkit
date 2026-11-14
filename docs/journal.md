@@ -46,6 +46,20 @@ The vetting record is in docs/runbooks/vetting-a-dependency.md.
 
 ## Build narrative
 
+### 2026-11-13: Vulnerability actions and review history
+
+Microsoft remediation and explicit NVD and CNA references support the
+same action badges. CNA workaround text is stored when a CVE record is
+ingested or looked up. A general advisory link leaves patch status
+unknown.
+
+The review panel compares the current evidence with a SQLite baseline.
+Only new signals enter the review history. A review action records the
+acknowledgment. Mark All Reviewed uses the latest event ID from the
+rendered page, so a refresh can add new unread items while it is open.
+Events expire after 90 days. Active evidence stays in the baseline so
+an old signal does not reappear just because its event expired.
+
 ### 2026-11-13: Local catalog and Microsoft release triage
 
 The first All Vulnerabilities query took about 15 seconds on 404,849

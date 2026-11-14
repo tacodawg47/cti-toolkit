@@ -15,6 +15,15 @@
   <a href="{{ prefix }}/views" class="muted"><small>all views</small></a>
 </p>
 
+<section class="card" id="since-last-review" aria-labelledby="review-heading">
+  <h2 id="review-heading">Since Last Review</h2>
+  {% with t = review_page, dashboard_return = true %}
+    {% include "vulnintel/_review_items.html" %}
+  {% endwith %}
+  <p><a href="{{ prefix }}/review">All Unreviewed Changes ({{ review_page.total }})</a> ·
+    <a href="{{ prefix }}/review?history=true">90-Day History</a></p>
+</section>
+
 <section id="pinned-views" aria-labelledby="pinned-views-heading">
   <h2 id="pinned-views-heading">Pinned Views</h2>
   <p><a href="{{ prefix }}/views">{% if pinned_previews %}Manage Pins{% else %}Choose Views to Pin{% endif %}</a></p>

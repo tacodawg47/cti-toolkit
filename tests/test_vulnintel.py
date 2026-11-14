@@ -485,7 +485,7 @@ class RouteTests(TempDbMixin, unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         for needle in ("P1 Emergency", "Sensitive information disclosure.", "7.5", "CWE-119",
                        "Known exploited", "someone/CVE-2023-4966", "Vendor advisory", "12.1-55.300",
-                       '<span class="ok">Patch Reference</span>',
+                       '<a href="#references">Patch Reference</a>',
                        '<p class="cvetitle">Citrix NetScaler Buffer Overflow</p>',   # CISA's name as the title
                        "<li>On a known-exploited list"):                          # bullets start with a capital
             self.assertIn(needle, r.text)
@@ -1823,6 +1823,114 @@ class FirstSeenTests(TempDbMixin, unittest.TestCase):
         self.assertTrue(any(p.startswith("listed ") and p.endswith("y ago") for p in hot["parts"]), hot["parts"])
 
 
+class ActionAndReviewTests(TempDbMixin, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        from fastapi.testclient import TestClient
+        from app.main import app
+
+        self.client = TestClient(app, base_url="http://127.0.0.1")
+        self.prefix = "/vulnerability-intelligence"
+
+    def test_non_microsoft_actions_and_watchlist_scope(self):
+        from app.modules.vulnerability_intelligence.feeds import cvelist
+
+        cve_id = "CVE-2026-12001"
+        record = cve5(cve_id)
+        record["containers"]["cna"]["workarounds"] = [{"lang": "en", "value": "Disable the widget endpoint."}]
+        store.save_cve_records([cvelist.parse_record(record)])
+        store.save_cve({"cve_id": cve_id, "patch_available": True, "references": [
+            {"url": "https://example.test/update", "tags": ["Patch"]},
+            {"url": "https://github.com/example/widget-exploit", "tags": ["Exploit"]},
+        ]})
+        store.add_watchlist("Acme", "Widget")
+        url = self.prefix + "/views/all"
+        body = self.client.get(url).text
+        for label in ("Patch", "Mitigate", "Hunt"):
+            self.assertIn(f">{label}</span>", body)
+        self.assertNotIn(">Investigate Applicability</span>", body)
+        filtered = self.client.get(url, params={"v_tag": "watchlist"}).text
+        self.assertIn(">Investigate Applicability</span>", filtered)
+
+        record["containers"]["cna"]["references"] = [{"url": "https://example.test/cna-fix", "tags": ["patch"]}]
+        store.save_cve_records([cvelist.parse_record(record)])
+        store.save_cve({"cve_id": cve_id})
+        self.assertIn("CNA Patch Reference", self.client.get(url).text)
+
+    def test_advisory_only_keeps_patch_unknown_and_detection_is_not_exploit_code(self):
+        cve_id = "CVE-2026-12002"
+        store.save_cve({"cve_id": cve_id, "references": [
+            {"url": "https://example.test/advisory", "tags": ["Vendor Advisory"]},
+            {"url": "https://example.test/workaround", "tags": ["Mitigation"]},
+        ]})
+        store.upsert_exploits("nuclei", [{"ref": "test", "cve_id": cve_id, "title": "Test", "url": None,
+                                          "date": None, "kind": "high", "platform": None, "verified": 0}])
+        body = self.client.get(self.prefix + "/views/all").text
+        self.assertIn("Unknown · Advisory", body)
+        for label in ("Mitigate", "Monitor"):
+            self.assertIn(f">{label}</span>", body)
+        for label in ("Patch", "Hunt"):
+            self.assertNotIn(f">{label}</span>", body)
+
+    def test_review_tracks_material_changes_and_preserves_later_arrivals(self):
+        from app.modules.vulnerability_intelligence import review
+        from app.modules.vulnerability_intelligence.feeds import cvelist
+
+        cve_id = "CVE-2026-12003"
+        store.save_cve_records([cvelist.parse_record(cve5(cve_id))])
+        response = self.client.post(self.prefix + "/watchlist/add", data={"vendor": "Acme"})
+        self.assertEqual(response.status_code, 200)
+        watch = review.page()["rows"][0]
+        self.assertEqual((watch["kind"], watch["detail"]), ("watch", "Acme"))
+        rows, _ = kev_feed.parse(json.dumps(KEV_DOC).encode())
+        store.upsert_kev(rows[:1], "cisa")
+        store.save_cve({"cve_id": cve_id, "patch_available": True, "references": [
+            {"url": "https://example.test/patch", "tags": ["Patch"]},
+        ]})
+        store.upsert_exploits("exploitdb", [{"ref": "100", "cve_id": cve_id, "title": "Test", "url": None,
+                                             "date": None, "kind": "webapps", "platform": None, "verified": 1}])
+        review.capture()
+        url = self.prefix + "/review"
+        body = self.client.get(url).text
+        for label in ("Product Match", "Patch Evidence", "Exploitation Reported", "Public Exploit Code"):
+            self.assertIn(label, body)
+        self.assertEqual(review.page()["total"], 4)
+        last_seen = review.page()["latest"]
+        self.client.post(url + "/mark", data={"event_id": watch["id"]})
+        store.upsert_kev(rows[1:], "cisa")
+        review.capture(cve_id="CVE-2026-118527")
+        review.capture()
+        self.assertEqual(review.page()["total"], 4)
+        denied = self.client.post(url + "/mark", data={"event_id": last_seen, "through": True},
+                                  headers={"Sec-Fetch-Site": "cross-site"})
+        self.assertEqual(denied.status_code, 403)
+        self.client.post(url + "/mark", data={"event_id": last_seen, "through": True})
+        self.assertEqual([r["cve_id"] for r in review.page()["rows"]], ["CVE-2026-118527"])
+        store.init_schema()
+        self.assertEqual(review.page(history=True)["total"], 5)
+        self.assertIn("Reviewed", self.client.get(url, params={"history": True}).text)
+        self.assertIn("Since Last Review", self.client.get(self.prefix).text)
+
+    def test_review_baselines_an_existing_database_and_expires_old_events(self):
+        from app.modules.vulnerability_intelligence import review
+
+        rows, _ = kev_feed.parse(json.dumps(KEV_DOC).encode())
+        store.upsert_kev(rows[:1], "cisa")
+        with db.connect() as conn, conn:
+            conn.execute("DELETE FROM sync_state WHERE name='vuln_review_initialized'")
+        review.capture()
+        self.assertEqual(review.page(history=True)["total"], 0)
+        store.upsert_kev(rows[1:], "cisa")
+        review.capture()
+        self.assertEqual(review.page(history=True)["total"], 1)
+        with db.connect() as conn, conn:
+            conn.execute("UPDATE vuln_review_events SET observed_at='2000-01-01'")
+        review.capture()
+        self.assertEqual(review.page(history=True)["total"], 0)
+        with db.connect() as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM vuln_review_events").fetchone()[0], 0)
+
+
 class MicrosoftAdvisoryTests(TempDbMixin, unittest.TestCase):
     def test_refresh_retries_missing_advisories_and_feeds_the_views(self):
         import asyncio
@@ -1856,6 +1964,8 @@ class MicrosoftAdvisoryTests(TempDbMixin, unittest.TestCase):
                 paths[ids[1]]: advisory(ids[1], "2026-11-10", "MEDIUM"),
                 paths[ids[2]]: advisory(ids[2], "2026-11-10", "HIGH", cna="Chromium"),
                 paths[ids[3]]: advisory(ids[3], "2026-11-12", "HIGH")}
+        docs[paths[ids[0]]]["vulnerabilities"][0]["remediations"].append(
+            {"category": "workaround", "details": "Disable the affected component", "product_ids": ["1"]})
         calls = []
         fail = {paths[ids[1]]}
 
@@ -1889,6 +1999,8 @@ class MicrosoftAdvisoryTests(TempDbMixin, unittest.TestCase):
         self.assertIn(ids[0], triage.text)
         self.assertIn("Windows Widget", triage.text)
         self.assertIn("10.0.9", triage.text)
+        for label in ("Patch", "Mitigate", "Hunt"):
+            self.assertIn(f">{label}</span>", triage.text)
         self.assertNotIn(ids[1], triage.text)
         self.assertIn(ids[1], client.get(url, params={"v_focus": "all"}).text)
         self.assertIn(ids[2], client.get(url, params={"v_cycle": "also"}).text)

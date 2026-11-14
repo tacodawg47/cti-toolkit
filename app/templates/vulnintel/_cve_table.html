@@ -21,6 +21,7 @@
       {{ th(t.key, f.sort, f.desc, "product", "Product") }}
       {{ th(t.key, f.sort, f.desc, "date", date_label) }}
       <th>Patch Status</th>
+      <th>Actions</th>
       {% if show_maturity %}<th>Exploit Evidence</th>
       {% elif show_sources %}<th>Source</th>
       {% else %}<th>Exploit and Detection Evidence</th>{% endif %}
@@ -41,7 +42,8 @@
         <td>{{ r.vendor or "—" }}</td>
         <td>{{ r.product or "—" }}</td>
         <td>{{ r.date or "—" }}</td>
-        <td>{% if r.fix == "vendor_fix" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#microsoft-advisory">Microsoft Fix</a>{% elif r.fix == "patch" %}<span class="ok">Patch Reference</span>{% elif r.fix == "advisory" %}<span class="muted">Unknown · Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}</td>
+        <td>{% if r.fix == "vendor_fix" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#microsoft-advisory">Microsoft Fix</a>{% elif r.fix == "patch" %}<span class="ok">Patch Reference</span>{% elif r.fix == "cna_patch" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#remediation">CNA Patch Reference</a>{% elif r.fix == "advisory" %}<span class="muted">Unknown · Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}</td>
+        <td>{% with actions = r.actions %}{% include "vulnintel/_action_badges.html" %}{% endwith %}</td>
         {% set where = [] %}
         {% if c.msf %}{% set _ = where.append("Metasploit Exploit") %}{% endif %}
         {% if c.msf_other %}{% set _ = where.append("Other Metasploit Module") %}{% endif %}

@@ -401,17 +401,16 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
 - Add a recent observation filter once observation dates are available.
   Add optional private watchlist details for version, exposure, business
   importance, owner, and last confirmation.
-- Show independent action badges. Patch means a fix is available for the
-  affected product or version. Mitigate means a documented workaround or
-  compensating control is available. Show both when both options exist and
-  explain that mitigation can be used while patching is delayed. Hunt means
-  public exploit code or reported exploitation warrants a hunt lead. Monitor
-  means watch for a change that could affect the response. Investigate
-  Applicability applies in a watchlist view when exposure is still unknown.
-  A missing patch reference leaves patch status unknown.
-- Include a Since Last Review panel with material exploitation, fix, exploit
-  evidence, and watchlist changes. Use a checkmark per item and a Mark All
-  Reviewed control. Keep 90 days of history initially and retain case links.
+- Built 2026-11-13: Action badges use Microsoft remediation, explicit
+  NVD references, and CNA patch references and workarounds. Patch and
+  Mitigate can appear together. Hunt follows reported exploitation or
+  indexed public exploit code. Monitor appears while both patch and hunt
+  evidence are absent. Investigate Applicability appears in watchlist
+  views when a product matches. The CVE page explains the evidence.
+- Built 2026-11-13: Since Last Review tracks new exploitation, patch,
+  mitigation, exploit evidence, and product matches. Use per-item
+  checkmarks or Mark All Reviewed. Retain 90 days of history. Connect
+  review items to cases and retain linked evidence when cases ship.
 - Support reports without a CVE. Confirm a zero-day when a tracked source
   establishes active exploitation while a vendor patch, a public vendor
   advisory, and a CVE are all absent. Record the evidence and date. Give it

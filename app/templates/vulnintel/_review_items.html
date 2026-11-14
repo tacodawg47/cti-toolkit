@@ -1,0 +1,32 @@
+{% if t.rows %}
+  <ul class="plain">
+    {% for event in t.rows %}
+      <li>
+        {% if not event.reviewed_at %}
+          <form class="inline-form" method="post" action="{{ prefix }}/review/mark">
+            <input type="hidden" name="event_id" value="{{ event.id }}">
+            {% if dashboard_return %}<input type="hidden" name="dashboard_return" value="true">{% endif %}
+            <button type="submit" class="small" aria-label="Mark {{ event.cve_id }} {{ review_labels[event.kind] }} reviewed" title="Mark Reviewed">✓</button>
+          </form>
+        {% endif %}
+        {% with id = event.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}
+        <strong>{{ review_labels[event.kind] }}</strong>
+        <small>{{ kev_names.get(event.source, event.source) }} · {{ event.observed_at | day }}{% if event.reviewed_at %} · Reviewed{% endif %}</small>
+        {% if event.detail %}<details><summary>Evidence</summary><small>
+          {% if event.url %}<a href="{{ event.url }}" rel="noopener noreferrer nofollow" target="_blank">{{ event.url }}</a>
+          {% else %}{{ event.detail }}{% endif %}
+        </small></details>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+  {% if not history %}
+    <form method="post" action="{{ prefix }}/review/mark">
+      <input type="hidden" name="event_id" value="{{ t.latest }}">
+      <input type="hidden" name="through" value="true">
+      {% if dashboard_return %}<input type="hidden" name="dashboard_return" value="true">{% endif %}
+      <button type="submit" class="small">Mark All Reviewed</button>
+    </form>
+  {% endif %}
+{% else %}
+  <p class="muted">{{ "No changes in the last 90 days." if history else "No unreviewed changes." }}</p>
+{% endif %}
