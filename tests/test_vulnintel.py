@@ -1732,6 +1732,46 @@ class ViewRouteTests(ViewTests):
         self.assertIn('href="/vulnerability-intelligence/views/exploited" class="viewcount"><strong>2</strong> Known Exploited', r.text)
         self.assertIn('href="/vulnerability-intelligence/views/all" class="viewcount"><strong>4</strong> All Vulnerabilities', r.text)
 
+    def test_edge_view_matches_product_pairs_and_shows_source(self):
+        from app.modules.vulnerability_intelligence import views
+        from app.modules.vulnerability_intelligence.feeds import cvelist
+
+        records = [
+            cve5("CVE-2026-12401", "Cisco Systems, Inc.", "IOS XE Software"),
+            cve5("CVE-2026-12402", "Cisco", "Secure Client"),
+            cve5("CVE-2026-12403", "Fortinet", "FortiOS", state="REJECTED"),
+            cve5("CVE-2026-12404", "Unrelated Vendor", "FortiOS"),
+        ]
+        store.save_cve_records([cvelist.parse_record(row) for row in records])
+        store.save_cve({"cve_id": "CVE-2026-12401", "products": [
+            {"vendor": "juniper", "product": "junos_os"},
+            {"vendor": "fortinet", "product": "fortios"},
+        ]})
+        store.replace_rvm([
+            {"cve_id": "CVE-2026-12405", "grp": "Example", "role": "gang", "category": "File Transfer Servers",
+             "vendor": "PaperCut", "product": "PaperCut Application Server", "sources": []},
+            {"cve_id": "CVE-2026-12406", "grp": "Example", "role": "gang", "category": "Network Edge Devices",
+             "vendor": "Fortinet", "product": "FortiOS & FortiProxy", "sources": []},
+        ])
+        store.add_watchlist("Fortinet")
+        url = "/vulnerability-intelligence/views/edge"
+        view = views.BY_SLUG["edge"]
+        rows = {row["cve_id"]: row for row in view.rows()}
+        self.assertEqual(set(rows), {"CVE-2023-4966", "CVE-2026-118527", "CVE-2026-12401", "CVE-2026-12406"})
+        self.assertEqual(view.count(), len(rows))
+        combined = rows["CVE-2026-12406"]["edge_matches"]
+        self.assertEqual({match.product for match in combined}, {"FortiOS", "FortiProxy"})
+        self.assertEqual({match.source for match in combined}, {"Ransomware Vulnerability Matrix"})
+        filtered = self.client.get(url, params={"v_vendor": "Juniper Networks", "v_tag": "watchlist"}).text
+        self.assertIn("1 of 4 rows", filtered)
+        self.assertIn("CVE Record lists Cisco Systems, Inc. / IOS XE Software", filtered)
+        self.assertIn("NVD Affected Products lists juniper / junos_os", filtered)
+        self.assertNotIn("CVE-2026-12406", filtered)
+        self.client.post("/vulnerability-intelligence/views/pins", data={"pinned": "edge"})
+        dashboard = self.client.get("/vulnerability-intelligence").text
+        self.assertIn('id="t-pin-edge"', dashboard)
+        self.assertIn("Edge Match", dashboard)
+
     def test_watchlist_filter_on_both_views(self):
         from app.modules.vulnerability_intelligence.feeds import cvelist
 

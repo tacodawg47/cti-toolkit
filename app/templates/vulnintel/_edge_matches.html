@@ -1,0 +1,7 @@
+<ul class="plain">
+  {% for match in edge_matches %}
+    <li><strong>{{ match.category }}</strong> · {{ match.vendor }} {{ match.product }}<br>
+      <small>{{ kev_names.get(match.source, match.source) }} lists {{ match.source_vendor }} / {{ match.source_product }}</small>
+    </li>
+  {% endfor %}
+</ul>

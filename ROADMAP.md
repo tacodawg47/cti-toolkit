@@ -492,10 +492,14 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
      remediation of `none_available` or `no_fix_planned`, no OSV fixed
      version, or the affected release is end-of-life per the
      endoflife.date API, MIT).
-  8. Edge and perimeter: vendor and product on a hand-kept list of
-     firewalls, VPNs, gateways, file-transfer and remote-access products
-     (no official public list exists), seeded from the Ransomware
-     Vulnerability Matrix categories.
+  8. Edge and Perimeter, built 2026-11-15. Match a curated vendor and
+     product pair against the CVE record, NVD, exploited lists, or
+     Ransomware Vulnerability Matrix. Start with firewalls, VPN and
+     remote access, gateways, routing and switching, application
+     delivery, and file transfer. Show the product family, category,
+     exact source pair, and source name. The view includes CVEs with
+     and without reported exploitation. Actual exposure depends on
+     the deployment.
   9. Ransomware-linked: KEV ransomware flag, a ransomware.live group
      link, or a Ransomware Vulnerability Matrix row (CC BY 4.0). Built
      2026-11-11 without the Matrix (CISA and VulnCheck flags, and

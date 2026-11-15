@@ -46,6 +46,65 @@ The vetting record is in docs/runbooks/vetting-a-dependency.md.
 
 ## Build narrative
 
+### 2026-11-15: Edge and Perimeter, view 8
+
+The operator approved the Exploitation Reports commit and requested
+Edge and Perimeter as the next Phase 2 slice. The approved report
+files and related roadmap, journal, and runbook edits went into
+`80082c7`, Track exploitation reports before CVE assignment.
+Supply Chain (`4250728`) precedes it locally. The last verified
+GitHub checkpoint is `c16e07a`. The Git runbook records the report
+checkpoint commands.
+
+The view at `/vulnerability-intelligence/views/edge` classifies
+affected products using 29 curated families in `edge.py`. It reads
+vendor and product pairs already stored from NVD, the CVE List,
+exploited lists, and the Ransomware Vulnerability Matrix. It ignores
+punctuation, spacing, and case and requires a complete pair. It
+checks every affected pair and excludes rejected CVEs. One CVE can
+match several families. Combined labels such as FortiOS & FortiProxy
+map to both named families. In the table, the main vendor and
+product come from the first sorted match. Vendor filter options
+include every matching vendor. Expand Edge Match to see all reasons,
+including the original source spelling. The same reasons appear
+on the CVE detail page.
+
+The starter list was informed by the Matrix's Network Edge and
+File Transfer Servers files (BushidoToken, CC BY 4.0). A Matrix
+category is too broad to use as automatic membership. PaperCut
+is grouped under file transfer and FortiClient EMS under network
+edge. Both are outside this initial product list. Cisco IOS XE
+and Juniper Junos extend the routing and switching coverage.
+Review an affected product in the authoritative source before
+adding an alias. A product match describes the affected technology.
+Check deployment and configuration for exposure.
+
+- [Ransomware Vulnerability Matrix](https://github.com/BushidoUK/Ransomware-Vulnerability-Matrix)
+- [Cisco IOS XE advisory](https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-iosxe-webui-privesc-j22SaA4z)
+- [Juniper SRX advisory](https://supportportal.juniper.net/s/article/2026-10-Security-Bulletin-Junos-OS-and-Junos-OS-Evolved-SRX-Series-Multiple-vulnerabilities-resolved)
+
+The read-only local benchmark found 2,569 CVEs.
+Initial membership took about 1.1 seconds. The shared table rows
+took about 1.2 seconds to build. Spot checks found CVE-2024-3400
+(PAN-OS), CVE-2023-20198 (IOS XE), and CVE-2023-34362 (MOVEit Transfer).
+The offline suite ran 340 tests with one skip. The new integration
+test covered evidence from all four source types, a compound product
+label, a secondary vendor filter, Watchlist, rejected records,
+unrelated products, and a dashboard pin.
+
+After restarting the app, the live view returned HTTP 200 and
+showed 2,569 matches. The first smoke check expected CVE-2024-3400
+on page one. The second checked pagination and found it on page
+two of the Palo Alto Networks and exploited filter. Exploitation
+Reports still returned HTTP 200. No feed refresh was needed for
+this feature. The vulnerability runbook has the offline test and
+the local verification commands.
+
+Phase 2 remains active. The next suggested slice is to carry
+Microsoft's Exploitation More Likely assessment into Likely Next
+using the stored MSRC data. Keep the source assessment visible
+and apply the existing exclusion for reported exploitation.
+
 ### 2026-11-14: Exploitation reports before CVE assignment
 
 The local app can record an exploitation report before an identifier

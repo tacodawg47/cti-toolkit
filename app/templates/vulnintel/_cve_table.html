@@ -40,7 +40,14 @@
             {%- if r.zero_day %}<span class="badge" title="Earliest dated exploitation evidence: {{ r.first_exploited or 'unknown' }}">{{ r.zero_day }}</span>{% endif -%}
           </div>{% endif %}</td>
         <td>{{ r.vendor or "—" }}</td>
-        <td>{{ r.product or "—" }}</td>
+        <td>{{ r.product or "—" }}
+          {% if r.edge_matches %}
+          <details>
+            <summary>Edge Match</summary>
+            {% with edge_matches = r.edge_matches %}{% include "vulnintel/_edge_matches.html" %}{% endwith %}
+          </details>
+          {% endif %}
+        </td>
         <td>{{ r.date or "—" }}</td>
         <td>{% if r.fix == "vendor_fix" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#microsoft-advisory">Microsoft Fix</a>{% elif r.fix == "patch" %}<span class="ok">Patch Reference</span>{% elif r.fix == "cna_patch" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#remediation">CNA Patch Reference</a>{% elif r.fix == "advisory" %}<span class="muted">Unknown · Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}</td>
         <td>{% with actions = r.actions %}{% include "vulnintel/_action_badges.html" %}{% endwith %}</td>

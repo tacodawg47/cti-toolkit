@@ -69,6 +69,13 @@
   </p>
 </div>
 
+{% if edge_matches %}
+<section class="card" id="edge-match">
+  <h3>Edge and Perimeter</h3>
+  {% include "vulnintel/_edge_matches.html" %}
+</section>
+{% endif %}
+
 {% if exploitation_reports %}
 <section class="card" id="exploitation-reports">
   <h3>Linked Exploitation Reports</h3>
