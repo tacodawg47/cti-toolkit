@@ -46,15 +46,72 @@ The vetting record is in docs/runbooks/vetting-a-dependency.md.
 
 ## Build narrative
 
+### 2026-11-15: Likely Next, recent sightings, and score disagreement
+
+The operator asked for one reviewable batch before the next commit
+approval. This Phase 2 batch changes three triage workflows and uses
+the existing feed tables. No schema migration or dependency was added.
+The last pushed baseline is `f43350d`. The new edits are local.
+
+- **Likely Next.** A CVE qualifies through a FIRST EPSS score of at
+  least 10% or the Microsoft advisory's Exploitation More Likely
+  assessment. The latter can qualify a CVE without an EPSS score.
+  Show both reasons when both apply. The Microsoft badge links to
+  the advisory section and shows the source's revision date. The view
+  excludes rejected records and exploitation already recorded in KEV,
+  SSVC active assessments, stored exploitation sightings, or the
+  ransomware group feeds. Manual exploitation reports stay separate.
+  The saved data uses the latest imported Microsoft revision.
+- **Recent Sighting.** The filter in Known Exploited uses the latest
+  Vulnerability-Lookup `exploited` day bucket. Today and yesterday UTC
+  qualify. The feed collects about 48 hours of data, but SQLite stores
+  days, so an exact rolling window cannot be reconstructed. The first
+  exploitation date still drives the existing date filter and sort.
+  The table shows the date of the last stored sighting separately.
+- **Score Disagreement.** Compare a dated FIRST EPSS score with the
+  CVSS shown to the analyst. High EPSS means at least 50%, paired with
+  CVSS below 7.0. Low EPSS means at most 1%, paired with critical CVSS
+  at 9.0 or above. Both scores are required. These cutoffs are the
+  toolkit's triage choices. See `signals.py` for the shared rule.
+  The CVE detail page explains the two signals and the shared CVE
+  tables can filter on them. The priority calculation is independent.
+
+The first catalog query evaluated severity and EPSS against every
+catalog entry and took 8.04 seconds in the read-only check. The
+revised query narrows to CVEs with high FIRST EPSS or a potential
+critical CVSS before it applies the usual source precedence. It
+returned the same 16,258 matches in 3.38 seconds.
+
+The full offline suite ran 343 tests with one skip. New tests cover
+Microsoft-only and dual qualification, exclusions for rejected and
+exploited CVEs, sighting dates and Watchlist, and the score filter
+in both the Python and SQL table paths. Restarted the live toolkit.
+Likely Next, Known Exploited, and All Vulnerabilities each returned
+HTTP 200. The live Recent Sighting filter returned 90 matches.
+The live Score Disagreement filter returned 16,258. The local store
+had zero Microsoft advisories, so Likely Next displayed the load
+link. Microsoft qualifying rows were verified in the offline
+fixture. The next Microsoft live check starts with **Feeds → Refresh
+Microsoft Advisories** and then **Likely Next → Microsoft More Likely**.
+The vulnerability runbook has the test and HTTP check commands.
+
+Next recommended Phase 2 slice is **Exploited and Unfixed** using
+explicit vendor evidence that a fix is unavailable for a specific
+affected product or release. Use Unknown for gaps, and keep lifecycle
+and mitigation evidence visible. First identify a source with a reliable
+explicit no-fix field, then test it with both an affected release with
+no fix and a different affected release that has a fix.
+
 ### 2026-11-15: Edge and Perimeter, view 8
 
 The operator approved the Exploitation Reports commit and requested
 Edge and Perimeter as the next Phase 2 slice. The approved report
 files and related roadmap, journal, and runbook edits went into
 `80082c7`, Track exploitation reports before CVE assignment.
-Supply Chain (`4250728`) precedes it locally. The last verified
-GitHub checkpoint is `c16e07a`. The Git runbook records the report
-checkpoint commands.
+On 2026-11-15 the operator approved pushing Edge and Perimeter
+(`f43350d`), Exploitation Reports (`80082c7`), and Supply Chain
+(`4250728`) together. GitHub's `main` was verified at `f43350d`.
+The Git runbook records the push and verification commands.
 
 The view at `/vulnerability-intelligence/views/edge` classifies
 affected products using 29 curated families in `edge.py`. It reads

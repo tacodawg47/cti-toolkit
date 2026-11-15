@@ -22,7 +22,7 @@
     </div>
   </details>
   {% endif %}
-  {% for tag in tags if tag not in (hide_tags or ()) %}
+  {% for tag in tags + (t.extra_tags or ()) if tag not in (hide_tags or ()) %}
     <label><input type="checkbox" name="{{ t.key }}_tag" value="{{ tag }}" {% if tag in f.tags %}checked{% endif %}> {{ tag_labels[tag] }}</label>
   {% endfor %}
   <label>EPSS ≥

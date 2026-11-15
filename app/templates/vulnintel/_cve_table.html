@@ -38,7 +38,17 @@
             {%- if r.ransomware %}<span class="badge badge-ransom" title="known ransomware use{% if r.ransomware_groups %}: {{ r.ransomware_groups | join(', ') }}{% endif %}">ransomware</span>{% endif -%}
             {%- if r.matched %}<span class="badge badge-stack" title="{{ r.matched | join(', ') }}">Product Match</span>{% endif -%}
             {%- if r.zero_day %}<span class="badge" title="Earliest dated exploitation evidence: {{ r.first_exploited or 'unknown' }}">{{ r.zero_day }}</span>{% endif -%}
-          </div>{% endif %}</td>
+          </div>{% endif %}
+          {% if r.qualifies_epss is defined and (r.qualifies_epss or r.msrc_likely) %}
+            <div class="tagline">
+              {% if r.qualifies_epss %}<small class="badge">FIRST Forecast</small>{% endif %}
+              {% if r.msrc_likely %}
+                <a class="badge" href="{{ prefix }}/cve/{{ r.cve_id }}#microsoft-advisory">Microsoft More Likely</a>
+                {% if r.msrc_revised %}<br><small class="muted">Advisory revised {{ r.msrc_revised | day }}</small>{% endif %}
+              {% endif %}
+            </div>
+          {% endif %}
+        </td>
         <td>{{ r.vendor or "—" }}</td>
         <td>{{ r.product or "—" }}
           {% if r.edge_matches %}
@@ -48,7 +58,11 @@
           </details>
           {% endif %}
         </td>
-        <td>{{ r.date or "—" }}</td>
+        <td>{{ r.date or "—" }}
+          {% if "recent_sighting" in (t.extra_tags or ()) and r.last_sighting %}
+            <br><small class="muted" title="Vulnerability-Lookup exploitation sighting">Last sighting {{ r.last_sighting }}</small>
+          {% endif %}
+        </td>
         <td>{% if r.fix == "vendor_fix" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#microsoft-advisory">Microsoft Fix</a>{% elif r.fix == "patch" %}<span class="ok">Patch Reference</span>{% elif r.fix == "cna_patch" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#remediation">CNA Patch Reference</a>{% elif r.fix == "advisory" %}<span class="muted">Unknown · Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}</td>
         <td>{% with actions = r.actions %}{% include "vulnintel/_action_badges.html" %}{% endwith %}</td>
         {% set where = [] %}
@@ -69,7 +83,9 @@
         <td>{{ r.cvss if r.cvss is not none else "—" }}</td>
         <td>{% if r.epss is not none %}{{ "%.2f%%" | format(r.epss * 100) }}<br>
           <small class="muted">{{ (r.epss_date | day) if r.epss_date else "Date Unknown" }}</small>
-          {% else %}—{% endif %}</td>
+          {% else %}—{% endif %}
+          {% if r.score_gap %}<br><small class="badge">{{ r.score_gap }}</small>{% endif %}
+        </td>
         {% if show_heat %}
           <td style="white-space: nowrap;"><strong>{{ r.heat }}</strong><span class="barwrap"><span class="bar" style="width: {{ (r.heat / 133 * 100) | round | int }}%"></span></span></td>
           <td><small>{{ r.parts | join(", ") }}</small></td>

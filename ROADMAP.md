@@ -398,7 +398,9 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   historical exploitation reports. The dashboard links to both filtered
   views. Watchlist management stays on its own tab. A vendor, a product,
   or both can be watched. Matching rows show Product Match.
-- Add a recent observation filter once observation dates are available.
+- Built 2026-11-15: Known Exploited can filter by exploitation
+  sightings from today and yesterday UTC. Preserve the first reported
+  exploitation date and show the last stored sighting separately.
   Add optional private watchlist details for version, exposure, business
   importance, owner, and last confirmation.
 - Built 2026-11-13: Action badges use Microsoft remediation, explicit
@@ -482,12 +484,11 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   5. New and severe: published in the last 7 days with CVSS 9.0 or
      higher, or SSVC Automatable = yes with Technical Impact = total.
      Built 2026-11-11; rejected CVEs left out.
-  6. Likely next: not in view 1 and EPSS at or above 0.10, or in the top
-     5 percent, or risen by 0.10 in 7 days, or Microsoft "Exploitation
-     More Likely". Absorbs today's Trending section. Built 2026-11-11 as
-     EPSS 0.10 alone (the top 5% and the rise both fall inside it);
-     Microsoft joins with view 4; Trending stays on the Dashboard for
-     now.
+  6. Likely Next, extended 2026-11-15. Include CVEs with FIRST EPSS
+     at 0.10 or higher or Microsoft "Exploitation More Likely". Show the
+     forecast and vendor assessment as separate reasons. Exclude rejected
+     CVEs and tracked evidence of exploitation. Trending stays on the
+     Dashboard.
   7. Exploited and unfixed: in view 1 and no vendor fix (vendor CSAF
      remediation of `none_available` or `no_fix_planned`, no OSV fixed
      version, or the affected release is end-of-life per the
@@ -590,9 +591,9 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   phishing"), and Phase 6 pivots ("single feature class, shared hosting:
   Weak, do not export"). No prose is generated; a line is a template with
   values filled in.
-- Include (2026-11-06): a "signals disagree" strip on the detail page and
-  as a dashboard filter: KEV, EPSS, CVSS, and SSVC side by side, with the
-  score-disagreement rule (below) highlighted when they pull apart.
+- Built 2026-11-15: Show score disagreement in CVE details and as a
+  filter on the shared CVE tables. Keep exploitation evidence and SSVC
+  visible alongside the scores.
 
 **Supply Chain tab** (decided 2026-11-04, sources settled 2026-11-11):
 "is a library, package or
@@ -715,9 +716,9 @@ Three cheap signals (agreed 2026-11-03):
 - Patch available (built): the Fix column and the detail page show whether
   NVD tags a reference as "Patch" or "Vendor Advisory", so "exploited and
   unpatched" stands out.
-- Score disagreement (not built): highlight a CVE whose EPSS is high while
-  its CVSS is low (or the reverse). Those are the ones a CVSS-only triage
-  misses.
+- Score disagreement (built): flag FIRST EPSS of at least 50% with
+  CVSS below 7.0, or CVSS of at least 9.0 with FIRST EPSS at most 1%.
+  These are triage thresholds. The filter requires both scores.
 - Deadlines (built on the detail page): CISA's KEV due date, a federal
   deadline that is a useful urgency proxy. It was dropped from the Dashboard
   on 2026-11-04.

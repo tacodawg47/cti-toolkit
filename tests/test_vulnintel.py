@@ -1732,6 +1732,69 @@ class ViewRouteTests(ViewTests):
         self.assertIn('href="/vulnerability-intelligence/views/exploited" class="viewcount"><strong>2</strong> Known Exploited', r.text)
         self.assertIn('href="/vulnerability-intelligence/views/all" class="viewcount"><strong>4</strong> All Vulnerabilities', r.text)
 
+    def test_likely_view_shows_microsoft_and_first_as_separate_signals(self):
+        from app.modules.vulnerability_intelligence import views
+        from app.modules.vulnerability_intelligence.feeds import msrc
+
+        microsoft_only, both, observed, rejected, confirmed, less_likely = [
+            f"CVE-2026-{n}" for n in range(12600, 12606)
+        ]
+        for cve_id in (microsoft_only, both, observed, rejected, confirmed, less_likely):
+            msrc._save({
+                "cve_id": cve_id, "released": "2026-11-10", "revised": "2026-11-13", "cycle": "scheduled",
+                "title": "Test advisory", "cvss": 8.0, "url": f"{msrc.ADVISORY}/{cve_id}",
+                "exploitability": "Exploitation Less Likely" if cve_id == less_likely else msrc.MORE_LIKELY,
+                "exploited": "Yes" if cve_id == confirmed else "No",
+            }, "2026-11-13T00:00:00+00:00")
+        store.save_cve({"cve_id": rejected, "status": "Rejected"})
+        store.upsert_epss([(both, 0.1, 0.9), (rejected, 0.9, 0.99)], "2026-11-14")
+        store.replace_recent_sightings([(observed, "exploited", store._since(0), 1)])
+        likely = views.BY_SLUG["likely"]
+        rows = {row["cve_id"]: row for row in likely.rows()}
+        self.assertEqual(likely.count(), 4)
+        self.assertEqual(set(rows), {microsoft_only, both, "CVE-2025-1111", "CVE-2025-2222"})
+        self.assertFalse(rows[microsoft_only]["qualifies_epss"])
+        self.assertTrue(rows[both]["qualifies_epss"])
+        self.assertTrue(rows[both]["msrc_likely"])
+        url = "/vulnerability-intelligence/views/likely"
+        response = self.client.get(url, params={"v_tag": "msrc_likely"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("2 of 4 rows", response.text)
+        self.assertIn(f"/cve/{microsoft_only}#microsoft-advisory", response.text)
+        self.assertIn("Advisory revised 2026-11-13", response.text)
+        self.assertIn("FIRST Forecast", response.text)
+
+    def test_recent_sighting_filter_keeps_the_first_exploitation_date(self):
+        old_cve = "CVE-2023-4966"
+        stale_cve = "CVE-2026-118527"
+        store.replace_recent_sightings([
+            (old_cve, "exploited", store._since(1), 1),
+            (stale_cve, "exploited", store._since(2), 1),
+            (stale_cve, "seen", store._since(0), 1),
+        ])
+        store.add_watchlist("Citrix")
+        url = "/vulnerability-intelligence/views/exploited"
+        body = self.client.get(url, params={"v_tag": ["recent_sighting", "watchlist"]}).text
+        self.assertIn("1 of 2 rows", body)
+        self.assertIn(old_cve, body)
+        self.assertNotIn(stale_cve, body)
+        self.assertIn("2023-10-10", body)
+        self.assertIn(f"Last sighting {store._since(1)}", body)
+        self.assertIn(stale_cve, self.client.get(url).text)
+
+    def test_score_disagreement_filters_catalog_and_shared_view(self):
+        low_severity, high_severity = "CVE-2023-4966", "CVE-2026-118527"
+        store.save_cve({"cve_id": low_severity, "cvss_score": 6.9})
+        store.save_cve({"cve_id": high_severity, "cvss_score": 9.0})
+        store.upsert_epss([(low_severity, 0.5, 0.99), (high_severity, 0.01, 0.5)], "2026-11-14")
+        for slug in ("all", "exploited"):
+            body = self.client.get(f"/vulnerability-intelligence/views/{slug}", params={"v_tag": "score_gap"}).text
+            self.assertIn("High EPSS, CVSS Below High", body)
+            self.assertIn("Critical CVSS, Low EPSS", body)
+            self.assertIn(low_severity, body)
+            self.assertIn(high_severity, body)
+            self.assertNotIn("CVE-2025-1111", body)  # EPSS alone is insufficient
+
     def test_edge_view_matches_product_pairs_and_shows_source(self):
         from app.modules.vulnerability_intelligence import views
         from app.modules.vulnerability_intelligence.feeds import cvelist

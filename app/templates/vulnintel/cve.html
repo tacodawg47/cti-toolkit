@@ -40,6 +40,11 @@
     <div><small>Weakness</small>{% if cve and cve.cwe %}{{ cve.cwe }}{% elif rep.cwe_fallback %}{{ rep.cwe_fallback }} <small>from the CVE record</small>{% else %}<span class="muted">—</span>{% endif %}</div>
     <div><small>Patch Status</small>{% if rep.fix_status == "vendor_fix" %}<a href="#microsoft-advisory">Microsoft Fix</a>{% elif rep.fix_status == "patch" %}<a href="#references">Patch Reference</a>{% elif rep.fix_status == "cna_patch" %}<a href="#remediation">CNA Patch Reference</a>{% elif rep.fix_status == "advisory" %}<span class="muted">Unknown · Vendor Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}</div>
   </div>
+  {% if rep.score_gap %}
+    <p><strong>{{ rep.score_gap }}</strong><br>
+      <small>CVSS measures technical severity. FIRST EPSS estimates exploitation activity in the next 30 days.
+      Use the exploitation evidence above and check local exposure when triaging.</small></p>
+  {% endif %}
   <h3>Actions</h3>
   <ul class="plain">
     {% for action in rep.actions %}<li><strong>{{ action.label }}</strong> <small>{{ action.reason }}</small></li>{% endfor %}
