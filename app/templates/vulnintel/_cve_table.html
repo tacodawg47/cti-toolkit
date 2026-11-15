@@ -63,7 +63,15 @@
             <br><small class="muted" title="Vulnerability-Lookup exploitation sighting">Last sighting {{ r.last_sighting }}</small>
           {% endif %}
         </td>
-        <td>{% if r.fix == "vendor_fix" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#microsoft-advisory">Microsoft Fix</a>{% elif r.fix == "patch" %}<span class="ok">Patch Reference</span>{% elif r.fix == "cna_patch" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#remediation">CNA Patch Reference</a>{% elif r.fix == "advisory" %}<span class="muted">Unknown · Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}</td>
+        <td>
+          {% if r.vendor_vex %}
+            <details><summary>Red Hat No-Fix Evidence</summary>
+              {% with vendor_vex = r.vendor_vex %}{% include "vulnintel/_vendor_vex.html" %}{% endwith %}
+            </details>
+          {% else %}
+            {% if r.fix == "vendor_fix" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#microsoft-advisory">Microsoft Fix</a>{% elif r.fix == "patch" %}<span class="ok">Patch Reference</span>{% elif r.fix == "cna_patch" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#remediation">CNA Patch Reference</a>{% elif r.fix == "advisory" %}<span class="muted">Unknown · Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}
+          {% endif %}
+        </td>
         <td>{% with actions = r.actions %}{% include "vulnintel/_action_badges.html" %}{% endwith %}</td>
         {% set where = [] %}
         {% if c.msf %}{% set _ = where.append("Metasploit Exploit") %}{% endif %}

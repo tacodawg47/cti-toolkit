@@ -2227,6 +2227,95 @@ class SupplyChainTests(TempDbMixin, unittest.TestCase):
         self.assertEqual(row["ranges"], ["SEMVER introduced 1.0.0", "SEMVER fixed 1.1.0"])
 
 
+class RedHatVexTests(TempDbMixin, unittest.TestCase):
+    def test_exploited_and_unfixed_uses_only_scoped_vendor_evidence(self):
+        from unittest.mock import patch
+
+        from fastapi.testclient import TestClient
+        from app.main import app
+        from app.modules.vulnerability_intelligence import views
+        from app.modules.vulnerability_intelligence.feeds import redhat
+
+        mixed = "CVE-2023-4966"
+        unaffected = "CVE-2026-118527"
+        unknown = "CVE-2026-13200"
+        not_exploited = "CVE-2026-13201"
+        store.save_ssvc(unknown, {"exploitation": "active", "timestamp": "2026-11-10"})
+        kev, _ = kev_feed.parse(json.dumps(KEV_DOC).encode())
+        store.upsert_kev(kev, "cisa")
+        store.save_cve({"cve_id": mixed, "patch_available": True})
+
+        def vex(cve_id, revised, *, fixed=False):
+            return {
+                "document": {"category": "csaf_vex", "tracking": {"id": cve_id, "status": "final",
+                                                                   "current_release_date": revised}},
+                "product_tree": {
+                    "branches": [{"category": "vendor", "branches": [
+                        {"product": {"product_id": "old", "name": "Red Hat Example Release 1"}}]}],
+                    "relationships": [{"full_product_name": {"product_id": "new", "name": "Red Hat Example Release 2"}}],
+                    "full_product_names": [{"product_id": "other", "name": "Red Hat Unaffected Release"}],
+                    "product_groups": [{"group_id": "unfixed", "product_ids": ["old", "new", "other"]}],
+                },
+                "vulnerabilities": [{
+                    "cve": cve_id,
+                    "product_status": {"known_affected": ["old", "new"], "known_not_affected": ["other"], "fixed": ["new"]},
+                    "remediations": [
+                        {"category": "no_fix_planned", "group_ids": ["unfixed"], "details": "Out of support scope"},
+                        {"category": "vendor_fix", "product_ids": ["new", "old"] if fixed else ["new"], "details": "Fixed"},
+                        {"category": "workaround", "product_ids": ["old"], "details": "Disable the sample service."},
+                        {"category": "workaround", "product_ids": ["new"], "details": "For Release 2 only."},
+                    ],
+                }],
+            }
+
+        initial = "2026-11-14T00:00:00+00:00"
+        revised = "2026-11-15T00:00:00+00:00"
+        docs = {mixed: vex(mixed, initial), unaffected: vex(unaffected, initial, fixed=True),
+                not_exploited: vex(not_exploited, initial)}
+        once = {unaffected}
+        calls = []
+
+        async def fetch(url, **kwargs):
+            if url.endswith("changes.csv"):
+                data = "".join(f'"{cve[4:8]}/{cve.lower()}.json","{doc["document"]["tracking"]["current_release_date"]}"\n'
+                               for cve, doc in docs.items())
+                return 200, data.encode(), None
+            cve = url.rsplit("/", 1)[-1][:-5].upper()
+            calls.append(cve)
+            if cve in once:
+                once.remove(cve)
+                return 503, None, None
+            return 200, json.dumps(docs[cve]).encode(), None
+
+        client = TestClient(app, base_url="http://127.0.0.1")
+        prefix = "/vulnerability-intelligence"
+        trigger = f"{prefix}/refresh-redhat-vex"
+        self.assertEqual(client.post(trigger, headers={"Sec-Fetch-Site": "cross-site"}).status_code, 403)
+        with patch.object(redhat, "fetch_bytes", side_effect=fetch):
+            page = client.post(trigger)
+            self.assertEqual(page.status_code, 200)
+            self.assertCountEqual(calls, [mixed, unaffected])
+            self.assertIn("1 Red Hat VEX documents failed", page.text)
+            self.assertIn("No Fix Planned", page.text)
+            self.assertIn("Red Hat Example Release 1", page.text)
+            self.assertIn("Red Hat also lists fixed targets", page.text)
+            self.assertIn("Disable the sample service.", page.text)
+            self.assertIn(">Mitigate</span>", page.text)
+            self.assertNotIn(">Patch</span>", page.text)
+            self.assertNotIn("For Release 2 only.", page.text)
+            self.assertNotIn(f"/cve/{unaffected}", page.text)
+            self.assertNotIn(unknown, page.text)
+            self.assertNotIn(not_exploited, page.text)
+            self.assertEqual(views.BY_SLUG["unfixed"].count(), 1)
+            calls.clear()
+            docs[mixed] = vex(mixed, revised, fixed=True)
+            page = client.post(trigger)
+            self.assertCountEqual(calls, [mixed, unaffected])
+            self.assertEqual(views.BY_SLUG["unfixed"].count(), 0)
+            self.assertNotIn(mixed, page.text)
+            self.assertEqual(store.feed_status()[redhat.FEED]["entries"], 2)
+
+
 class MicrosoftAdvisoryTests(TempDbMixin, unittest.TestCase):
     def test_refresh_retries_missing_advisories_and_feeds_the_views(self):
         import asyncio

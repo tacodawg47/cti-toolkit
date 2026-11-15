@@ -1,0 +1,18 @@
+<p><small>Red Hat Product Security · Advisory revised {{ vendor_vex.revised | day }} ·
+  <a href="{{ vendor_vex.url }}" target="_blank" rel="noopener noreferrer">Source VEX</a> (CC BY 4.0)</small></p>
+{% if vendor_vex.fixed_count %}
+  <p class="muted"><small>Red Hat also lists fixed targets. Check the affected product and release in the source.</small></p>
+{% endif %}
+<ul class="plain">
+  {% for finding in vendor_vex.unfixed %}
+  <li>
+    <strong>{{ "No Fix Planned" if finding.category == "no_fix_planned" else "No Fix Available" }}</strong>
+    <small>{{ finding.details }}</small>
+    <ul>{% for product in finding.products %}<li>{{ product }}</li>{% endfor %}</ul>
+    {% for mitigation in finding.mitigations %}
+      <p><small><strong>Workaround or Mitigation</strong> {{ mitigation.details }}<br>
+        Applies to {{ mitigation.products | join(", ") }}</small></p>
+    {% endfor %}
+  </li>
+  {% endfor %}
+</ul>

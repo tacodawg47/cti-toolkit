@@ -46,6 +46,65 @@ The vetting record is in docs/runbooks/vetting-a-dependency.md.
 
 ## Build narrative
 
+### 2026-11-15: Exploited and Unfixed, view 7
+
+The operator approved the previous triage batch. It is local commit
+`5682ee4`, Improve vulnerability triage signals and filters. GitHub
+was last verified at `f43350d`. The Git runbook records the exact
+commands for the triage commit. The new Red Hat work is still local.
+
+#### Source and Membership
+
+Red Hat's public per-CVE CSAF VEX feed supplies explicit product-level
+status. The index is a CSV of relative paths and revision timestamps.
+The current sample had 76,669 records, about 4 MiB, and 811 IDs
+intersected the local Known Exploited view. The oldest update in that
+sample was 2025-08-22. A separate button keeps the first wave of
+downloads out of the normal vulnerability feed refresh. No key or
+dependency was needed.
+
+The parser resolves product IDs and group IDs from product branches,
+full product names, and relationships. It intersects the explicit
+`none_available` or `no_fix_planned` targets with named affected
+products and removes conflicting fixed, unaffected, or under
+investigation targets. It keeps workarounds only when their scope
+overlaps the unfixed evidence. Other fixed targets are indicated
+separately and can be inspected in the source. A CVE with only a
+general advisory or a missing patch reference stays outside this
+view. The view still requires Known Exploited membership.
+
+SQLite stores the index date, document date, normalized evidence,
+and fixed target count per CVE. Refresh skips known revisions,
+keeps the previous evidence on failure, and retries failed revisions
+on the next run. When a new revision clears the last unfixed target,
+the CVE leaves the view. The view and CVE page both show the source
+revision date. In the unfixed view, the actions are scoped to
+the unfixed targets, so a fix listed for a different release cannot
+produce a Patch badge there.
+
+- [Red Hat VEX format and terms](https://redhatproductsecurity.github.io/security-data-guidelines/csaf-vex/)
+- [OASIS CSAF 2.0 specification](https://docs.oasis-open.org/csaf/csaf/v2.0/os/csaf-v2.0-os.html)
+
+#### Verification and Follow-up
+
+Four public advisories passed parser checks and a real refresh into a
+temporary database. The rendered view returned HTTP 200 and included
+`CVE-2024-21626`, `CVE-2026-116690`, and `CVE-2026-90436`.
+`CVE-2024-3094` carried no affected no-fix targets and stayed out.
+The full offline suite ran 344 tests with one skip. The new route
+test covers group and relationship resolution, a temporary HTTP
+failure, retry, the mixed fixed/unfixed case, scoped mitigation, and
+removal after a revision fixes the last affected target. Its first
+assertion checked the whole page for an excluded CVE and matched
+the feed error message. The test now checks CVE row links separately.
+
+The live app was restarted. Exploited and Unfixed and Feeds both
+returned HTTP 200 and the refresh button was visible. The full
+Red Hat import into the live store remains pending. The vulnerability
+runbook has the test and local HTTP commands. Coverage beyond Red
+Hat's rolling index and other vendors remains open. A later pass can
+add another vendor with an explicit product-scoped no-fix field.
+
 ### 2026-11-15: Likely Next, recent sightings, and score disagreement
 
 The operator asked for one reviewable batch before the next commit

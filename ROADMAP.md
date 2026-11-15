@@ -489,10 +489,14 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
      forecast and vendor assessment as separate reasons. Exclude rejected
      CVEs and tracked evidence of exploitation. Trending stays on the
      Dashboard.
-  7. Exploited and unfixed: in view 1 and no vendor fix (vendor CSAF
-     remediation of `none_available` or `no_fix_planned`, no OSV fixed
-     version, or the affected release is end-of-life per the
-     endoflife.date API, MIT).
+  7. Exploited and Unfixed, built 2026-11-15 with Red Hat VEX.
+     Require Known Exploited membership and a vendor
+     `none_available` or `no_fix_planned` statement for a named
+     affected target. Show the specific targets, overlapping
+     workarounds, source link and revision date. A CVE can also have
+     fixed targets. Extend coverage to other vendor advisories with
+     equivalent evidence. OSV version ranges and lifecycle data can
+     add context when their coverage and provenance are clear.
   8. Edge and Perimeter, built 2026-11-15. Match a curated vendor and
      product pair against the CVE record, NVD, exploited lists, or
      Ransomware Vulnerability Matrix. Start with firewalls, VPN and

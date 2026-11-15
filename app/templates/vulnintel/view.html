@@ -13,6 +13,15 @@
   {% if view.slug == "likely" and not microsoft_loaded %}
     <p class="muted"><small>Load Microsoft assessments with <a href="{{ prefix }}/feeds">Refresh Microsoft Advisories</a>.</small></p>
   {% endif %}
+  {% if view.slug == "unfixed" %}
+    <p class="muted"><small>
+      {% if vex_status.fetched_at %}Red Hat VEX checked {{ vex_status.fetched_at | day }} · {% endif %}
+      <a href="{{ prefix }}/feeds">Refresh Red Hat VEX</a>
+    </small></p>
+    {% if vex_status.error %}
+      <p class="err"><small>{{ vex_status.error }} Showing the last stored evidence.</small></p>
+    {% endif %}
+  {% endif %}
   <p class="muted"><small>EPSS estimates the probability of exploitation activity in the next 30 days as of the score date.</small></p>
   {% with date_label = view.date_label, show_maturity = view.show_maturity, hide_tags = view.hide_tags,
           empty = ("The watchlist is empty: add vendors and products on the Watchlist tab." if view.slug == "watchlist" and t.unfiltered == 0

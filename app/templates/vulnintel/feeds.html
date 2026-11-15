@@ -41,6 +41,10 @@
     <button type="submit" class="small">Refresh Microsoft Advisories</button>
     <small>The first load downloads advisories changed in the last 45 days. Later runs fetch new or revised documents. No key is required.</small>
   </form>
+  <form method="post" action="{{ prefix }}/refresh-redhat-vex" style="margin-top: 8px;">
+    <button type="submit" class="small">Refresh Red Hat VEX</button>
+    <small>Checks revisions for Known Exploited CVEs in Red Hat's change index. The first load may take several minutes.</small>
+  </form>
 </div>
 
 <div class="card">

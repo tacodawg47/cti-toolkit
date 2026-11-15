@@ -74,6 +74,13 @@
   </p>
 </div>
 
+{% if vendor_vex %}
+<section class="card" id="redhat-vex">
+  <h3>Red Hat Affected Releases Without a Fix</h3>
+  {% include "vulnintel/_vendor_vex.html" %}
+</section>
+{% endif %}
+
 {% if edge_matches %}
 <section class="card" id="edge-match">
   <h3>Edge and Perimeter</h3>
