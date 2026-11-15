@@ -46,6 +46,154 @@ The vetting record is in docs/runbooks/vetting-a-dependency.md.
 
 ## Build narrative
 
+### 2026-11-14: Exploitation reports before CVE assignment
+
+The local app can record an exploitation report before an identifier
+exists. Open Views or Search and follow Exploitation Reports. The
+Zero-Days view links to the same page. The report list is paginated and
+has a Show Unlinked Reports filter.
+
+`reports.py` validates the source, affected product, evidence summary,
+report date, optional exploitation date, and evidence statuses.
+`store.init_schema()` creates `exploitation_reports` in the existing
+SQLite store. A local numeric ID stays stable after CVE assignment.
+The source URL and optional source record ID together deduplicate
+submissions. A repeated submission opens the existing row. A source
+URL is stored as a citation and the app does not fetch it.
+
+The form records patch, public vendor advisory, and CVE assignment
+status at the time of exploitation. All default to Unknown. Active
+exploitation with a date and documented absence of all three yields
+Confirmed Zero-Day. Active exploitation with an incomplete timeline
+yields Possible Zero-Day. A documented patch, public advisory, or
+CVE at that time yields Exploitation Reported. Unconfirmed
+exploitation has its own label. These are assessments of the
+source evidence the operator entered.
+
+Link CVE accepts a syntactically valid CVE ID even before it appears
+in the local feeds. The CVE detail page links back to the report.
+Updating or removing the association changes only the linked CVE
+and link time. The source, timeline, and original assessment stay on
+the report. These records do not enter the KEV feed or recalculate
+CVE priority.
+
+Verification: the focused test first exposed an incomplete mocked
+CVE detail response. The fixture was corrected to include the raw
+evidence fields the template renders. The full offline suite ran 339
+tests with one skip. The tests exercised a confirmed report, unknown
+and present evidence, duplicate submission, invalid dates and URLs,
+cross-site POST rejection, and a later CVE link with a backlink.
+The live toolkit was restarted on localhost. Exploitation Reports
+and Supply Chain returned HTTP 200 and the Zero-Days page linked to
+the new workflow. Record creation and CVE linking were exercised in
+temporary test databases. The vulnerability runbook has the exact
+commands and a manual walkthrough.
+
+Still open: automated intake and handling a publisher correction to
+a stored source report. Keep those separate from CVE association.
+For the next Phase 2 slice, Edge and Perimeter can reuse the stored
+product evidence, shared table, and Ransomware Vulnerability Matrix
+categories. The first decision is which categories count as edge
+products and how to show the reason each CVE matches.
+
+### 2026-11-14: Phase 2 handoff and remaining work
+
+Phase 2 is still active. The operator asked to work through it one item
+at a time. Use the build order in ROADMAP.md and review the current
+feature in the running app before starting a new phase. This entry is
+a checkpoint for the next agent.
+
+The build entry immediately above records the completed manual
+no-CVE workflow and supersedes the recommendation at the end of
+this checkpoint.
+
+#### Built and Verified
+
+- IOC extraction accepts pasted text, public HTTPS report URLs, and
+  PDF or text uploads. It deduplicates IOCs and routes CVEs to
+  Vulnerability Intelligence. See the IOC extraction runbook.
+- Vulnerability Intelligence has the CVE detail page, Dashboard,
+  Watchlist, Exploits & Detection, Feeds, and named Views. The built
+  numbered views are 1 through 6, 9, 11, and 12. All Vulnerabilities is
+  also available. All Vulnerabilities and Known Exploited both offer a
+  Watchlist filter. Dashboard pins, independent action badges, and
+  Since Last Review with 90-day history are built.
+- Microsoft Patch Tuesday is built from the MSRC CSAF index. The
+  parser was checked against live advisory samples. A full monthly
+  review of the default Triage filter remains to be recorded.
+- The Supply Chain tab is in local commit `4250728`. The app was
+  restarted and its refresh was run against the live local store.
+  Both sources reported success on 2026-11-14. The app showed 2,528
+  npm report rows and five GitHub Actions rows. The test suite at this
+  checkpoint ran 336 tests with one skip. GitHub's last verified
+  checkpoint in this handoff is `c16e07a`. The Supply Chain push has
+  separate approval pending.
+- Supply Chain spot checks: search npm for `@zread/cli-win32-arm64`.
+  The GHSA and MAL source entries appear under the same package report
+  with their own ranges. Search GitHub Actions for
+  `tj-actions/changed-files`. The 2025 source publication and the 2026
+  local import date appear separately. Use the advisory for the
+  compromise window, since the table shows version or ref bounds.
+
+#### Open Phase 2 Work
+
+- **Exploitation reports without a CVE.** Store a source identifier,
+  source link, product, evidence, and dates independently of a CVE.
+  Link the CVE when one is assigned. The current Zero-Days view only
+  handles CVEs. Project Zero listings are Confirmed Zero-Day. Dated
+  exploitation evidence on or before publication is a Possible
+  Zero-Day lead. A report without a CVE needs explicit evidence about
+  exploitation, patch, and disclosure status for the confirmed label.
+- **Five unbuilt views.** View 7 Exploited and Unfixed needs explicit
+  no-fix evidence for the affected version. Missing patch data stays
+  Unknown. View 8 Edge and Perimeter needs a curated product list.
+  View 10 AI and ML Stack needs validated package or product matches
+  and the match reason. View 13 OT, ICS, and Medical needs vendor or
+  CISA advisory feeds. View 14 Trending Attention needs an attention
+  signal distinct from exploitation. The Dashboard already shows
+  EPSS risers.
+- **Finish existing views and detail pages.** Known Exploited needs a
+  recent-observation filter tied to observation dates. The current
+  Exploitation Sightings view covers the feed's 48-hour window. Likely
+  Next uses EPSS and still needs the Microsoft Exploitation More
+  Likely signal. Patch Tuesday needs a full monthly triage check and
+  later vendor coverage. Watchlist entries still need the optional
+  version, exposure, owner, importance, and last-confirmed fields.
+  Score disagreement and the separate rule-based verdict lines remain
+  open. The current action reasons already explain Patch, Mitigate,
+  Hunt, Monitor, and Investigate Applicability.
+- **Coverage and extraction.** Older CVEs still have gaps in vendor
+  and product fields. The roadmap proposes a full NVD backfill.
+  ATT&CK ID extraction and table-aware TTP capture are still planned.
+  Read the extractor survey and fixtures in the journal before
+  choosing a parser. The decode helper and wrapped PDF hashes are
+  additional extractor follow-ups.
+
+#### Dependencies and Deferred Work
+
+- Saved extractions and Enrich All need the shared corpus and job
+  runner. Scheduled refresh and watchlist alerts need the scheduler
+  and alert inbox. Review events can link to cases when cases exist.
+  Vendor news and social chatter have their own collector dependencies.
+- Supply Chain package watchlists, lockfile checks, broader ecosystem
+  coverage, and the ordinary vulnerability backfill are parked for
+  post-v1. Vendor research reporting follows the Phase 4 feed. HTMX
+  partial reloads, export work, and optional detection indexes remain
+  tracked in the roadmap. The older roadmap summary of patch deadlines
+  is superseded by the 2026-11-12 decision to omit them from triage.
+
+#### Recommended Next Slice
+
+Build the no-CVE report workflow before adding a new feed. Prove it with
+one sourced report, a report whose patch or disclosure status is
+unknown, and a later CVE assignment. Verify that the original source
+and dates survive linking, and that the analyst can distinguish
+exploitation reported from the zero-day assessment. Add the exact
+verification commands to the vulnerability runbook. Continue recording
+what changed, why, live checks, failures, and the next open decision at
+each Phase 2 checkpoint. Keep the journal free of session transcripts
+and private operator details.
+
 ### 2026-11-14: First Supply Chain feed
 
 The GitHub malware endpoint returned no results for the Actions ecosystem.

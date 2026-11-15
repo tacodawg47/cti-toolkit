@@ -411,11 +411,13 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   mitigation, exploit evidence, and product matches. Use per-item
   checkmarks or Mark All Reviewed. Retain 90 days of history. Connect
   review items to cases and retain linked evidence when cases ship.
-- Support reports without a CVE. Confirm a zero-day when a tracked source
-  establishes active exploitation while a vendor patch, a public vendor
-  advisory, and a CVE are all absent. Record the evidence and date. Give it
-  a source identifier and link the CVE if one appears. Unknown patch or
-  disclosure status leaves a Possible Zero-Day lead.
+- Built 2026-11-14: Exploitation Reports supports manual intake of source
+  reports before CVE assignment. Preserve the source and its timeline
+  when linking a CVE. Confirm a zero-day when the source establishes dated
+  active exploitation while a vendor patch, public vendor advisory, and
+  CVE are all documented absent. Unknown status leaves a Possible Zero-Day
+  lead when the source reports active exploitation. Feed intake and
+  source corrections are follow-ups.
 - VulnCheck KEV (built 2026-11-10; the XDB index is paid, see above) and
   OTX pulses by CVE (built 2026-11-11) are done. AttackerKB is dropped:
   Rapid7 retired the public platform and API on 2026-08-18.

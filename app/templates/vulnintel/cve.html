@@ -69,6 +69,18 @@
   </p>
 </div>
 
+{% if exploitation_reports %}
+<section class="card" id="exploitation-reports">
+  <h3>Linked Exploitation Reports</h3>
+  <ul>
+    {% for report in exploitation_reports %}
+      <li><a href="{{ prefix }}/exploitation-reports/{{ report.id }}">{{ report.title }}</a>
+          <small>{{ report.assessment }} · {{ report.source_name }} · {{ report.reported_on }}</small></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 {% if microsoft %}
 <div class="card" id="microsoft-advisory">
   <h3>Microsoft Security Advisory</h3>

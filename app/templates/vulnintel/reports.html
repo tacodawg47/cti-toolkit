@@ -1,0 +1,65 @@
+{% extends "vulnintel/layout.html" %}
+{% block title %}Exploitation Reports | CTI Toolkit{% endblock %}
+{% block tab %}
+<section class="card" id="t-reports">
+  <h2>Exploitation Reports</h2>
+  <p>Save reports under their source. Link a CVE when its assignment is known.</p>
+  <p><a href="#record-report">Record a Report</a> ·
+    <a href="{{ prefix }}/views/zero-day">Zero-Day CVEs</a> ·
+    {% if unlinked %}<a href="{{ prefix }}/exploitation-reports">Show All Reports</a>
+    {% else %}<a href="{{ prefix }}/exploitation-reports?unlinked=true">Show Unlinked Reports</a>{% endif %}
+  </p>
+  {% if t.rows %}
+  <div class="tablescroll">
+    <table>
+      <tr><th>Report</th><th>Affected Product</th><th>Source</th><th>Reported</th><th>Assessment</th><th>CVE</th></tr>
+      {% for report in t.rows %}
+      <tr>
+        <td><a href="{{ prefix }}/exploitation-reports/{{ report.id }}">{{ report.title }}</a></td>
+        <td>{{ report.product }}</td>
+        <td>{{ report.source_name }}</td>
+        <td>{{ report.reported_on }}</td>
+        <td>{{ report.assessment }}</td>
+        <td>{% if report.linked_cve %}{% with id = report.linked_cve %}{% include "vulnintel/_cve_link.html" %}{% endwith %}
+            {% else %}Unlinked{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% include "vulnintel/_pager.html" %}
+  {% else %}<p class="muted">{{ "No unlinked reports." if unlinked else "No reports recorded." }}</p>{% endif %}
+</section>
+<section class="card" id="record-report">
+  <h2>Record a Report</h2>
+  {% if error %}<p class="err" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="{{ prefix }}/exploitation-reports#record-report">
+    {% for field, label in [("title", "Title"), ("product", "Affected Product"), ("source_name", "Source Name"),
+                            ("source_url", "Source URL"), ("source_ref", "Source Record ID (Optional)")] %}
+      <p><label>{{ label }}
+        <input type="{{ 'url' if field == 'source_url' else 'text' }}" name="{{ field }}"
+               maxlength="{{ limits[field] }}" value="{{ form.get(field, '') }}"{% if field != "source_ref" %} required{% endif %}>
+      </label></p>
+    {% endfor %}
+    <p class="muted"><small>Use a source record ID when a single URL covers multiple reports.</small></p>
+    <p><label>Source Report Date <input type="date" name="reported_on" value="{{ form.get('reported_on', '') }}" required></label>
+      <label>Exploitation Date (Optional) <input type="date" name="exploited_on" value="{{ form.get('exploited_on', '') }}"></label></p>
+    <p><label>Evidence Summary
+      <textarea name="evidence" maxlength="{{ limits.evidence }}" rows="4" required>{{ form.get("evidence", "") }}</textarea>
+    </label></p>
+    <p class="muted">Summarize what the source establishes. Assess patch, disclosure, and CVE status at the time of exploitation. Leave uncertain facts Unknown.</p>
+    <p><label>Exploitation
+      <select name="exploitation">
+        {% for value, label in exploitation_options.items() %}<option value="{{ value }}"{% if form.get("exploitation") == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </label></p>
+    {% for field, label in [("patch_status", "Vendor Patch"), ("advisory_status", "Public Vendor Advisory"), ("cve_status", "CVE Assignment")] %}
+      <p><label>{{ label }}
+        <select name="{{ field }}">
+          {% for value, name in states.items() %}<option value="{{ value }}"{% if form.get(field) == value %} selected{% endif %}>{{ name }}</option>{% endfor %}
+        </select>
+      </label></p>
+    {% endfor %}
+    <button type="submit">Save Report</button>
+  </form>
+</section>
+{% endblock %}

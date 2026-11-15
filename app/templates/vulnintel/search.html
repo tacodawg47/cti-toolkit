@@ -1,5 +1,6 @@
 {% extends "vulnintel/layout.html" %}
 {% block tab %}
+<p><a href="{{ prefix }}/exploitation-reports">Exploitation Reports</a></p>
 <form method="get" action="{{ prefix }}/search">
   <input type="text" name="q" value="{{ q | default('') }}" placeholder="CVE-2023-4966, or a nickname like CitrixBleed or Log4Shell" autofocus>
   <button type="submit">Look up</button>

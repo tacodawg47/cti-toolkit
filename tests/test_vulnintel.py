@@ -1931,6 +1931,89 @@ class ActionAndReviewTests(TempDbMixin, unittest.TestCase):
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM vuln_review_events").fetchone()[0], 0)
 
 
+class ExploitationReportTests(TempDbMixin, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        from fastapi.testclient import TestClient
+        from app.main import app
+
+        self.client = TestClient(app, base_url="http://127.0.0.1")
+        self.prefix = "/vulnerability-intelligence"
+        self.url = f"{self.prefix}/exploitation-reports"
+        self.report = {
+            "title": "Gateway investigation", "product": "Example Gateway",
+            "source_name": "Example Research", "source_url": "https://example.test/report",
+            "source_ref": "IR-42", "reported_on": "2026-11-14", "exploited_on": "2026-11-12",
+            "evidence": "The investigation recorded exploitation on November 12 and established the disclosure timeline.",
+            "exploitation": "reported", "patch_status": "absent", "advisory_status": "absent", "cve_status": "absent",
+        }
+
+    def test_report_survives_later_cve_link_and_duplicate_submission(self):
+        from unittest.mock import AsyncMock, patch
+        from app.modules.vulnerability_intelligence import reports
+
+        created = self.client.post(self.url, data=self.report, follow_redirects=False)
+        self.assertEqual(created.status_code, 303)
+        detail = created.headers["location"]
+        self.assertIn("Confirmed Zero-Day", self.client.get(detail).text)
+        self.assertIn("Gateway investigation", self.client.get(self.url, params={"unlinked": True}).text)
+        duplicate = self.client.post(self.url, data={**self.report, "evidence": "Different text"})
+        self.assertIn("Showing the original entry", duplicate.text)
+        self.assertNotIn("Different text", duplicate.text)
+        self.assertEqual(reports.page(1)["total"], 1)
+        cve_id = "CVE-2026-12345"
+        linked = self.client.post(f"{detail}/link", data={"cve_id": cve_id.lower()})
+        self.assertEqual(linked.status_code, 200)
+        self.assertIn("Confirmed Zero-Day", linked.text)
+        self.assertIn(self.report["evidence"], linked.text)
+        self.assertIn("2026-11-12", linked.text)
+        self.assertIn("No unlinked reports.", self.client.get(self.url, params={"unlinked": True}).text)
+        store.init_schema()
+        saved = reports.for_cve(cve_id)[0]
+        self.assertEqual(saved["source_ref"], "IR-42")
+        self.assertEqual(saved["cve_status"], "absent")
+        # The CVE route still uses its ordinary evidence pipeline.
+        with patch("app.modules.vulnerability_intelligence.routes.service.report", new_callable=AsyncMock) as fetch:
+            fetch.return_value = {"cve_id": cve_id, "cve": None, "sightings": {}, "microsoft": None,
+                                  "kev": [], "epss": None, "ssvc": None,
+                                  "priority": {"level": "N/A", "reasons": []}, "nvd": {}, "exploits": {},
+                                  "record": {}, "github": {}, "otx": {}, "feeds": {}, "actions": []}
+            cve_page = self.client.get(f"{self.prefix}/cve/{cve_id}")
+        self.assertIn("Linked Exploitation Reports", cve_page.text)
+        self.assertIn(detail, cve_page.text)
+        self.client.post(f"{detail}/link", data={"remove": "true"})
+        self.assertEqual(reports.for_cve(cve_id), [])
+        self.assertIn("Confirmed Zero-Day", self.client.get(detail).text)
+
+    def test_assessment_uses_explicit_evidence_and_date(self):
+        from app.modules.vulnerability_intelligence import reports
+
+        for number, (changes, label) in enumerate((
+            ({"patch_status": "unknown"}, "Possible Zero-Day"),
+            ({"advisory_status": "present"}, "Exploitation Reported"),
+            ({"exploited_on": ""}, "Possible Zero-Day"),
+            ({"exploitation": "unknown"}, "Exploitation Unconfirmed"),
+            ({"cve_status": "unknown"}, "Possible Zero-Day"),
+        )):
+            report_id, _ = reports.save({**self.report, **changes, "source_ref": f"IR-{number}"})
+            self.assertEqual(reports.get(report_id)["assessment"], label)
+
+    def test_invalid_input_and_cross_site_posts(self):
+        for changes in ({"source_url": "javascript:alert(1)"}, {"patch_status": "missing"},
+                        {"exploited_on": "2026-11-15"}, {"reported_on": "20261114"}):
+            response = self.client.post(self.url, data={**self.report, **changes})
+            self.assertEqual(response.status_code, 422)
+            self.assertIn("Gateway investigation", response.text)
+        headers = {"Sec-Fetch-Site": "cross-site"}
+        self.assertEqual(self.client.post(self.url, data=self.report, headers=headers).status_code, 403)
+        created = self.client.post(self.url, data=self.report, follow_redirects=False)
+        detail = created.headers["location"]
+        self.assertEqual(self.client.post(f"{detail}/link", data={"cve_id": "bad"}).status_code, 422)
+        self.assertEqual(self.client.post(f"{detail}/link", data={"cve_id": "CVE-2026-1234"},
+                                          headers=headers).status_code, 403)
+        self.assertEqual(self.client.get(f"{self.url}/999").status_code, 404)
+
+
 class SupplyChainTests(TempDbMixin, unittest.TestCase):
     def test_refresh_merges_aliases_and_retains_withdrawn_sources(self):
         from io import BytesIO

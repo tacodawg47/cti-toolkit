@@ -1,0 +1,45 @@
+{% extends "vulnintel/layout.html" %}
+{% block title %}{{ report.title }} | CTI Toolkit{% endblock %}
+{% block tab %}
+<section class="card">
+  <p><a href="{{ prefix }}/exploitation-reports">Exploitation Reports</a></p>
+  <h2>{{ report.title }}</h2>
+  {% if existing %}<p role="status">This source report was already saved. Showing the original entry.</p>{% endif %}
+  <p><strong>{{ report.assessment }}</strong> · {{ report.product }}</p>
+  <dl>
+    <dt>Source</dt>
+    <dd><a href="{{ report.source_url }}" target="_blank" rel="noopener noreferrer nofollow">{{ report.source_name }}</a>
+        {% if report.source_ref %} · {{ report.source_ref }}{% endif %}</dd>
+    <dt>Source Report Date</dt><dd>{{ report.reported_on }}</dd>
+    <dt>Exploitation Date</dt><dd>{{ report.exploited_on or "Unknown" }}</dd>
+    <dt>Recorded Locally</dt><dd>{{ report.created_at | day }}</dd>
+  </dl>
+  <h3>Evidence Summary</h3>
+  <p style="white-space: pre-wrap">{{ report.evidence }}</p>
+  <h3>Evidence at the Time of Exploitation</h3>
+  <dl>
+    <dt>Exploitation</dt><dd>{{ exploitation_options[report.exploitation] }}</dd>
+    <dt>Vendor Patch</dt><dd>{{ states[report.patch_status] }}</dd>
+    <dt>Public Vendor Advisory</dt><dd>{{ states[report.advisory_status] }}</dd>
+    <dt>CVE Assignment</dt><dd>{{ states[report.cve_status] }}</dd>
+  </dl>
+</section>
+<section class="card">
+  <h3>Linked CVE</h3>
+  {% if report.linked_cve %}
+    <p>{% with id = report.linked_cve %}{% include "vulnintel/_cve_link.html" %}{% endwith %} · Linked {{ report.linked_at | day }}</p>
+  {% else %}<p class="muted">No CVE linked.</p>{% endif %}
+  {% if error %}<p class="err" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="{{ prefix }}/exploitation-reports/{{ report.id }}/link">
+    <p><label>CVE ID <input type="text" name="cve_id" maxlength="40" value="{{ report.linked_cve or '' }}"
+                           placeholder="CVE-2026-12345" required></label></p>
+    <button type="submit">{{ "Update CVE Link" if report.linked_cve else "Link CVE" }}</button>
+  </form>
+  {% if report.linked_cve %}
+    <form method="post" action="{{ prefix }}/exploitation-reports/{{ report.id }}/link">
+      <input type="hidden" name="remove" value="true">
+      <button type="submit" class="small">Remove CVE Link</button>
+    </form>
+  {% endif %}
+</section>
+{% endblock %}
