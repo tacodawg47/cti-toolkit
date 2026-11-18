@@ -3,15 +3,22 @@
 {% if error %}<div class="card"><p class="err">⚠ {{ error }}</p></div>{% endif %}
 
 <div class="card">
-  <h3>Technology watchlist <small>({{ entries | length }})</small></h3>
+  <h3>Technology Watchlist <small>({{ entries | length }})</small></h3>
   <p class="muted">Follow a vendor, a product, or both. Matching ignores case. For example, "NetScaler" matches
     "NetScaler ADC". Entries are stored in the local database.</p>
   {% if entries %}
     <table>
-      <tr><th>Vendor</th><th>Product</th><th>Note</th><th>Added</th><th></th></tr>
+      <tr><th>Vendor</th><th>Product</th><th>Note</th><th>Context</th><th>Added</th><th></th></tr>
       {% for e in entries %}
         <tr>
           <td>{{ e.vendor or "Any" }}</td><td>{{ e.product or "Any" }}</td><td><small>{{ e.note }}</small></td>
+          <td><details><summary>Environment Details</summary>
+            <form method="post" action="{{ prefix }}/watchlist/context">
+              <input type="hidden" name="entry_id" value="{{ e.id }}">
+              {% with entry = e %}{% include "vulnintel/_watchlist_context.html" %}{% endwith %}
+              <button class="small" type="submit">Save Context</button>
+            </form>
+          </details></td>
           <td><small>{{ e.added_at | day }}</small></td>
           <td style="text-align: right;">
             <form class="inline-form" method="post" action="{{ prefix }}/watchlist/delete">
@@ -32,7 +39,12 @@
         <td style="border: 0; width: 1%;"><button type="submit" class="small">Add</button></td>
       </tr>
     </table>
+    <details style="margin-top: 8px;">
+      <summary>Optional Environment Details</summary>
+      {% with entry = {} %}{% include "vulnintel/_watchlist_context.html" %}{% endwith %}
+    </details>
   </form>
+  <p class="muted"><small>Environment details are stored locally for your reference. Vendor and product determine matches.</small></p>
 </div>
 
 <div class="card">

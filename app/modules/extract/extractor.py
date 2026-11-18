@@ -52,6 +52,7 @@ class Extracted(BaseModel):
     defanged: bool = False          # never seen in plain form
     note: str | None = None         # "md5", "private", "host of a URL", ...
     popular_rank: int | None = None  # Tranco rank when the host is a top site
+    context: list[str] = Field(default_factory=list)
 
 
 class Extraction(BaseModel):

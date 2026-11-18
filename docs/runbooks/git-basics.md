@@ -116,7 +116,170 @@ for the others. The first diff after staging shows what the commit will
 contain. The second shows what is still in your working folder. Review the
 full staged file list with `git diff --cached --stat` before committing.
 
+For the vulnerability catalog checkpoint, stage the Phase 2 roadmap
+sections and the new build note using the same hunk review:
+
+```bash
+git add -p -- ROADMAP.md docs/journal.md
+git add -- app/modules/vulnerability_intelligence/ app/templates/base.html app/templates/vulnintel/ docs/runbooks/vulnerability-intelligence.md tests/test_vulnintel.py
+git diff --cached --check
+git diff --cached --stat
+git commit -m "Add vulnerability catalog and Microsoft Patch Tuesday triage"
+git log -1 --oneline
+git status --short
+```
+
+For the action badges and review checkpoint, review the action and review
+hunks in the roadmap and journal, then stage the module, templates, runbook,
+and tests:
+
+```bash
+git add -p -- ROADMAP.md docs/journal.md
+git add -- app/modules/vulnerability_intelligence/ app/templates/vulnintel/ docs/runbooks/vulnerability-intelligence.md tests/test_vulnintel.py
+git diff --cached --check
+git diff --cached --stat
+git commit -m "Add vulnerability action badges and review history"
+git log -1 --oneline
+git status --short
+```
+
+For the Supply Chain checkpoint, stage the Phase 2 Supply Chain roadmap
+edits and the first build note in the journal:
+
+```bash
+git add -p -- ROADMAP.md docs/journal.md
+git add -- app/modules/vulnerability_intelligence/feeds/supply.py app/modules/vulnerability_intelligence/http.py app/modules/vulnerability_intelligence/routes.py app/modules/vulnerability_intelligence/store.py app/modules/vulnerability_intelligence/supply_chain.py app/templates/vulnintel/layout.html app/templates/vulnintel/supply_chain.html docs/runbooks/vulnerability-intelligence.md tests/test_vulnintel.py
+git diff --cached --check
+git diff --cached --stat
+git commit -m "Add supply chain malware advisory triage"
+git log -1 --format='%h %s'
+git status --short --untracked-files=all
+```
+
+The Exploitation Reports checkpoint was committed as `80082c7`.
+Stage the Phase 2 report entry in the roadmap and the new build and
+handoff entries in the journal. Check the staged diff before committing:
+
+```bash
+git add -p -- ROADMAP.md docs/journal.md
+git add -- app/modules/vulnerability_intelligence/reports.py app/modules/vulnerability_intelligence/routes.py app/modules/vulnerability_intelligence/store.py app/templates/vulnintel/cve.html app/templates/vulnintel/report.html app/templates/vulnintel/reports.html app/templates/vulnintel/search.html app/templates/vulnintel/view.html app/templates/vulnintel/views.html docs/runbooks/vulnerability-intelligence.md tests/test_vulnintel.py
+git diff --cached --check
+git diff --cached --stat
+git commit -m "Track exploitation reports before CVE assignment"
+git log -1 --oneline
+```
+
+The Edge and Perimeter checkpoint was committed as `f43350d`.
+Stage the view 8 roadmap hunk and its build entry in the journal.
+The other files can be staged in full:
+
+```bash
+git add -p -- ROADMAP.md docs/journal.md
+git add -- app/modules/vulnerability_intelligence/edge.py app/modules/vulnerability_intelligence/routes.py app/modules/vulnerability_intelligence/tables.py app/modules/vulnerability_intelligence/views.py app/templates/vulnintel/_cve_table.html app/templates/vulnintel/_edge_matches.html app/templates/vulnintel/cve.html app/templates/vulnintel/view.html app/templates/vulnintel/views.html docs/runbooks/vulnerability-intelligence.md tests/test_vulnintel.py
+git diff --cached --check
+git diff --cached --stat
+git commit -m "Add Edge and Perimeter vulnerability view"
+git log -1 --oneline
+git status --short --untracked-files=all
+```
+
+For the vulnerability triage checkpoint (`5682ee4`), stage the
+triage roadmap hunks and journal build entry separately:
+
+```bash
+git add -p -- ROADMAP.md docs/journal.md
+git add -- app/modules/vulnerability_intelligence/feeds/msrc.py app/modules/vulnerability_intelligence/routes.py app/modules/vulnerability_intelligence/service.py app/modules/vulnerability_intelligence/signals.py app/modules/vulnerability_intelligence/tables.py app/modules/vulnerability_intelligence/views.py app/templates/vulnintel/_cve_table.html app/templates/vulnintel/_filterbar.html app/templates/vulnintel/cve.html app/templates/vulnintel/view.html docs/runbooks/vulnerability-intelligence.md tests/test_vulnintel.py
+git diff --cached --check
+git diff --cached --stat
+git commit -m "Improve vulnerability triage signals and filters"
+git log -1 --oneline
+```
+
+For Exploited and Unfixed with Red Hat VEX (`ab42e64`), stage the
+view 7 roadmap hunk and its build entry. The automated commit used
+`git apply --cached` with only those two hunks. To repeat this by hand,
+use the interactive staging command below and leave the other edits
+unstaged.
+
+```bash
+git add -p -- ROADMAP.md docs/journal.md
+git add -- app/modules/vulnerability_intelligence/feeds/redhat.py app/modules/vulnerability_intelligence/feeds/__init__.py app/modules/vulnerability_intelligence/routes.py app/modules/vulnerability_intelligence/store.py app/modules/vulnerability_intelligence/views.py app/templates/vulnintel/_vendor_vex.html app/templates/vulnintel/_cve_table.html app/templates/vulnintel/cve.html app/templates/vulnintel/feeds.html app/templates/vulnintel/view.html app/templates/vulnintel/views.html docs/runbooks/vulnerability-intelligence.md tests/test_vulnintel.py
+git diff --cached --check
+git diff --cached --stat
+git commit -m "Add Exploited and Unfixed view with Red Hat VEX"
+git log -1 --oneline
+git status --short
+```
+
+### Push an approved checkpoint
+
+Name the approved commit explicitly so Git pushes that checkpoint even if
+another local commit has since been made. For the vulnerability evidence
+checkpoint, the command was:
+
+```bash
+git push origin bc38a5e:refs/heads/main
+```
+
+For the next approved checkpoint, replace `bc38a5e` with its commit ID.
+Confirm that the output reports the commit was sent to `main`.
+
+For the vulnerability catalog and Patch Tuesday checkpoint, these commands
+push the approved commit and confirm that both checks return the same ID:
+
+```bash
+git push origin 0d913cb:refs/heads/main
+git ls-remote --exit-code origin refs/heads/main
+git rev-parse 0d913cb
+```
+
+For the action badges and review checkpoint:
+
+```bash
+git push origin c16e07a:refs/heads/main
+git ls-remote --exit-code origin refs/heads/main
+git rev-parse c16e07a
+```
+
+The Edge and Perimeter push also included Supply Chain and Exploitation
+Reports. The remote and local checks returned the same commit ID.
+
+```bash
+git log --oneline c16e07a..f43350d
+git push origin f43350d:refs/heads/main
+git ls-remote --exit-code origin refs/heads/main
+git rev-parse f43350d
+```
+
 ## Undo cheat sheet
+
+### Save the Phase 2 Evidence Checkpoint
+
+The operator approved this checkpoint commit and push in the same request.
+The checkpoint includes the pending Phase 2 coverage work, passive C2
+feed browser, tests and documentation. Inspect the paths first. Stage only
+the reviewed project paths; do not add `.env`, `data/`, exports or session
+files. From the project root:
+
+```bash
+git status --short
+git diff --stat
+git add -- AGENTS.md CLAUDE.md ROADMAP.md app docs/journal.md docs/runbooks docs/research/2026-11-15-feedly-workflow-review.md docs/review/2026-11-17-phase2-coverage-audit.md tests
+git diff --cached --check
+git diff --cached --stat
+git -c core.hooksPath=.githooks commit -m "Advance Phase 2 coverage and unify vulnerability evidence"
+git rev-parse HEAD
+git push origin HEAD:refs/heads/main
+git ls-remote --exit-code origin refs/heads/main
+```
+
+The automated stage command enumerates the exact reviewed paths before
+passing them to `git add`. The equivalent grouped command above is only
+appropriate after reviewing everything in those directories. The commit
+command explicitly runs the transcript hook without changing local Git
+configuration. Never bypass that hook. Compare the remote SHA with the
+local commit SHA. New work after the push remains local until another
+commit and push are approved.
 
 ```bash
 git restore <file>          # throw away unstaged edits to a file

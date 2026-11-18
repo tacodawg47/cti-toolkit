@@ -11,7 +11,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -24,9 +24,11 @@ from .core.ratelimit import LIMITS, rate_limiter
 from .core.templating import templates
 from .core.web import reject_cross_site
 from .modules.enrich import base, registry, shodan
-from .modules.extract import extractor
+from .modules.extract import attack, attack_catalog, decode, extractor, markdown
 from .modules.extract import fetch as extract_fetch
 from .modules.extract import pdf as extract_pdf
+from .modules.extract.html import Document, parse_document
+from .modules.infrastructure import c2feed, routes as infra_routes
 from .modules.vulnerability_intelligence import routes as vulnintel_routes
 from .modules.vulnerability_intelligence import service as vulnintel_service
 from .modules.vulnerability_intelligence import store as vulnintel_store
@@ -53,6 +55,7 @@ def _display_path(p) -> str:
 async def lifespan(app: FastAPI):
     db.init_db()
     vulnintel_store.init_schema()    # module tables live beside the core ones
+    c2feed.init_schema()
     vulnintel_service.seed_aliases()  # shipped nicknames, added once, never overwritten
     allowlist.load()                 # Tranco top list, if data/tranco.csv exists
     base.set_client(base.new_client())
@@ -89,6 +92,7 @@ static_dir = BASE_DIR / "static"
 # startup; it just 404s static requests until there is something to serve.
 app.mount("/static", StaticFiles(directory=str(static_dir), check_dir=False), name="static")
 app.include_router(vulnintel_routes.router)
+app.include_router(infra_routes.router)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -121,7 +125,43 @@ async def enrich(request: Request, indicator: str = Form(...), force: bool = For
 
 @app.get("/extract", response_class=HTMLResponse)
 def extract_page(request: Request):
-    return templates.TemplateResponse(request, "extract.html", {})
+    return _extraction_page(request, {})
+
+
+def _extraction_page(request: Request, context: dict, document: Document | None = None, *, status_code: int = 200):
+    catalog = attack_catalog.load()
+    context.update(catalog_version=catalog.get("version"), decode_modes=decode.MODES)
+    if document is not None:
+        context["result"] = extractor.extract(document.text)
+        for item in context["result"].by_type("hash"):
+            item.context = document.hash_context.get(item.value, [])
+        document.text = document.text[:extractor.MAX_TEXT_CHARS]
+        context["attack_findings"] = attack.extract(document, catalog)
+        context["plain_list"] = extractor.plain_list
+        context["type_order"] = extractor.TYPE_ORDER
+    return templates.TemplateResponse(request, "extract.html", context, status_code=status_code)
+
+
+@app.post("/extract/decode", response_class=HTMLResponse)
+async def decode_text(request: Request, encoded: str = Form(""), mode: str = Form("base64")):
+    reject_cross_site(request)
+    context = {"encoded": encoded[:decode.MAX_INPUT], "decode_mode": mode}
+    try:
+        decoded = decode.decode(encoded, mode)
+    except ValueError as exc:
+        context["error"] = str(exc)
+        return _extraction_page(request, context)
+    context.update(decoded=decoded, source=f"Local decoding ({decode.MODES[mode]})")
+    return _extraction_page(request, context, markdown.parse_document(decoded))
+
+
+@app.post("/extract/refresh-attack")
+async def refresh_attack(request: Request):
+    reject_cross_site(request)
+    error = await attack_catalog.refresh()
+    if error:
+        return _extraction_page(request, {"error": error}, status_code=502)
+    return RedirectResponse("/extract", status_code=303)
 
 
 @app.post("/extract", response_class=HTMLResponse)
@@ -138,7 +178,7 @@ async def extract(
     """
     reject_cross_site(request)
     ctx: dict = {"text": text, "url": url}
-    body: str | None = None
+    document: Document | None = None
 
     if file is not None and file.filename:
         # Read one byte past the cap: if we get it, the file is too big, and
@@ -147,29 +187,29 @@ async def extract(
         if len(data) > MAX_UPLOAD_BYTES:
             ctx["error"] = f"file too large (over {MAX_UPLOAD_BYTES // (1024 * 1024)} MB)"
         elif data[:5] == b"%PDF-" or (file.filename.lower().endswith(".pdf")):
-            body, err = extract_pdf.pdf_text(data)
+            document, err = extract_pdf.pdf_document(data)
             if err:
                 ctx["error"] = err
             ctx["source"] = f"PDF {file.filename}"
         else:
-            body = data.decode("utf-8", errors="replace")
+            body = data.decode("utf-8-sig", errors="replace")
+            if file.filename.lower().endswith((".htm", ".html")):
+                document = parse_document(body)
+            else:
+                document = markdown.parse_document(body)
             ctx["source"] = f"file {file.filename}"
     elif url.strip():
-        body, kind, err = await extract_fetch.fetch_text(url.strip())
+        document, kind, err = await extract_fetch.fetch_document(url.strip())
         if err:
             ctx["error"] = err
         ctx["source"] = f"{kind or 'page'} at {url.strip()}"
     elif text.strip():
-        body = text
+        document = markdown.parse_document(text)
         ctx["source"] = "pasted text"
     else:
         ctx["error"] = "Paste some text, enter a URL, or choose a file."
 
-    if body is not None:
-        ctx["result"] = extractor.extract(body)
-        ctx["plain_list"] = extractor.plain_list
-        ctx["type_order"] = extractor.TYPE_ORDER
-    return templates.TemplateResponse(request, "extract.html", ctx)
+    return _extraction_page(request, ctx, document)
 
 
 @app.get("/health", response_class=HTMLResponse)

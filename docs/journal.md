@@ -46,6 +46,763 @@ The vetting record is in docs/runbooks/vetting-a-dependency.md.
 
 ## Build narrative
 
+### 2026-11-17: Phase 2 checkpoint prepared for commit and push
+
+The operator authorized one checkpoint commit and its push before the next
+Phase 2 extraction pass. The pending working tree includes earlier approved
+AI/ML and OT views, passive C2 feed browsing, Trending Attention, sourced
+sightings, CVE evidence presentation, Microsoft monthly fallback, optional
+watchlist context, local decoding/PDF repair, six vendor connectors, and
+the F1-F3 evidence corrections. Include their tests, source reviews,
+roadmap and runbooks together. Proposed message:
+`Advance Phase 2 coverage and unify vulnerability evidence`.
+
+Reviewed 88 changed/new/deleted paths, including removal of the superseded
+GitHub-only table template. Scanned the candidate files without printing
+matching values for secret-like tokens, private keys, personal home paths,
+runtime databases and conversation exports. No candidate was flagged.
+Verified the intended GitHub repository without exposing remote credentials.
+The pre-commit transcript guard is retained. The post-push result and
+commit identifier will be recorded in the next working entry. Continue
+with deterministic ATT&CK procedure layouts after this checkpoint.
+
+### 2026-11-17: Fixed Phase 2 audit findings F1-F3
+
+The operator approved fixing all three consistency findings. Clarified
+that ATT&CK procedures belong to Phase 2 report extraction: preserve a
+report's technique, tactic and observed procedure, not generate actor
+attribution or hunts. Supply Chain's npm and GitHub Actions first slice
+remains in Phase 2. Other ecosystems, ordinary advisory backfill, package
+history, lockfiles and package watchlists retain their earlier post-v1
+scope. No additional feature was deferred by this clarification.
+
+`evidence.py` defines the shared positive-source rules and derived SQL
+views. Catalogs, SSVC active, rolling exploitation sightings, the current
+per-CVE sighting assessment, ransomware.live, RVM and positive linked
+manual reports feed the same membership contract. The report service
+uses those facts before priority/actions are computed. A report-only CVE
+opens locally. Unknown reports do not promote it. Linking produces a
+review event and invalidates counter state. Unlinking removes the current
+assertion and preserves the original report and event history. Another
+independent source continues to count. Positive per-CVE lookups survive
+cache expiry and errors; a later successful corrected response can
+remove their own assertion. This is not a full sighting-history feature.
+
+The OT source now supplies shared fix/mitigation flags, CVSS fallback,
+watchlist product pairs and review evidence. Generic vendor products
+also fill shared display and filter gaps. A fallback displays an actual
+vendor/product pair from one source instead of independently taking
+alphabetic minima. Edge and Perimeter applies its curated matches to
+these additional advisory facts. The source's product/version scope is
+retained. The badges remain leads to check against that scope.
+
+KEV records retain typed date context and validated report-date fields.
+EUVD's explicit exploitedSince can supply an exploitation observation;
+datePublished cannot. Project Zero discovery and patch dates remain
+context, while its explicit zero-day classification remains confirmed.
+Catalog addition, source-report and Microsoft positive-revision dates
+retain their meanings. The first-date summary names the meaning. Legacy
+EUVD/Project Zero rows with ambiguous dates stay unknown until a source
+refresh supplies typed data. No dates were invented during migration.
+SQLite can normalize February 30 into March, so calendar validation is
+explicit. Publication/patch fallback and malformed dates cannot create
+the early-exploitation lead. A linked confirmed manual report qualifies
+for Zero-Days without requiring missing CVE publication metadata.
+
+The additive migration preserves existing records and review history.
+It adds date metadata/validated fields, a current sighting-assessment
+table, and four derived views. View definitions are replaced in one
+transaction at startup so existing databases get the current query rules.
+Existing newly connected OT/report facts can appear as first tracked in
+Since Last Review; that time describes local tracking, not vendor release.
+
+Regression tests cover report-only local rendering; P1/Hunt and view
+membership; unlinking; independent surviving sources; sighting, lookup,
+ransomware and RVM exclusions; cached SSVC/counters; OT scope, scores,
+watchlist/filter/review behavior and corrected advisory membership;
+paired product fallbacks; EUVD explicit and fallback dates, invalid dates,
+legacy rows and Project Zero patch/discovery context. A shared test
+fixture copied a CISA record to Shadowserver with a new date but retained
+CISA's typed date. Corrected the fixture to specify its own source-report
+date rather than discarding provenance in production code.
+
+The audit probe prints the expected fixed results for F1-F3. The full
+suite ran 393 tests with 392 passing and one missing-pypdf-path skip.
+Twenty-six live page/filter checks passed after migration, including a
+real OT CVE with Patch/Mitigate evidence. The app was restarted on
+127.0.0.1 with the final schema and code. Source feeds were not refreshed
+and no external report, credential or indicator was uploaded.
+
+Live data exposed avoidable query cost from repeatedly evaluating date
+JSON inside membership checks. Added a date-free membership view generated
+from the same positive-source conditions, and validate/store date fields
+once at ingestion. The membership count fell from roughly 0.7 seconds
+to 0.036 seconds in local checks. Full navigation profiling remains parked;
+these changes address work introduced by this evidence integration.
+Final observations: Known Exploited membership count 0.033 seconds;
+Zero-Days count 4.214 seconds; first dashboard GET 23.27 seconds; Likely
+Next 3.00 seconds; Zero-Days page 7.20 seconds; Watchlist-filtered catalog
+1.64 seconds; OT detail 0.23 seconds. All returned HTTP 200. These single
+local observations are not benchmark claims. The first dashboard is still
+slow. Keep the performance issue open, including counter calculation,
+matching and pinned-view hydration; do not describe the module as fully
+optimized because membership improved. Two immediate warm dashboard
+requests took 4.46 and 4.53 seconds, both HTTP 200. Treat cold counter
+calculation and repeated navigation as separate measurements at the
+parked performance review.
+
+Roadmap, runbook, audit-resolution note and both agent status summaries
+are updated. ATT&CK layout gaps and other Phase 2 scope decisions remain
+open. No dependency was added. No git operation, commit or push was run.
+
+### 2026-11-17: Phase 2 coverage audit and decoder expansion parked
+
+Audited the current working tree against the entire Phase 2 roadmap,
+later scope decisions, journal, runbooks, implementation and tests. The
+full report is
+[Phase 2 coverage audit](review/2026-11-17-phase2-coverage-audit.md).
+This pass changes documentation and adds an offline audit probe. It does
+not fix application behavior, refresh feeds, install dependencies, restart
+the app, or run git operations. No commit or push was performed.
+
+All 15 view entry points exist, including All Vulnerabilities, but that
+does not close the phase. The strongest findings are cross-feature gaps:
+
+- A linked manual report can make a detail show Exploitation Reported and
+  Confirmed Zero-Day while priority remains P5 and the action Monitor.
+  Known Exploited, Zero-Days and review events omit that linked evidence.
+- A sighting-only exploitation report can produce Hunt while its CVE is
+  still included in Exploit Leads Without Reported Exploitation.
+- An OT CSAF fix and workaround give Patch/Mitigate and CVSS 8.8 on the
+  detail, but the shared row gives Monitor without a score. The exact
+  vendor/product is absent from watchlist matching and review events.
+- EUVD's publication fallback is excluded from the detail's first
+  exploitation date but can still drive Possible Zero-Day membership.
+- HTML tables recover procedure text, but a nearby HTML heading loses
+  tactic context. HTML lists and prose produce IDs without procedures.
+  The remaining grids, pre/br blocks, ID-bearing headings and aligned PDF
+  procedures still need the deterministic extractor work promised by the
+  2026-11-09 survey. Real publisher fixtures need separate validation.
+
+These observations are reproducible with
+`python -B -m tests.phase2_coverage_probe` using the project venv. The
+probe uses synthetic data and a temporary database, and imports the suite's
+network refusal guard. It prints observations rather than asserting that
+incorrect behavior is desired. Future fixes should add regression tests
+for the corrected contracts, including corrections and unlinking.
+
+The existing suite ran 381 tests, with 380 passing and one skipped. Thirty
+read-only local page/filter requests returned HTTP 200. These checks show
+that entry points work and existing fixtures pass, not that the missing
+cross-feature requirements are covered. No Linux runtime or original
+MuddyWater PDF was revalidated. No external source review was repeated.
+
+Public-data aggregates showed 22,742 NVD records and 425,847 CVE List
+records. Of the 24,593 IDs in the current Exploit Leads query, 22,900 have
+no complete nonblank product pair in the NVD/CVE List/KEV source tables.
+That is a source-table measure, not a complete census of all evidence.
+Red Hat and SUSE still report 25,394 and 28,812 pending changed documents.
+Their healthy connector status is not complete historical coverage.
+
+Single-pass GET timings were 7.789 seconds for the dashboard, 3.355 for
+All Vulnerabilities and 2.571 for Likely Next. Do not infer a cause from
+those numbers. Keep the existing post-v1 performance profiling task and
+decide HTMX partial reload scope separately.
+
+Updated stale roadmap and runbook summaries, including current navigation,
+Trending Attention, deadlines, evidence classes and zero-day wording.
+Refreshed status in AGENTS.md and CLAUDE.md without changing the working
+agreement. Broader Supply Chain, scheduler, alerts, saved extractions,
+case links, Sigma coverage and exploitation evidence strength retain their
+existing deferrals. GreyNoise per-CVE, CVEDB, extension IDs, older NVD
+backfill and partial reloads need explicit scope disposition, not an
+assumption that they are done.
+
+Recommended next implementation batch: F1-F3 in the audit. Share the
+positive-exploitation evidence contract, make OT remediation/products
+available to shared consumers, and retain date meaning across inference
+and display. Then finish the remaining ATT&CK procedure layouts. The
+decoder is sufficient for now; its broader expansion is explicitly parked
+with candidates and acceptance checks below. Phase 2 remains open.
+
+### 2026-11-17: Local decoding, wrapped PDF hashes, and vendor coverage
+
+Completed the three requested Phase 2 slices together. No new dependency,
+AI feature or phase transition. Existing work from earlier passes was
+preserved. No commit or push was performed in this pass.
+
+The extractor has an explicit Decode Text form. `extract/decode.py`
+handles plain Base64 UTF-8, PowerShell UTF-16LE, Base64 with gzip/zlib/raw
+deflate, character-code lists, and JWT header/payload JSON. The original
+input and decoded text stay in the response. Decoded commands are not
+executed; the normal indicator extractor processes the output. JWT
+signatures are not verified. Input and decompressed-output limits are
+enforced, including truncated or concatenated compressed streams.
+
+`extract/pdf.py` now returns a Document with per-hash context. It joins
+hex fragments over short line or page boundaries, skips numeric footers
+and repeated hash headings, and retains recent headings, detection labels
+and trailing annotations. Two adjacent valid MD5s are not joined without
+an explicit SHA256 heading. Upload and URL-fetch paths share the repair.
+The result exposes PDF Row Context rather than losing the reason a hash
+appeared in the report. This is best-effort text-layer repair. Scanned
+PDFs and arbitrary multi-column row reconstruction are outside the slice.
+The original Trend Micro report was not available locally; tests use
+synthetic text and a real in-memory PDF, not a claim of testing that report.
+
+Vendor coverage is in `feeds/vendors.py` with `vendor_notices.py` and
+two local SQLite tables. Vendor Updates is a separate tab linked from
+Patch Tuesday and Feeds. It filters publisher, publication month and
+Watchlist, paginates notices, and links their CVEs. Fortinet follows the
+CSAF links embedded in its RSS; Palo Alto reads its documented JSON list;
+Cisco and Chrome retain public feed references; Red Hat and SUSE process
+their advisory CSAF change indexes. Microsoft and OT views keep their
+existing entry points. No Cisco OAuth account or new key is needed.
+
+Structured fixes and scoped workarounds flow into shared table actions,
+CVE detail, fallback CVSS, optional product matching, and Since Last
+Review. A plain feed reference does not assert a patch or exploitation.
+Corrections replace evidence for the advisory revision rather than
+leaving removed CVE links behind. A known vendor-only CVE opens locally.
+The detail names the scoring publisher and displays original version
+scope. Long scope lists show the first 100 entries and direct the analyst
+to the original notice; full evidence remains stored locally.
+
+Live checks found and corrected several assumptions that synthetic
+fixtures initially missed:
+
+- Fortinet's public RSS redirects to its file host. Use the canonical
+  HTTPS filestore URL directly. Its CSAF dates omit timezones, so retain
+  dates rather than manufacturing UTC times. RSS revision dates determine
+  whether a linked advisory needs another download.
+- Cisco RSS dates also omit timezones. Preserve the date. Remove feed
+  tracking query strings from source links.
+- SUSE publishes some JSON with invalid UTF-8 prose. Replace undecodable
+  bytes with replacement symbols and show a source warning, rather than
+  guessing cp1252 or discarding the complete advisory. One real document
+  is 46,169,553 bytes. Use a 64 MB cap for SUSE and 32 MB elsewhere.
+- Red Hat and SUSE regenerate old advisories in bulk. Their latest
+  change timestamps do not mean latest vulnerability publication. Process
+  newer numbered advisory IDs first within the changed set. Each refresh
+  takes up to 50 documents from the last 45 days and reports pending
+  batches. Large historical continuation remains open and is not silently
+  presented as complete coverage.
+
+Validation includes new offline tests for all decoder formats, compression
+limits, malformed inputs, browser cross-site refusal, escaped decoded HTML,
+PDF repair and ambiguity, all six source formats, source identity and host
+validation, revisions, retry/resume, and consistent actions across views.
+Live POSTs tested decoding and PDF upload. Vendor Updates, Watchlist
+filter, Feeds, Patch Tuesday and CVE detail from every publisher returned
+HTTP 200. Final validation: 381 tests ran, 380 passed and one was skipped
+because pypdf is installed, making the missing-pypdf branch inapplicable.
+All six vendor statuses were error-free. Local totals were 377 notices
+referencing 3,674 distinct CVEs: Fortinet 50, Palo Alto 25, Cisco 50,
+Chrome 15, Red Hat 100 and SUSE 137. Red Hat still reported 25,394
+additional changed documents and SUSE 28,812. These are pending batches,
+not imported history. Chrome notice identity includes year/month/path
+because Blogger can reuse filenames in different months. A regression
+test and local normalization preserve distinct posts. Fortinet's unchanged
+revision test confirms that a second refresh skips CSAF downloads.
+Runbooks contain the exact repeatable commands.
+
+Phase 2 remains open. Next useful work is a coverage audit to distinguish
+remaining Phase 2 requirements from parked improvements. Chrome's
+explicit exploitation statements, historical NVD coverage, and UI reload
+work remain open. The full NVD download needs a separate scope decision.
+Original-source exploitation evidence strength remains parked as agreed.
+Do not jump to later phases because these three slices are built.
+
+### 2026-11-17: Microsoft monthly fallback and Phase 2 workflow audit
+
+The Microsoft refresh now reads recent monthly CVRF releases alongside
+the per-CVE CSAF index. The cutoff is the start of the oldest month in
+the existing initial 45-day window. Read the public update metadata
+and download a month only when its revision changes. Construct the
+Microsoft API URL from a validated release ID. A data-supplied link
+does not select a download host. The monthly files are about 19 MB for
+November and 32 MB for October in the checked snapshot.
+[Microsoft API documentation](https://github.com/microsoft/MSRC-Microsoft-Security-Updates-API)
+[Monthly API schema](https://api.msrc.microsoft.com/cvrf/v3.0/swagger/v3/swagger.json).
+
+Each CVE keeps one advisory. Existing per-CVE CSAF records take precedence
+over monthly records even when the monthly document timestamp is newer.
+If a per-CVE record arrives later, it replaces the monthly fallback.
+Monthly updates are applied in one transaction with their revision
+checkpoint. A removed monthly entry removes only the corresponding
+fallback and its Microsoft exploitation listing. Malformed downloads
+preserve the previous snapshot and checkpoint. October includes
+ADV260001, which is outside this CVE view and is skipped.
+
+The parser preserves product IDs on remediations and converts HTML
+description fields to plain text. Blank Release Notes placeholders
+leave vendor-fix status unknown. A URL or fixed build, or substantive
+fix guidance, provides evidence for the scoped fix. The UI links the
+monthly source and shows Customer Action Required when the document
+supplies it. Existing NVD and CNA evidence continues to contribute its
+own patch references on a CVE page.
+
+The first live refresh encountered HTTP 502 from the per-CVE index.
+The refresh was corrected to attempt both sources independently.
+The retry completed with 5,811 Microsoft advisories, including 3,068
+monthly fallback records across the October and November releases.
+All seven missing November 10 CVEs were loaded. Four belong in
+Patch Tuesday and three Azure Linux CVEs belong in Also Released.
+The live November views had 1,093 scheduled and three Also Released
+records, covering all 1,096 release-day records from the earlier
+comparison. Each of the seven CVE detail pages displayed the monthly
+source and evidence. Product-specific remediation was checked on
+CVE-2026-109467.
+
+The workflow audit found that the previously agreed optional watchlist
+context was still missing. It is now implemented and editable for old
+and new watches. The fields are version, exposure, business importance,
+owner, and last-confirmed date. They are optional local reference fields.
+The existing vendor and product matching rules still determine watchlist
+membership. Old entries migrate with blank context. An invalid date or
+cross-site update leaves the entry intact. These behaviors are covered
+by offline store and route regressions.
+
+Ran 363 offline tests with one skip. Thirty live GET checks passed across
+the dashboard, all 15 views, feeds, watchlist, review inbox, exploitation
+reports, supply chain, and representative filters and pagination. The
+live watchlist form rendered all optional fields. Writes and validation
+were verified with temporary-database tests to preserve the live watches.
+The seven monthly CVE details took 0.05 to 0.20 seconds in this run.
+The remaining Phase 2 scope includes
+the decode helper and wrapped PDF hashes, grid and PDF procedure
+extraction, additional vendor feeds, and older CVE product coverage.
+Scheduled refresh, document saving, queued bulk enrichment, and alerts
+depend on the Phase 5 foundation. The later Supply Chain backfill,
+package watchlist, lockfiles and remaining ecosystems stay in their
+existing post-v1 scope. Phase 2 remains open.
+
+### 2026-11-16: November Patch Tuesday check and Markdown ATT&CK evidence
+
+Check the November release against Microsoft's public monthly CVRF and
+per-CVE CSAF data. The monthly file had 1,646 CVEs, with 1,096 whose
+earliest listed revision was November 10. The first local import had
+1,089 of those release-day CVEs. The old Triage rule showed 827 of the
+1,089. It hid CVE-2026-112745 even though Microsoft assessed exploitation
+as More Likely. Microsoft's aggregate rating for that CVE was Important
+while its CVSS band was Medium. The old table displayed the CVSS band
+under a combined severity heading.
+
+The advisory parser keeps Microsoft's own aggregate rating separately
+from the CVSS score and band. Older stored rows re-fetch once at the
+same revision if they lack that field. Triage now includes disclosed
+and More Likely cases and sorts reported exploitation first. Microsoft
+Important applied to 1,025 of the first 1,089 rows, and using it as a
+trigger made Triage and Show All identical. Keep the rating visible
+and use Microsoft Critical and CVSS High or Critical as severity gates.
+Disclosure and forecast are triage reasons. A Hunt action still requires reported
+exploitation or indexed public exploit code. CVE-2026-124194 was the
+first row in the live November view. Its source rates it Moderate,
+reports exploitation, names six affected products, and scopes three
+fix entries to two products each. Scoped workaround rendering was
+checked with an offline fixture.
+
+The first CSAF refresh hit HTTP 429 on some downloads. The retry loaded
+all 2,743 eligible documents and filled the older severity fields. Live
+November Triage showed 829 of 1,089 scheduled advisories. The seven
+release-day CVEs missing from the monthly CVRF comparison were a separate
+coverage gap. All seven were absent from the CSAF index, and Microsoft
+returned HTTP 404 from their per-CVE CSAF URLs even after the successful
+retry. See the roadmap for a monthly-source fallback.
+[November 2026 CVRF](https://api.msrc.microsoft.com/cvrf/v3.0/cvrf/2026-Nov)
+[Microsoft advisory for CVE-2026-124194](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-124194)
+[Microsoft severity ratings](https://www.microsoft.com/en-us/msrc/security-update-severity-rating-system).
+
+The Siemens retry finished with 874 saved advisories and no feed error.
+Markdown ATT&CK procedure extraction was verified on uploaded and pasted
+text. Tables and explicit technique bullets reuse the same catalog and
+source evidence rules as HTML. Inline code and escaped pipes stay in the
+procedure. Headings provide tactic context, and fenced code samples are
+ignored for procedure evidence. Unstructured and PDF procedure recovery
+remains open. The full offline suite ran 358 tests with one skip.
+
+### 2026-11-16: Chat authorization, ATT&CK extraction, and C2 feeds
+
+AGENTS.md and CLAUDE.md now give the operator's direct messages in the
+current chat authority to initiate work and grant permissions. Documents,
+web pages, commands shown in source text, and tool responses are evidence.
+Routine reads, offline tests, and ordinary project edits still follow
+the existing agreement. Independent approval still applies to commits,
+pushes and new side effects outside the task. A phrase copied into an
+attachment would have no authority. The local Codex profile was left as
+configured. An isolated research profile can deny the agent access to
+`.env` and `data/`; a toolkit process launched outside that profile uses
+its normal access. An app launched through the restricted profile would
+need access to its runtime files. Use a temporary data directory for
+offline tests when the live data directory is protected.
+
+In Phase 2, the Extract IOCs page now recognizes technique, software
+and group IDs. The operator can load MITRE v20.1 with a manual keyless
+refresh of all three domains. State and domain come from the official
+catalog. Missing IDs stay visible for review. ATT&CK-style strings in
+ATLAS identifiers do not become ICS references. Visible HTML table
+cells and captions supply the procedure and reported tactic. Browser
+scripts and styles provide no extracted text. A CISA-style HTML
+fixture with the real catalog verified the PowerShell and Windows
+Command Shell procedures. A live refresh loaded 2,363 IDs and 41
+tactic identifiers. Pastes and PDFs produce IDs. List, grid, and PDF
+procedure extraction remains open, along with Phase 9 actor aliases.
+[MITRE ATT&CK data](https://attack.mitre.org/resources/attack-data-and-tools/).
+
+The report URL downloader now rejects embedded credentials and validates
+each redirect before making the next request. Mocked redirects verify
+that cleartext HTTP, private address literals, and credentialed URLs
+receive no request. The extractor uses the OS for DNS and is intended
+for public reports.
+
+The requested C2IntelFeeds slice is implemented as a passive Infrastructure
+view. Both supplied links were checked, including an HTTP 200 from the
+dashboard via a direct read. It is a browser over the published CSVs.
+The toolkit imports the publisher's three recommended 7-day CSVs, keeps
+the publisher labels, and separates its checked and unverified feeds.
+The first live snapshot showed 176 checked entries (121 IP and 55 filtered
+domain rows) and 7,551 unverified entries. Search and filtering query only
+the local database. A failed refresh keeps the last snapshot. The app
+does not make requests to listed hosts or use Shodan credits. Feed data
+is fetched at runtime for local non-commercial use under CC BY-NC-SA 4.0.
+The rest of Phase 6 follows the roadmap.
+[C2IntelFeeds](https://github.com/drb-ra/C2IntelFeeds)
+[Publisher dashboard](https://drb-ra.github.io/c2intel-web/).
+
+For the later walkthrough, start with the publisher's published fingerprints
+and exclusions, then trace one row back to the indexed evidence. Modat
+supplies the current indexed data. Judge how much each fingerprint narrows
+the population, what may share it, and what an independent source would
+need to corroborate. Some signatures in the publisher's documentation have
+redacted criteria. The Phase 6 research notes explain how to design and
+evaluate our own passive hunts.
+
+Ran 357 offline tests with one skip. Repeatable commands are in the IOC
+extraction and infrastructure runbooks. Also resumed the earlier Siemens
+import. It now has 694 saved advisories, up from 336. The publisher
+returned HTTP 429 partway through the retry, so the import remains
+partial and the next refresh can resume.
+
+### 2026-11-16: Trending Attention, sourced sightings, and First Steps
+
+View 14 reads Intruder cvemon's public hourly RSS. The published
+rank and Hype Score describe social media attention. The shared
+CVE table shows exploitation separately from this signal. The
+parser keeps four fields: CVE ID, rank, score, and snapshot date.
+It discards RSS text, links, and attachments. Source links use
+the fixed Intruder host and validated CVE IDs. A malformed feed
+keeps the last good snapshot. A snapshot more than three hours
+old carries an age warning. Monthly and other historical trends
+are outside the scope of this snapshot.
+[Publisher feed documentation](https://cvemon.intruder.io/feeds).
+
+The public Vulnerability-Lookup refresh now retains an attribution,
+date, count, and link when provided for records marked exploited.
+The row count describes received records. The live source includes
+social and catalog links, so a large count can reflect repeat
+reporting. The Shadowserver Source filter uses the source marker or
+the Shadowserver domain. History still covers the 48-hour import
+window. Legacy summaries keep their counts until the next refresh.
+
+First Steps uses the current CVE fields and links to the evidence.
+Reported exploitation triggers an exposure and hunt step. Patch
+and explicit Red Hat no-fix evidence use their named source and
+product scope. The fallback says patch status unknown. Public
+exploit references, Exploit-DB, XDB, and Metasploit exploit modules
+can trigger a behavior review step. This adds no AI or dependencies.
+
+During the credential review, NVD recent changes and VulnCheck KEV
+were found to use the bulk downloader's default redirect behavior.
+Both authenticated requests now refuse redirects. An offline
+regression uses dummy keys and verifies that the redirected host
+receives no requests. The toolkit uses vendor API keys with their
+respective services, and enrichment searches send the selected IOC.
+Loopback binding limits inbound access. The active Codex session
+allowed broad file reads with restricted shell networking, including
+read access to the workspace as configured. Git ignore does not
+restrict reads. The review used configuration and code without
+printing credential values or modifying the Codex profile.
+
+The running app loaded 10 ranked CVEs and rendered First Steps on
+CVE-2025-29927. The 48-hour sightings refresh saved 1,257 aggregate
+rows and 105 exploitation source rows, 74 with Shadowserver
+attribution. One oversized upstream page was skipped and the
+snapshot status says so. The offline suite ran 354 tests with one
+skip. Next open Phase 2 work includes remaining watchlist and
+vendor coverage checks, the extractor work in the Phase 2 handoff,
+and staged follow-ups with their dependencies.
+
+### 2026-11-15: Direct Siemens and Schneider Electric advisories
+
+Extend the existing OT & ICS view with public direct vendor feeds.
+Prior CISA data remains in the database. Each source has its own
+refresh and status. Siemens publishes a ROLIE JSON index with 874
+advisory entries in the checked snapshot. Schneider's public
+directory had 294 indexed paths, including security bulletins with
+the SESB prefix. The first CISA refresh after this change reloads
+the public archive to recover publisher links from previously stored
+advisories. The parser now accepts published CISA IDs with revision
+suffixes and the legacy ICSA-16-231-01-0 path.
+[CISA CSAF](https://github.com/cisagov/CSAF)
+[Siemens ProductCERT advisory policy](https://cert-portal.siemens.com/advisory-policy/)
+[Schneider Electric CSAF directory](https://www.se.com/.well-known/csaf/).
+
+The importer validates an indexed filename and pins the document
+request to the configured publisher. It checks the identity in the
+document before replacing a prior revision. Vendor notices and
+selected details are fetched at runtime for the local database.
+
+Group a CISA advisory under a direct vendor advisory only when CISA
+links to a single recognized vendor ID and both documents contain
+the CVE. The vendor entry shows its own evidence first. Expand
+CISA Advisory Coverage for CISA's date, product scope, guidance
+and original link. Keep separate entries for other advisories on
+the same CVE. The CISA Industrial and Medical filters and the
+publisher filters use source membership even when entries group.
+
+The unpaced temporary test hit HTTP 429 from Siemens after
+708 saved advisories. The importer now paces Siemens requests
+and stops after a batch returns 429. A retry resumes with missing
+or newer revisions. The Schneider test completed independently.
+Regression tests cover the stop and retry behavior, non-publisher
+ROLIE links, exact publisher grouping, and separate advisories that
+share a CVE.
+
+The running app loaded 3,999 CISA advisories and 283 Schneider
+advisories with CVEs. The Schneider filter returned data. The detail
+page for CVE-2025-6625 showed Schneider SEVD-2025-224-05 with CISA
+ICSA-26-260-04 under CISA Advisory Coverage. The first live Siemens
+refresh hit HTTP 429 at the index. A later retry loaded 336 Siemens
+advisories before another 429. The Siemens filter and SSA-104023 on
+CVE-2026-0266 both worked with the saved data. The remaining import
+can resume from Feeds > Refresh Siemens ProductCERT after the
+publisher limit clears. The offline suite ran 350 tests with one skip.
+
+### 2026-11-15: CISA OT, ICS, and Medical, view 13
+
+The operator chose **OT & ICS** for the view title. It stays
+pinnable under Vulnerability Intelligence with Industrial Advisory
+and Medical Advisory filters.
+
+Phase 2 resumed with CISA's industrial and medical advisories.
+The live view and CVE detail use the same stored advisory
+evidence. The table supports the existing Watchlist and
+exploitation filters, separate Industrial Advisory and Medical
+Advisory tags, and dashboard pinning. The default date is the
+latest advisory revision across a CVE's matched documents.
+
+#### Source and import
+
+CISA's CSAF provider metadata returned HTTP 403 from this
+environment. Its own public GitHub repository documents the OT
+feed and serves a working distribution. The first refresh reads
+the repository ZIP and selects only public ICSA and ICSMA JSON
+members by path. The downloaded ZIP was about 22 MB, with about
+97 MB of selected JSON. The archive and individual documents
+have size limits. Parsing reads data in place from the ZIP and
+never extracts a source file onto the project filesystem.
+[CISA CSAF repository](https://github.com/cisagov/CSAF).
+
+The matching change index had 3,879 distinct advisory paths.
+One source document was a draft and contributes no CVE
+membership. One archive document had a revision date earlier
+than the same snapshot's change index. Store the document's
+revision date for display and the indexed timestamp for sync.
+Later refreshes fetch newer indexed paths. When a download
+fails or returns a revision older than its index, retain the
+last import and retry on the next refresh. Successful
+revisions replace that advisory's old CVE memberships in a
+single SQLite transaction.
+
+#### Analyst evidence
+
+Resolve CSAF product IDs to filed versions and groups. Preserve
+the status of each version, including First Fixed, and show
+remediation next to the named products it applies to. An
+explicit fixed version or a vendor fix with a resolved scope
+can produce an OT Advisory Fix. A scoped workaround or
+mitigation can produce Mitigate. Advisory self-links with
+generic instructions supply a citation without producing a
+mitigation action. Known Exploited continues to use its own
+tracked exploitation evidence.
+
+#### Validation and next work
+
+The full temporary import produced 3,878 CVE-bearing advisories
+and 12,593 distinct CVEs. The running view showed 12,578 after
+applying local rejection status, with 518 under Medical
+Advisory. The live import and page render took about 8.6
+seconds. A repeat refresh completed without retry errors.
+CVE-2026-111594 displayed the InterSystems IRIS for Health
+product and ICSMA-26-295-01 link. Tests cover draft exclusion,
+overlap, scoped product names, a fixed version without
+remediation text, dashboard pinning, and retry behavior.
+[CISA InterSystems advisory](https://raw.githubusercontent.com/cisagov/CSAF/develop/csaf_files/OT/white/2026/icsma-26-295-01.json).
+
+The live import ran before the final First Fixed rule. During
+development a scoped SQLite update set `patch = 1` on 128 OT
+advisory rows whose stored product states explicitly said Fixed
+or First Fixed. A fresh import runs that rule during advisory
+storage.
+
+Direct vendor feeds are the next extension of this view.
+Schneider Electric's public changes CSV answered HTTP 200.
+Siemens ProductCERT's public ROLIE JSON answered HTTP 200.
+Check each publisher's revision and product-scope conventions
+before importing. Where a vendor advisory is republished by a
+catalog, retain the original publisher and document identity
+so both copies do not inflate coverage.
+[Schneider Electric CSAF](https://www.se.com/.well-known/csaf/)
+[Siemens ProductCERT CSAF feed](https://cert-portal.siemens.com/productcert/csaf/ssa-feed-tlp-white.json).
+
+### 2026-11-15: One first reported exploitation date
+
+Use **First Reported Exploitation** in the shared CVE summary.
+Select the earliest usable date and show the source beside it.
+Candidates are dated positive catalog entries, VulnCheck's dated
+exploitation citations, CISA SSVC active assessments, Microsoft
+advisory revisions reporting exploitation, CIRCL exploitation
+sightings, and the publication date of linked reports that assert
+active exploitation. The date describes the available reporting
+record. It can change when an earlier report is ingested.
+
+ENISA EUVD can fall back to the CVE publication date and Project
+Zero can fall back to the patch date. The local rows do not
+distinguish those fallbacks, so they can establish Exploitation
+Reported while the date remains unknown. PoCs, generic mentions,
+vulnerability validation, and SSVC `none` provide no exploitation
+date. The detail view now shows source links and assessments without
+duplicating dates. The original inputs remain in the local store.
+The running app showed 2026-11-15 from VulnCheck KEV for
+CVE-2026-119618 and 2023-10-10 from CISA SSVC for CVE-2023-4966.
+
+### 2026-11-15: CVE detail evidence and response time
+
+The operator walked through CVE-2026-119618. The local VulnCheck
+KEV row lists it on 2026-11-15 and cites Coalition. The CISA SSVC
+assessment in the CVE record is dated 2026-11-13 and reports no
+evidence at assessment, Automatable No and Technical Impact Total.
+The summary now says Exploitation Reported. The details retain
+each source and date and link to the catalog and underlying
+citation. The priority reasons still explain known-exploited
+list membership.
+
+CIRCL's public sightings response supplies a Karen IT article
+URL with type `confirmed`. CIRCL uses that type for analyst
+validation of the vulnerability. Its separate `exploited` type
+records reported exploitation. The new sightings display makes
+the distinction, keeps original HTTP(S) references, and links to
+the upstream CVE when source details are unavailable. Older
+cached sightings may have only source names until refreshed.
+Exploitation and PoC sightings stay in their source categories.
+[Vulnerability-Lookup sightings documentation](https://www.vulnerability-lookup.org/user-manual/sightings/).
+
+Affected Products follows the summary. Use NVD ranges when
+available and show CVE List product names with a direction to the
+CVE record for other ranges. MITRE CWE links use short labels
+for frequent IDs, including CWE-362 Race Condition. Refresh
+Feeds downloads and parses the MITRE catalog locally. The live
+catalog was version 5.0 with 984 weakness names. The SQLite sync
+record keeps the source, version, copyright, and terms link.
+[MITRE CWE catalog](https://cwe.mitre.org/data/downloads).
+
+Exploit Code and Detection Templates shows Metasploit types,
+Exploit-DB, XDB, Nuclei, source-linked PoC sightings, and GitHub
+claims or exploit references. Combine feed and lookup GitHub
+matches by repository. Display the matching excerpt when available
+and point to the text on supported browsers. Bare mentions stay
+out of the page. Preserve the Claimed PoC label for self-reported
+text. Recognize variations such as proof of concept,
+proof-of-concept, exploit code, and exploit script near the CVE.
+An NVD-tagged GitHub file or release can link straight to the
+artifact. Move general References to the end and park the
+CVE-specific OTX pulse card as optional context.
+
+Opening a known CVE reads stored NVD, CVE List, catalog, and cached
+per-CVE evidence. Unknown CVEs still use the normal network
+lookup. Fetch Source Updates bypasses caches for NVD, GitHub,
+CIRCL sightings, and the CVE record. The rolling sightings feed
+can add newer exploitation evidence between manual lookups.
+The running app returned HTTP 200 for three normal detail opens
+at 138 ms, 52 ms, and 54 ms. These are local server timings on the
+current catalog. The live check verified both exploitation dates,
+the Coalition and Karen IT links, and the LLCForge PoC claim
+in the exploit section. Supply Chain also returned 200.
+Regression coverage includes a local CVE whose mock transport
+fails if any vendor request is made, a dated SSVC assessment
+alongside a KEV listing, source URLs, Github filtering, and a
+mock MITRE catalog refresh. The complete suite ran 345 tests,
+with one skipped.
+
+### 2026-11-15: AI and ML Stack, view 10
+
+The operator approved the Red Hat VEX checkpoint. It is local commit
+`ab42e64`, Add Exploited and Unfixed view with Red Hat VEX. The Git
+runbook shows how to stage only the Red Hat roadmap and journal hunks.
+The last verified remote checkpoint remains `f43350d`.
+
+#### Membership and Evidence
+
+The AI and ML Stack view reuses the vulnerability table, watchlist
+filter, and dashboard pin. It joins three pieces of structured evidence:
+an exact curated affected vendor and product in CVE List or NVD, an
+affected package filed in the CVE record, or CWE-1427 in the record.
+Match Evidence shows the original value and links to the source.
+Membership and reasons derive from stored evidence and the curated
+rules on read, so a source correction takes effect on the next view
+load without rebuilding a second membership table.
+
+The local catalog has CIENA MCP and MCPJam Inspector entries. Bare
+product names would classify them as the official MCP SDK and Inspector.
+The product rule requires both vendor and product. Package rules
+check the registry if the CNA filed a collection URL. Older records
+with distinctive package names can match with Registry Unspecified.
+Ambiguous package names such as `mcp` and `torch` require a matching
+affected vendor and product or a known registry. PyPI names follow
+its punctuation normalization rules.
+
+Needs Review matches whole phrases and words in stored CVE titles
+and descriptions. It shows the term and source, excludes CVEs that
+already have structured matches, and leaves dashboard totals and
+pins on structured matches. Adding coverage after confirming a
+lead is a rules-file change.
+
+#### Feed Compatibility and Sources
+
+Keep the primary CWE for existing consumers. New CVE List imports
+save all filed CWE IDs and preserve the registry inferred from the
+CNA package's `collectionURL`. SQLite adds the fields at startup.
+Existing rows keep their primary CWE and package name. A CVE List
+delta updates revised records. A full reload backfills secondary
+CWEs and registries in historical records where the source supplies
+them. GHSA-only advisories still need an intake path.
+
+Valyu's [2026 AI-tooling dataset](https://www.valyu.ai/blogs/mcp-ai-agent-vulnerabilities)
+(CC BY 4.0, 2,675 rows in the checked CSV) informed the starter list,
+including Dify. Runtime inputs are the curated identifiers and local
+CVE evidence.
+Primary checks included [Langflow CVE-2026-33017](https://www.cve.org/CVERecord?id=2026-33017),
+[Flowise](https://github.com/FlowiseAI/Flowise/security/advisories/GHSA-g98q-rm45-q9h8),
+[Dify](https://github.com/langgenius/dify/security/advisories/GHSA-phpv-94hg-fv9g),
+[MCP Inspector](https://github.com/modelcontextprotocol/inspector/security/advisories/GHSA-4fc4-wcmh-4g86),
+and [MITRE CWE-1427](https://cwe.mitre.org/data/definitions/1427.html).
+
+#### Verification and Next Work
+
+The running app returned 761 structured CVEs and 783 keyword leads.
+The Dify vendor filter rendered the filed `langgenius / dify` pair.
+The initial Needs Review scan took 8.4 seconds on the local store.
+SQLite now prefilters likely text in bulk before applying exact
+word boundaries in Python. The same 783 leads loaded in 3.8
+seconds in the next check. These are single-run timings.
+
+The regression test covers NVD and CVE List product evidence,
+registry mismatches, PyPI spelling variants, secondary CWE-1427,
+ambiguous names, rejected records, whole-word leads, and the
+dashboard pin. The Phase 2 view after this is OT, ICS, and Medical.
+Start with CISA's advisory coverage and keep vendor remediation
+evidence tied to the affected product and advisory revision.
+
 ### 2026-11-15: Exploited and Unfixed, view 7
 
 The operator approved the previous triage batch. It is local commit
@@ -536,6 +1293,64 @@ Built 2026-11-04 after the live dashboard review:
 ~~~
 
 ## Research notes
+
+### 2026-11-17: Public vendor notice endpoints
+
+Inspected all six requested publishers' live formats and read applicable
+publisher documentation before choosing endpoints. No third-party parser
+code or publisher dataset was copied into the repository.
+
+- Palo Alto's [API documentation](https://security.paloaltonetworks.com/api)
+  documents the public `/json` list and per-ID JSON. The current list has
+  25 notices with product, version, affected and fixed arrays. The
+  authenticated or beta API is unnecessary for this slice.
+- Fortinet's [news-feed guidance](https://community.fortinet.com/fortigate-3/technical-tip-fortinet-product-vulnerabilities-news-feeds-143896)
+  and [monthly PSIRT note](https://community.fortinet.com/fortiguard-23/psirt-note-fortinet-psirt-and-monthly-psirt-advisories-94244)
+  describe its public notices. The canonical
+  [RSS](https://filestore.fortinet.com/fortiguard/rss/ir.xml) carries direct
+  CSAF links and revision text. Live parsing was tested, including all
+  50 linked current documents.
+- Cisco's [PSIRT API documentation](https://developer.cisco.com/docs/psirt/obtain-all-advisories/)
+  describes an OAuth workflow. The keyless
+  [public RSS](https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml)
+  works for references. A guessed public CSAF metadata route returned a
+  login page, not JSON. Do not describe Cisco as a direct CSAF import.
+- Red Hat's [provider metadata](https://security.access.redhat.com/data/csaf/v2/provider-metadata.json)
+  points to its advisory and VEX distributions. Use the
+  [advisory changes](https://security.access.redhat.com/data/csaf/v2/advisories/changes.csv)
+  for this source. Existing Red Hat VEX no-fix evidence remains separate.
+- SUSE's [public CSAF directory](https://ftp.suse.com/pub/projects/security/csaf/)
+  provides changes.csv and year directories. Include SUSE and openSUSE IDs,
+  excluding reposted third-party RHSA/ESSA IDs. Read its complete
+  [license notice](https://ftp.suse.com/pub/projects/security/csaf/LICENSE):
+  CC BY 4.0, changed from CC BY-NC in 2021. A search surfaced SUSE's 2025
+  security-report PDF, but that full PDF was not read and was not used
+  as implementation evidence.
+- Chrome's [Stable Releases Atom](https://chromereleases.googleblog.com/feeds/posts/default/-/Stable%20updates?alt=atom&max-results=15)
+  supplies the latest 15 posts. Some posts contain no CVEs and stay useful
+  release notices. Parse only CVEs explicitly present in each post.
+
+Fortinet and Cisco naive timestamps, SUSE malformed prose and large
+product trees, and regenerated CSAF indexes are covered in the build note
+above and synthetic regression tests. Historical backfill, Chrome's
+explicit exploitation language, and automatic polling remain open.
+
+### 2026-11-15: Feedly workflow library and skills
+
+Reviewed both supplied skill bundles and the 44 Markdown prompts
+across the four Feedly reports. The cyberattack tracker records an
+original reporting organization, a separately graded claim and a
+reproducible source passage. It can support both case timelines and
+the parked exploitation evidence-strength work. The hunt prompts
+trace a lead through feasibility and validation. The risk-reduction
+skill records action and verification history, with organization-specific
+scoring as a later option.
+
+The prompt-by-prompt dispositions, source links, and suggested
+regression fixtures are in
+[the Feedly source review](research/2026-11-15-feedly-workflow-review.md).
+The roadmap records these as candidates. Runtime prompt automation
+belongs to Phase 11.
 
 ### 2026-11-12: HEARTH and candidate detections
 
@@ -1133,6 +1948,122 @@ Ethereum (UNC5342), Polygon (SmartLoader/ClickFix 2025-26). lolol.farm:
 
 ## Parked design notes
 
+### 2026-11-17: Expand the Local Encoding and Decoding Workbench
+
+The current helper is sufficient for the present Phase 2 slice. Revisit
+after v1 rather than growing it while the evidence consistency work is
+open. Candidate transformations:
+
+- Hex to/from bytes; Base32 and Base85; explicit alphabet and padding
+  variants where there is a clear report-analysis need.
+- URL percent encoding, HTML entities, Unicode and JavaScript escapes,
+  quoted-printable and ROT13. Keep byte encodings and text escaping
+  distinct so the displayed result explains the operation used.
+- Bzip2 and XZ/LZMA as bounded compression candidates. Evaluate archive
+  members separately before accepting multi-file archives.
+- XOR with an analyst-supplied key as a visible transformation. Distinguish
+  encoding from encryption and require the needed key material locally.
+- Encode as well as decode; explicit character sets; hex/byte previews
+  and local file output for non-text results. Preserve undecodable bytes
+  rather than quietly dropping them.
+- Visible multi-step recipes with undo and an input/output preview for
+  every step. Allow repeating a known recipe while retaining its exact
+  operations and parameters. Link resulting text to IOC extraction.
+- Format suggestions as labelled leads, not claims that a transformation
+  is correct. Let the analyst choose the step. A printable result alone
+  does not establish that the interpretation is right.
+
+Keep the workbench deterministic and local. Do not execute recovered
+commands or scripts, evaluate source-provided recipes as code, or send
+input to an online decoder. Revisit CyberChef-style interaction as design
+inspiration; review licences before importing code or recipes.
+
+Acceptance checks: round-trip encoding where meaningful; standard test
+vectors; malformed input and ambiguous alphabets; explicit errors for
+unsupported binary/text conversions; bounded input, output, nesting,
+steps and decompression time; inert HTML/script output; no external
+requests or automatic input retention. Generated output should identify
+its recipe so an analyst can repeat and explain the result.
+
+### 2026-11-15: Case Attack Flow, inspired by FlowViz
+
+FlowViz takes a report URL or pasted text, uses a model to draft an
+interactive ATT&CK flow, and supports exports including STIX and
+Attack Flow Builder files. Its docs and MIT-licensed repository were
+reviewed for workflow ideas.
+[FlowViz documentation](https://www.flowviz.io/docs)
+[FlowViz repository](https://github.com/davidljohnson/flowviz).
+
+Candidate placement is a view inside Cases. Start with analyst
+authoring from saved report excerpts, logs, and case notes. Build on
+the planned case graph and ATT&CK lookup. Let a step link to saved
+IOCs, CVEs, tools, required telemetry, and candidate detections.
+An ATT&CK mapping is optional. Use the evidence to decide whether a
+connection means chronology, dependency, or an inferred relationship.
+Save the cited excerpt or event with each finding. Leave gaps visible
+where a report gives no sequence or supporting evidence.
+
+For interoperability, evaluate CTID Attack Flow's STIX 2.1 extension.
+Its action-to-action edge means dependency. Export dependency edges
+only where the case supports that interpretation. Keep report ordering
+and unverified relationships in the local case data. Test import and
+export with a sample that has two possible branches and an unmapped step.
+[CTID Attack Flow concepts](https://center-for-threat-informed-defense.github.io/attack-flow/introduction/)
+[CTID Attack Flow language](https://center-for-threat-informed-defense.github.io/attack-flow/language/).
+
+In Phase 11, consider a draft from pasted text or a collected report.
+Show the source passage beside each proposed step, ATT&CK mapping, or
+connection and accept edits at that level. The manual flow stays usable
+with the provider set to none. Reuse the case's hunting package and
+detection workflow to record whether telemetry exists and a candidate
+detection has been validated.
+
+### 2026-11-15: Exploitation evidence strength
+
+Consider an evidence label in Exploitation Details once the app
+can trace provenance. Use **Direct Observation** for an explicit
+firsthand vendor, responder, or telemetry report. Use **Catalog
+Assertion** for a reputable listing when its underlying evidence
+is not available or has yet to be reviewed. Use **Relayed Report**
+when the source quotes another report. Use **Independently
+Corroborated** only when separate origins describe their own
+observations. Keep attempts and confirmed compromise distinct.
+
+Record the original reporting organization, link and report ID
+where available, the upstream source each report cites, and the
+kind of evidence. Test a vendor report repeated by a news outlet
+and two catalogs as one origin. Test two security teams with
+separate telemetry as independent observations. Test a media
+reporter who conducted an original incident interview, and a
+catalog entry with an inaccessible underlying citation. Avoid a
+count-based or numerical confidence score while the source chain
+is incomplete. CISA SSVC already accepts credible reports from
+vendors, ISACs and threat researchers.
+[CISA SSVC guide](https://www.cisa.gov/sites/default/files/publications/cisa-ssvc-guide%20508c.pdf)
+[VulnCheck coverage criteria](https://docs.vulncheck.com/community/vulncheck-kev/coverage-criteria).
+
+### 2026-11-15: Cross-module performance
+
+After v1, profile the dashboard-to-CVE path, IOC enrichment, and
+large vulnerability views first. Capture cold and warm request
+times and measure SQLite queries, rendering, and each upstream
+call separately. Compare repeat visits on an empty cache and a
+populated cache using the same local dataset. Inspect slow queries
+with SQLite EXPLAIN QUERY PLAN. Try concurrent feed refresh and
+page navigation to check that recent local evidence stays visible
+during writes. Track time to first useful results, source freshness,
+and whether a cold provider or quota delay can block the page.
+Consider expanding local-first results and progressive source
+loading where this improves task time. Keep CVE-specific OTX
+pulses available as a candidate opt-in context lookup if a later
+investigation finds a concrete use for them.
+
+The 2026-11-17 live navigation check measured AI and ML Stack at
+5.19 seconds, Edge and Perimeter at 4.67 seconds, the catalog's
+second EPSS-sorted page at 3.61 seconds, and the default catalog
+at 3.16 seconds. These are single observations on the current
+local data. Use them to choose repeatable profiling cases after v1.
+
 ### Public deployment and hosting (parked 2026-11-03), full text
 
 The roadmap parking lot keeps a short summary. This is the full first-cut
@@ -1146,18 +2077,22 @@ deployment.
   first-cut notes as a starting point:
   - After AI is integrated, create a collections management archive where we store whatever reports we decide at the time to be relevant in an excel table or google sheets table with the following column and structure - Activity ID	Activity Descriptor	Activity Type	Activity Start	Activity End	Publication Date(s)	Threat Actor / Attribution	Attribution Confidence	Motivation	Target Industries	Target Regions	Targeted Technology	CVEs	Initial Access	ATT&CK TTPs	Malware / Tools	Activity / Impact	Relevance Type	Source(s)	Source Assessment (Admiralty)	Intelligence Gaps / Discrepancies	Organization Relevance / PIR	Collection Method	Review Status	Evidence / Validation Notes	Last Reviewed
 ACT-2026-001	Hypothetical credential phishing targeting aerospace contractors	Reported campaign	2026-08-01	2026-08-20	2026-09-05	Unknown	Not assessed	Espionage (suspected)	Aerospace; Defense	North America	Microsoft 365	Not reported	Credential phishing	T1566.002; T1078	Not reported	Credential theft reported; downstream impact unknown	Direct sector; Technology	https://example.org/research/sample-report	Publisher A: B2 (illustrative; not assessed)	Attribution unknown; extent of access not established	Relevant to identity monitoring and phishing detection; PIR-001	Manual	Example — not validated	Entire row is synthetic demonstration data; example.org is a placeholder, not a source	2026-11-11 - with AI doing first pass data input from reports.
-  - local AI model to analyze files (such as potential malware) and extract its configuration, metadata, hardcoded C2 information, loaded dlls, other relevant info, for tracking, correlation, research. 
+  - local AI model to analyze files (such as potential malware) and extract its configuration, metadata, PDB strings, hardcoded C2 information, loaded dlls, other relevant info, for tracking, correlation, research.
   - Lets exploire some ways to include the gui?
+  - AI-powered deobfuscator (Label it as ClickFix script decoder?) Leverage similar techniques used in cyberchef? Or other online methods
   - Login-only vs fully public: default to authenticated (even a single
     account, or basic auth at a reverse proxy). The app spends metered API
     keys and exposes `/health` (key presence, versions), so an open instance
     lets anyone burn your quota and fingerprint the stack.
+  - In ransomware tracker, also monitor for 8-k notices related to cyber breaches
+  - Look into how breach.house contains their info stealer data, look at all their sources, find links, make them our sources, for info stealers and leaks in general. same with ransomlook.io, find their sources for ransomware leak sites and darkweb markets.
   - "Not storing sensitive data" is not the whole risk. Even with nothing
     sensitive stored, an exposed instance still risks: quota/credit theft
     (every open lookup spends your keys), being used as an SSRF/proxy to fetch
     attacker-chosen URLs through your host, resource exhaustion / DoS, and info
     leak via `/health` and error pages. And the `.env` keys themselves ARE
     sensitive and sit on the host.
+  - Fillable templates maybe with brief guidelines for a structured analytic and forecasting techniques
   - Is the host PC at risk? It is one process, but a code-exec bug in the app
     or a dependency runs as your user on your machine. Shrink the blast radius:
     run it in a container / VM / dedicated low-privilege user, never as admin,
@@ -1168,6 +2103,7 @@ ACT-2026-001	Hypothetical credential phishing targeting aerospace contractors	Re
     so the fetcher can only reach known vendor APIs (anti-SSRF); keep the
     existing Sec-Fetch-Site / TrustedHost guards and add a CSP; secrets from
     the environment, never baked into an image.
+  - Translator for foreign language forums, messaging boards, messaging apps, in general. (AI or is there non-AI tool?)
   - Detection: structured access + audit logging (who looked up what, when),
     alerts on quota spikes and auth failures, proxy-level blocking
     (fail2ban-style) for abusive IPs, and a way to see it (the health page or a

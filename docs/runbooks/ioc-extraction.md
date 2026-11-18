@@ -41,13 +41,89 @@ the enrichment box instead.
    to run the Phase 1 vendors on it. Open **plain list** under a group to
    copy the values for another tool.
 
-The URL fetch is for vendor blogs and advisories. It only fetches `https://`
-addresses on public hosts, follows redirects but refuses one that lands on
-plain HTTP, and stops reading past 5 MB. It is not a sandbox: a suspected
-malicious URL belongs in the enrichment box, where urlscan's existing public
-scans are searched instead of the page being fetched.
+The URL fetch is for vendor blogs and advisories. It validates the initial
+HTTPS URL and each redirect before requesting it. It refuses embedded
+credentials, local names, and private, reserved or multicast address
+literals. It stops after five redirects or a 5 MB body. DNS resolution is
+handled by the OS. Use enrichment's existing-scan lookup for suspected
+malicious URLs.
+
+## Read ATT&CK Evidence
+
+1. Open **Extract IOCs** and select **Load ATT&CK Catalog**. This fetches
+   the three public MITRE STIX bundles for Enterprise, Mobile, and ICS
+   at v20.1. The toolkit keeps just a compact index in git-ignored
+   `data/attack-index.json`. A failed fetch keeps the prior index.
+2. Paste a report or upload a Markdown, PDF, or HTML advisory. For HTML,
+   uploading `.html` or entering an advisory URL preserves its tables.
+   Markdown tables and explicit technique list items work in pastes and
+   text uploads. For example, a bullet beginning `T1059.001 PowerShell -
+   Ran a script` supplies a procedure to the PowerShell row. A heading
+   such as `## Execution` supplies the reported tactic. Fenced examples
+   provide no procedure evidence.
+3. Open **ATT&CK References**. Technique, software and group IDs show
+   the official MITRE name and catalog status when matched. Review
+   absent IDs and revoked or deprecated entries. The result lists a
+   replacement when MITRE supplies one in the catalog.
+4. Expand the table evidence beside a technique to view the report's
+   procedure and stated tactic. The excerpt belongs to the report.
+   The catalog supplies the official name, domains, and mappings used
+   to flag a reported mismatch. Unstructured text and PDFs show IDs
+   without attached procedure text. ATLAS IDs are outside this view.
+
+For Windows, with the local app running:
+
+```powershell
+Invoke-WebRequest -Method POST -Uri 'http://127.0.0.1:8000/extract/refresh-attack'
+.\.venv\Scripts\python.exe -B -m unittest tests.test_extract
+```
+
+[MITRE ATT&CK data and attribution](https://attack.mitre.org/resources/attack-data-and-tools/).
 
 ## PDF support
+
+### Decode Text Locally
+
+Open Extract IOCs, expand **Decode Text**, choose a format, and select
+**Decode and Extract**. Formats are plain Base64 to UTF-8, PowerShell
+Base64 to UTF-16LE, Base64 with Gzip, zlib or raw Deflate, decimal or
+0x-prefixed character codes, and JWT header/payload JSON. Character
+codes use comma or space separators. Decoding handles one layer at a
+time. Commands remain displayed text. JWT signatures are not validated.
+The form makes no source requests and does not save its input.
+
+Input is capped at 1 MB of characters and decoded UTF-8 output at 2 MB.
+Compressed streams stop at the output cap, including highly compressed
+inputs. Invalid encodings, incomplete streams and concatenated streams
+show an error. Source extraction's own text/result limits still apply.
+
+With the local app running, repeat a harmless Base64 check in PowerShell:
+
+```powershell
+$sample = 'hxxps://example[.]org/a CVE-2026-12345'
+$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($sample))
+$result = Invoke-WebRequest -Method Post -Uri 'http://127.0.0.1:8000/extract/decode' -Body @{mode='base64'; encoded=$encoded}
+$result.Content.Contains('https://example.org/a')
+.\.venv\Scripts\python.exe -B -m unittest tests.test_decode_pdf -v
+```
+
+### Wrapped PDF Hashes
+
+Upload a text-layer PDF or fetch a public report PDF from the existing
+URL field. Hash repair rejoins contiguous hex fragments of MD5, SHA-1,
+and SHA-256. It skips blank lines, numeric page footers and repeated
+hash headings across a short page boundary. Expand **PDF Row Context**
+beside a recovered hash to read its text line numbers, recent headings,
+detection names and trailing annotations such as `(abused)`.
+
+An explicit SHA256 heading permits joining two 32-character fragments.
+Without that heading, two complete MD5-sized rows remain separate.
+Other unrelated text stops a join. This is text repair, not OCR or a
+general reconstruction of multi-column tables. Check source context
+before using repaired hashes. The offline tests build a real PDF in
+memory; the original MuddyWater report is not a checked-in fixture.
+
+On Linux run `.venv/bin/python -B -m unittest tests.test_decode_pdf -v`.
 
 PDF text extraction uses `pypdf` (BSD-3-Clause, maintained by the py-pdf
 organisation, pure Python, no required dependencies), pinned in
@@ -83,7 +159,10 @@ read". Password-protected PDFs are reported, not guessed.
 |---|---|
 | `app/core/indicators.py` | the CVE indicator type (`detect_type` now returns `cve`) |
 | `app/modules/extract/extractor.py` | document-wide refang, one pattern per type, validation, de-duplication |
-| `app/modules/extract/html.py` | HTML to text with the standard-library parser (scripts and styles skipped) |
+| `app/modules/extract/html.py` | Visible text and HTML table cells with the standard-library parser |
+| `app/modules/extract/attack.py` | ATT&CK identifier and procedure extraction |
+| `app/modules/extract/markdown.py` | Structured Markdown tables and explicit technique lists |
+| `app/modules/extract/attack_catalog.py` | MITRE STIX parsing and local catalog refresh |
 | `app/modules/extract/fetch.py` | the HTTPS-only, public-host-only page download |
 | `app/modules/extract/pdf.py` | pypdf wrapper with a page cap |
 | `app/templates/extract.html` | the page |

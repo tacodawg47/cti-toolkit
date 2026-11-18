@@ -1,0 +1,6 @@
+<div class="filterbar">
+  {% for key, label in (("version", "Version"), ("exposure", "Exposure"), ("importance", "Business Importance"), ("owner", "Owner")) %}
+    <label>{{ label }}<input type="text" name="{{ key }}" value="{{ entry.get(key, '') }}" maxlength="100"></label>
+  {% endfor %}
+  <label>Last Confirmed<input type="date" name="confirmed_on" value="{{ entry.get('confirmed_on', '') }}"></label>
+</div>

@@ -1,0 +1,33 @@
+<section class="card">
+  <h3>ATT&amp;CK References <small>({{ attack_findings | length }})</small></h3>
+  <p class="muted"><small>IDs and table excerpts come from the submitted report. Catalog names come from <a href="https://attack.mitre.org/resources/attack-data-and-tools/" rel="noopener noreferrer">MITRE ATT&amp;CK</a>.</small></p>
+  <div class="tablescroll">
+    <table>
+      <thead><tr><th>ID</th><th>Catalog Name</th><th>Catalog Status</th><th>Report Evidence</th></tr></thead>
+      <tbody>
+      {% for item in attack_findings %}
+        <tr>
+          <td>{% if item.url %}<a href="{{ item.url }}" rel="noopener noreferrer">{{ item.id }}</a>{% else %}<code>{{ item.id }}</code>{% endif %}</td>
+          <td>{{ item.name or "Unknown" }}
+            {% if item.domains %}<br><small>{{ item.domains | map("upper") | join(", ") }}</small>{% endif %}</td>
+          <td>{{ item.status }}{% if item.replacement %}<br><small>Replacement {{ item.replacement }}</small>{% endif %}</td>
+          <td>
+            {% for evidence in item.evidence %}
+              <details>
+                <summary>{{ evidence.caption or evidence.tactic or "Advisory Table" }}</summary>
+                {% if evidence.tactic and evidence.tactic != evidence.caption %}<p><small>Reported tactic {{ evidence.tactic }}</small></p>{% endif %}
+                {% if evidence.tactic_mismatch %}<p><small>Reported tactic differs from the current catalog.</small></p>{% endif %}
+                {% if evidence.name_mismatch %}<p><small>Report calls this {{ evidence.name_mismatch }}.</small></p>{% endif %}
+                {% if evidence.shared %}<p><small>Procedure shared by multiple IDs in the report.</small></p>{% endif %}
+                {% if evidence.procedure %}<p>{{ evidence.procedure }}</p>{% else %}<small>No procedure text in this row.</small>{% endif %}
+              </details>
+            {% else %}
+              <small>{{ item.count }} reference{{ "" if item.count == 1 else "s" }} · No Table Procedure</small>
+            {% endfor %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>

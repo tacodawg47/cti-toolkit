@@ -19,6 +19,7 @@
       {{ th(t.key, f.sort, f.desc, "cve_id", "CVE") }}
       {{ th(t.key, f.sort, f.desc, "vendor", "Vendor") }}
       {{ th(t.key, f.sort, f.desc, "product", "Product") }}
+      {% if t.show_attention %}{{ th(t.key, f.sort, f.desc, "attention_rank", "Attention") }}{% endif %}
       {{ th(t.key, f.sort, f.desc, "date", date_label) }}
       <th>Patch Status</th>
       <th>Actions</th>
@@ -33,6 +34,9 @@
       {% set c = r.code %}
       <tr>
         <td class="cvecell">{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}
+          {% if t.show_attention and (r.kev or r.exploited_sighting or r.ransomware) %}
+            <br><a class="badge badge-kev" href="{{ prefix }}/cve/{{ r.cve_id }}#exploitation-details">Exploitation Reported</a>
+          {% endif %}
           {% if r.sources or r.ransomware or r.matched or r.zero_day %}<div class="tagline">
             {%- for s in r.sources %}<span class="badge{% if s == 'cisa' %} badge-kev{% endif %}" title="listed as exploited">{{ kev_names.get(s, s) }}</span>{% endfor %}
             {%- if r.ransomware %}<span class="badge badge-ransom" title="known ransomware use{% if r.ransomware_groups %}: {{ r.ransomware_groups | join(', ') }}{% endif %}">ransomware</span>{% endif -%}
@@ -57,8 +61,34 @@
             {% with edge_matches = r.edge_matches %}{% include "vulnintel/_edge_matches.html" %}{% endwith %}
           </details>
           {% endif %}
+          {% if r.ai_matches %}
+          <details>
+            <summary>Match Evidence</summary>
+            <ul>
+            {% for match in r.ai_matches %}
+              <li>{{ match.kind }} · {{ match.value }}{% if match.family %} ({{ match.family }}){% endif %}
+                · <a href="{{ match.source_url }}">{{ match.source }}</a></li>
+            {% endfor %}
+            </ul>
+          </details>
+          {% endif %}
+          {% if r.ot_advisories %}
+          <details>
+            <summary>Advisory Evidence</summary>
+            {% with ot_advisories = r.ot_advisories %}{% include "vulnintel/_ot_advisories.html" %}{% endwith %}
+          </details>
+          {% endif %}
         </td>
+        {% if t.show_attention %}<td><a href="https://cvemon.intruder.io/cves/{{ r.cve_id }}" rel="noopener noreferrer">#{{ r.attention_rank }}</a>
+          <br><small>Hype Score {{ r.attention_score }}</small></td>{% endif %}
         <td>{{ r.date or "—" }}
+          {% if r.sightings %}
+            <details><summary>{{ r.sightings }} sighting{{ "" if r.sightings == 1 else "s" }} · Sighting Sources</summary>
+              {% with sources = r.sighting_sources, cve_id = r.cve_id %}
+                {% include "vulnintel/_sighting_sources.html" %}
+              {% endwith %}
+            </details>
+          {% endif %}
           {% if "recent_sighting" in (t.extra_tags or ()) and r.last_sighting %}
             <br><small class="muted" title="Vulnerability-Lookup exploitation sighting">Last sighting {{ r.last_sighting }}</small>
           {% endif %}
@@ -69,7 +99,7 @@
               {% with vendor_vex = r.vendor_vex %}{% include "vulnintel/_vendor_vex.html" %}{% endwith %}
             </details>
           {% else %}
-            {% if r.fix == "vendor_fix" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#microsoft-advisory">Microsoft Fix</a>{% elif r.fix == "patch" %}<span class="ok">Patch Reference</span>{% elif r.fix == "cna_patch" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#remediation">CNA Patch Reference</a>{% elif r.fix == "advisory" %}<span class="muted">Unknown · Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}
+            {% if r.fix == "vendor_fix" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#microsoft-advisory">Microsoft Fix</a>{% elif r.fix == "patch" %}<span class="ok">Patch Reference</span>{% elif r.fix == "cna_patch" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#remediation">CNA Patch Reference</a>{% elif r.fix == "vendor_patch" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#vendor-advisories">Vendor Fix</a>{% elif r.fix == "ot_patch" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#ot-advisories">OT Advisory Fix</a>{% elif r.fix == "advisory" %}<span class="muted">Unknown · Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}
           {% endif %}
         </td>
         <td>{% with actions = r.actions %}{% include "vulnintel/_action_badges.html" %}{% endwith %}</td>

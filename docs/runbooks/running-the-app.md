@@ -45,6 +45,59 @@ browser. It listens on localhost only, and refuses any request whose Host
 header is not a loopback name, so nothing off the machine can reach it. Stop it
 with Ctrl+C.
 
+### Start and Check the App in the Windows Background
+
+From the project root:
+
+```powershell
+$python = (Resolve-Path -LiteralPath '.venv/Scripts/python.exe').Path
+$toolkitProcess = Start-Process -FilePath $python -ArgumentList @('-B', 'run.py') -WorkingDirectory (Get-Location).Path -WindowStyle Hidden -PassThru
+$toolkitProcess.Id
+```
+
+Once startup finishes, check the Dashboard and the vulnerability catalog:
+
+```powershell
+$dashboard = Invoke-WebRequest -Uri 'http://127.0.0.1:8000/vulnerability-intelligence'
+$catalog = Invoke-WebRequest -Uri 'http://127.0.0.1:8000/vulnerability-intelligence/views/all'
+$dashboard.Content.Contains('Since Last Review')
+$catalog.Content.Contains('<th>Actions</th>')
+```
+
+Both checks should return `True`.
+
+### Restart After a Code Change
+
+The launcher reads code at startup. For a foreground server, press Ctrl+C
+in its terminal and run the start command again. For a background server on
+Windows, identify the process listening on port 8000 and verify its
+launcher before stopping it. Run this from the project root:
+
+```powershell
+$python = (Resolve-Path -LiteralPath '.venv/Scripts/python.exe').Path
+$listener = Get-NetTCPConnection -LocalPort 8000 -State Listen | Where-Object LocalAddress -eq '127.0.0.1' | Select-Object -First 1
+$server = Get-CimInstance Win32_Process -Filter "ProcessId = $($listener.OwningProcess)"
+$launcher = Get-CimInstance Win32_Process -Filter "ProcessId = $($server.ParentProcessId)"
+if ($launcher.ExecutablePath -ne $python -or $server.CommandLine -notmatch '(?:^|[\s"])run\.py(?:[\s"]|$)') {
+    throw 'The process on port 8000 does not match the toolkit launcher.'
+}
+Stop-Process -Id $server.ProcessId
+Wait-Process -Id $server.ProcessId -Timeout 5 -ErrorAction SilentlyContinue
+Start-Process -FilePath $python -ArgumentList @('-B', 'run.py') -WorkingDirectory (Get-Location).Path -WindowStyle Hidden
+```
+
+To check Supply Chain and refresh it after startup:
+
+```powershell
+$url = 'http://127.0.0.1:8000/vulnerability-intelligence/supply-chain'
+(Invoke-WebRequest -Uri $url).StatusCode
+$page = Invoke-WebRequest -Uri "$url/refresh" -Method Post -TimeoutSec 600
+$page.StatusCode
+```
+
+The POST downloads public advisory metadata into the local SQLite store.
+Open the tab and check both source status lines after it returns.
+
 ## Use it
 
 - Enrichment page (`/`): paste an indicator, click Enrich. Tick "query

@@ -3,11 +3,24 @@
 {% block tab %}
 <div class="card">
   <h2 style="margin: 0 0 6px;">{{ view.title }} <small class="muted">{{ "{:,}".format(t.unfiltered) }} CVEs</small></h2>
-  <p><small>{{ view.rule }}</small></p>
+  <p><small>{% if needs_review %}Keyword leads from CVE titles and descriptions. Verify the affected product before acting.
+    {% else %}{{ view.rule }}{% endif %}</small></p>
   {% if view.slug == "zero-day" %}<p><a href="{{ prefix }}/exploitation-reports">Exploitation Reports</a></p>{% endif %}
   {% if view.slug == "edge" %}
     <p class="muted"><small>Initial product list informed by
       <a href="https://github.com/BushidoUK/Ransomware-Vulnerability-Matrix" rel="noopener noreferrer" target="_blank">Ransomware Vulnerability Matrix by BushidoToken</a> (CC BY 4.0).</small></p>
+  {% endif %}
+  {% if view.slug == "ai-stack" %}
+    <nav aria-label="AI and ML Stack evidence" class="tagline">
+      {% if needs_review %}
+        <a href="{{ prefix }}/views/ai-stack">Structured Matches</a>
+        <strong aria-current="page">Needs Review</strong>
+      {% else %}
+        <strong aria-current="page">Structured Matches</strong>
+        <a href="{{ prefix }}/views/ai-stack?needs_review=true">Needs Review</a>
+      {% endif %}
+    </nav>
+    {% if not needs_review %}<p class="muted"><small>Expand Match Evidence to see the record behind each row.</small></p>{% endif %}
   {% endif %}
   {% for n in view.notes %}<p class="muted"><small>{{ n }}</small></p>{% endfor %}
   {% if view.slug == "likely" and not microsoft_loaded %}
@@ -22,10 +35,34 @@
       <p class="err"><small>{{ vex_status.error }} Showing the last stored evidence.</small></p>
     {% endif %}
   {% endif %}
+  {% if view.slug == "ot" %}
+    <p class="muted"><small><a href="{{ prefix }}/feeds">Refresh OT &amp; ICS feeds</a></small></p>
+    <ul class="plain">
+      {% for publisher, status in ot_status %}
+        <li><small>{{ publisher }} ·
+          {% if status.fetched_at %}Checked {{ status.fetched_at | day }}{% else %}Awaiting first refresh{% endif %}
+          {% if status.error %}<span class="err">· {{ status.error }}</span>{% endif %}</small></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if view.slug in ("trending", "sightings") %}
+    {% if view.slug == "trending" %}
+      <p><small><a href="{{ cvemon_page }}">Intruder cvemon</a>
+        {% if source_status.version %} · Snapshot published {{ source_status.version[:16] | replace("T", " ") }} UTC{% endif %}
+        {% if attention_stale %} · Snapshot is over 3 hours old{% endif %}</small></p>
+    {% elif source_status.fetched_at %}
+      <p><small>Vulnerability-Lookup fetched {{ source_status.fetched_at | ago }} · {{ source_status.version }}</small></p>
+    {% endif %}
+    {% if source_status.error %}<p class="err"><small>{{ source_status.error }}</small></p>{% endif %}
+    <form method="post" action="{{ prefix }}/refresh-{{ view.slug }}">
+      <button type="submit" class="small">{{ "Refresh Trending Attention" if view.slug == "trending" else "Refresh Exploitation Sightings" }}</button>
+    </form>
+  {% endif %}
   <p class="muted"><small>EPSS estimates the probability of exploitation activity in the next 30 days as of the score date.</small></p>
   {% with date_label = view.date_label, show_maturity = view.show_maturity, hide_tags = view.hide_tags,
           empty = ("The watchlist is empty: add vendors and products on the Watchlist tab." if view.slug == "watchlist" and t.unfiltered == 0
-                   else "Nothing matches." if t.unfiltered else "Nothing in this view yet: load the feeds on the Feeds tab.") %}
+                   else "Nothing matches." if t.unfiltered else "No keyword leads in the local catalog." if needs_review
+                   else "Nothing in this view yet: load the feeds on the Feeds tab.") %}
     {% include "vulnintel/_cve_table.html" %}
   {% endwith %}
   <p class="muted"><small><a href="{{ prefix }}/views">All views</a></small></p>

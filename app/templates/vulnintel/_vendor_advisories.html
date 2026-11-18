@@ -1,0 +1,15 @@
+{% if rep.vendor_advisories %}
+<section class="card" id="vendor-advisories">
+  <h3>Vendor Advisory Evidence</h3>
+  {% for notice in rep.vendor_advisories %}{% set evidence = notice.evidence %}
+  <article>
+    <h4><a href="{{ notice.url }}" target="_blank" rel="noopener noreferrer">{{ notice.title }}</a></h4>
+    <p><small>{{ notice.publisher }} · {{ notice.advisory_id }} · {{ evidence.kind }} · Published {{ notice.published | day }} · Updated {{ notice.updated | day }}</small></p>
+    {% if evidence.source_warning %}<p class="err">{{ evidence.source_warning }}</p>{% endif %}
+    {% if evidence.kind == 'Vendor Feed Reference' %}<p class="muted">The publisher's feed references this CVE. Review the notice for affected versions and fixes.</p>{% endif %}
+    {% if evidence.states %}<details><summary>Product and Version Scope ({{ evidence.states | length }})</summary><ul>{% for state in evidence.states[:100] %}<li>{{ state.name }} · {{ state.status }}</li>{% endfor %}</ul>{% if evidence.states | length > 100 %}<small>First 100 shown. Open the publisher notice for full scope.</small>{% endif %}</details>{% endif %}
+    {% for fix in evidence.remediations %}<p><strong>{{ fix.category | replace('_', ' ') | title }}</strong>: {{ fix.details }}{% if fix.url %} <a href="{{ fix.url }}" target="_blank" rel="noopener noreferrer">Vendor Reference</a>{% endif %}</p>{% if fix.products %}<details><summary>Applies To {{ fix.products | length }} Products / Versions</summary><ul>{% for product in fix.products[:100] %}<li>{{ product }}</li>{% endfor %}</ul>{% if fix.products | length > 100 %}<small>First 100 shown. Open the publisher notice for full scope.</small>{% endif %}</details>{% endif %}{% endfor %}
+  </article>
+  {% endfor %}
+</section>
+{% endif %}

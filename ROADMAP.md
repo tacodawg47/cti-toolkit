@@ -1,6 +1,6 @@
 # CTI Toolkit Roadmap
 
-Last updated: 2026-11-10 (v3, with the 2026-11-06, 2026-11-09 and 2026-11-10 review rounds)
+Last updated: 2026-11-17
 
 A local-only cyber threat intelligence toolkit that puts multiple analyst
 tools under one web interface. Built as a daily-use workflow aid and as a
@@ -179,11 +179,16 @@ local store, built on the Phase 1 HTTP client, cache and rate limiter.
   request) and stores the composite attributes (ASN, registrar, nameservers,
   WHOIS dates, certificate and SAN, JARM, hosting, file metadata) for Phase 6
   pivoting. Needs the Phase 5 foundation slice.
-- Include (2026-11-06): ATT&CK technique, software, and group IDs (T1059.001,
-  S0154, G0016) as extracted types, named from a local ATT&CK dataset, plus
-  actor-name matches against the Phase 9 alias table. This gives a
-  deterministic technique list for any report that carries a TTP table.
-  Reports that describe behaviour only in prose wait for Phase 11.
+- Built 2026-11-16: Extract ATT&CK technique, software, and group IDs
+  (T1059.001, S0154, G0016) and check them against a local index of MITRE
+  ATT&CK v20.1 for Enterprise, Mobile and ICS. Fetch the official STIX
+  bundles only on a catalog refresh. Keep catalog misses and status visible.
+  Actor-name matches still depend on the Phase 9 alias table.
+- Built 2026-11-16: Capture procedures and reported tactics from HTML
+  and Markdown advisory tables and explicit Markdown technique lists.
+  Use captions or headings and preserve inline code and escaped pipes.
+  Indicate shared procedure text and catalog mismatches. Grids and PDF
+  procedures remain open. Plain text and PDFs yield IDs.
 - Include (2026-11-06): the "Use" column too. CISA joint advisories and the
   current AR/MAR template render ATT&CK as real HTML tables, one per
   tactic, header `Technique Title | ID | Use`, tactic in the `<caption>`
@@ -259,10 +264,10 @@ local store, built on the Phase 1 HTTP client, cache and rate limiter.
 
 **Vulnerability intelligence** (`app/modules/vulnerability_intelligence/`)
 
-One module page at `/vulnerability-intelligence` with five tabs (Dashboard,
-Search, Exploits, Watchlist, Feeds; a server-rendered sub-navigation, no
-JavaScript needed), all reading one local store:
-a `vulnerabilities` table in SQLite filled from bulk feeds, plus per-CVE
+One module page at `/vulnerability-intelligence` with eight tabs (Dashboard,
+Views, Search, Vendor Updates, Exploits & Detection, Watchlist, Supply Chain,
+Feeds; server-rendered navigation), all reading one local SQLite store
+filled from bulk feeds, plus per-CVE
 lookups made on demand and cached. Tab design agreed 2026-11-03; features
 borrowed from cve.feedly.com, VulnCheck KEV and XDB, cvedetails.com and
 AttackerKB are marked with the source they come from.
@@ -356,7 +361,8 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   use, watchlist match; Metasploit sets P2 as the weaponised tier; group
   exploitation from ransomware.live counts as in-the-wild for P1; Nuclei is a
   badge). CVSS fallback: ENISA's score, else the CNA's score from the CVE
-  record on Vulnerability-Lookup, so a fresh CVE is never "not scored". A
+  record on Vulnerability-Lookup. A CVE with insufficient scoring evidence
+  remains N/A rather than Low. A
   deterministic heat score drives "Hottest right now" (weights in the runbook).
 - Dashboard sections (trimmed 2026-11-10): feed status and a count of CVEs
   with new exploit code this week; Hottest right now (top 10 / 100 with
@@ -392,6 +398,28 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   inthewild.io (API down; RSS and database frozen since January 2025).
 
 **Still to wire**
+
+Phase 2 coverage audit, 2026-11-17:
+[coverage, evidence, and acceptance checks](docs/review/2026-11-17-phase2-coverage-audit.md).
+Phase 2 remains open. All 14 numbered view entry points and All
+Vulnerabilities exist. Built 2026-11-17: shared positive-exploitation
+evidence, OT remediation/product integration, and typed exploitation dates
+resolve audit findings F1-F3 across views, details, actions and review.
+Phase closeout still requires the remaining deterministic ATT&CK procedure
+layouts and the scope decisions below. Existing vendor
+connectors have bounded feed windows, not complete historical coverage.
+Decide the scope of older NVD backfill, HTMX partial reloads, optional
+GreyNoise/CVEDB lookups, and extension identifiers before phase closeout.
+Scheduled work, the shared corpus and the later Supply Chain expansion
+retain their existing dependencies and deferrals.
+
+- Built 2026-11-15: the CVE detail opens from local evidence for
+  known CVEs. Show a combined Exploitation Status, named CWE, then
+  affected products and cited exploitation evidence. Show one first
+  reported exploitation date. Keep SSVC automation and impact in the
+  evidence section. Put actionable GitHub
+  claims with indexed exploits and detection templates. Put References
+  last. Park CVE-specific OTX pulses as optional context.
 - Built 2026-11-13: All Vulnerabilities and Known Exploited use the shared
   table and offer a Watchlist filter. All Vulnerabilities pages the local
   catalog in SQLite and excludes rejected CVEs. Known Exploited includes
@@ -401,8 +429,9 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
 - Built 2026-11-15: Known Exploited can filter by exploitation
   sightings from today and yesterday UTC. Preserve the first reported
   exploitation date and show the last stored sighting separately.
-  Add optional private watchlist details for version, exposure, business
-  importance, owner, and last confirmation.
+  Built 2026-11-17: optional private watchlist details for version,
+  exposure, business importance, owner, and last confirmation.
+  Context remains optional and product matching uses vendor and product.
 - Built 2026-11-13: Action badges use Microsoft remediation, explicit
   NVD references, and CNA patch references and workarounds. Patch and
   Mitigate can appear together. Hunt follows reported exploitation or
@@ -452,8 +481,7 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   rules, in build order (1 to 3 built 2026-11-11: a Views tab, one page
   per view, and a counter strip on the Dashboard; 5, 6, 9, 11 and 12
   built the same day from data already stored, with the narrowings noted
-  under each; 3 does not yet take SSVC "poc", which
-  would add about 46,700 CVEs):
+  under each):
   1. Known Exploited: in CISA KEV, VulnCheck KEV, the EUVD exploited list, any
      catalogue in Vulnerability-Lookup's `/api/kev` (it aggregates CIRCL,
      CISA, ENISA, Shadowserver and others), Microsoft `Exploited:Yes`, or
@@ -461,10 +489,13 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
      earliest date as "first seen exploited".
   2. Watchlist: matches the technology watchlist (built), with the other
      views shown as badges.
-  3. Exploit code, not yet exploited: not in view 1 and has a Metasploit
-     module, Nuclei template, Exploit-DB entry, VulnCheck XDB entry,
-     GitHub PoC, or SSVC Exploitation = poc. A maturity column (module,
-     template, proof of concept).
+  3. Exploit Leads Without Reported Exploitation: typed Metasploit exploit
+     modules, Exploit-DB or VulnCheck XDB entries, or a claimed GitHub PoC.
+     Show maturity and keep unverified claims distinct from exploit code.
+     Nuclei and non-exploit modules remain detection or capability context;
+     SSVC poc alone is not a linked artifact. Built 2026-11-17: exclude
+     positive exploitation from sightings, linked reports and ransomware
+     sources as well as catalogs and SSVC active.
   4. Patch Tuesday (Microsoft), built 2026-11-13. MSRC's keyless per-CVE
      CSAF index drives a separate refresh. First load fetches the last
      45 days of changed advisories. Later runs fetch new revisions and
@@ -472,15 +503,29 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
      and Chromium advisories released on Patch Tuesday go under Also
      Released. Other dates go under Out-of-Band. Show affected products,
      impact, severity, CVSS, Microsoft's disclosure and exploitation
-     assessments, and its remediation entries. Triage opens on High,
-     Important, Critical, public exploit code, or reported exploitation.
-     Show All and the individual Microsoft signal filters are available.
+     assessments, and its remediation entries. Reviewed 2026-11-16.
+     Keep Microsoft Severity separate from CVSS. Triage starts with
+     reported exploitation and includes public exploit code, public
+     disclosure, Microsoft's Exploitation More Likely forecast, Microsoft
+     Critical severity, or CVSS High or Critical. Show All
+     and the individual Microsoft signal filters are available.
      Add a customer-action field when a source supplies that assessment.
-     Review the default on a full monthly release. Consider whether to
-     include Publicly Disclosed and Exploitation More Likely by default.
-     Other vendors' cycles join as tagged rows where a keyless feed exists: Fortinet
-     PSIRT RSS, Palo Alto's JSON API, Cisco, Red Hat, and SUSE CSAF,
-     Chrome release notes, CISA's CSAF feeds.
+     Built 2026-11-17: fill per-CVE gaps from Microsoft's monthly CVRF
+     releases. Keep one row per CVE, prefer per-CVE CSAF when available,
+     and show the monthly source and scoped remediation for fallback
+     records. Fetch changed months from the public update index.
+     A failure of one Microsoft feed still allows refreshing the other.
+     Built 2026-11-17: Vendor Updates covers Fortinet PSIRT RSS with
+     linked CSAF, Palo Alto's public JSON, Cisco PSIRT RSS, Red Hat and
+     SUSE CSAF, and Chrome Stable Atom notices. Keep Microsoft release
+     cycles on Patch Tuesday. CISA CSAF remains in OT & ICS. Vendor
+     Updates filters by publisher, publication month, and Watchlist.
+     Show product-specific fixes and workarounds on CVE pages and use
+     them for action badges and Since Last Review. RSS references alone
+     do not establish a fix or exploitation. Each source starts from its
+     current feed window. Red Hat and SUSE process 50 changed documents
+     per refresh within 45 days, newer advisory IDs first. Show remaining
+     batches. Historical backfill and scheduled continuation remain open.
   5. New and severe: published in the last 7 days with CVSS 9.0 or
      higher, or SSVC Automatable = yes with Technical Impact = total.
      Built 2026-11-11; rejected CVEs left out.
@@ -514,33 +559,41 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
      the `rvm` feed fills `rvm_cves` (group, role from the matrix's
      markers, category, vendor, product, sources); the view, the CVE page
      and the priority (P1, with its own reason) use it, with credit.
-  10. AI and ML stack: a CVE or advisory whose package is on an
-      `ai_packages` list (PyPI, npm, crates), whose vendor and product is
-      on an `ai_products` list, or whose CVE record carries CWE-1427
-      (prompt injection; read from the CVE record, since NVD and GHSA
-      searches by that CWE return nothing). Keyword matches ("prompt
-      injection", "MCP server", "LLM") go to a "needs review" filter and
-      are never auto-included. The reason a row matched is stored and
-      shown. Lists are config files seeded from confirmed advisories
-      (langflow, litellm, mlflow, flowise, mcp-remote, the MCP SDKs and
-      Inspector, torch, langchain-core, Cursor, and so on) and the Valyu
-      2026 AI-tooling dataset (CC BY 4.0) as a one-off seed.
-  11. Probable zero-days: in view 1 and exploited at first publication
-      (Microsoft Exploited:Yes at revision 1, KEV added within a day of
-      publication, Chrome's "exists in the wild" wording, EUVD
-      exploited-since on or before publication). Labelled "probable".
-      Built 2026-11-11 from the dates already stored: first seen
-      exploited (any list, or SSVC active) no later than the day after
-      publication. Microsoft, Chrome and EUVD exploited-since join later.
-  12. Seen in honeypots: Vulnerability-Lookup sightings of type exploited
-      from Shadowserver in the last 7 days (already ingested). Built
-      2026-11-11 as "Exploitation sightings": the stored sightings keep
-      no source and cover the refresh's 48-hour window, so the rule is
-      any "exploited" sighting in that window.
-  13. OT, ICS, and medical: CVEs in CISA's CSAF OT feed (ICSA, ICSMA)
-      and the Siemens and Schneider CSAF feeds.
-  14. Trending attention: in Intruder's cvemon trending RSS or in the
-      top sighting counts over 24 hours. Attention, not exploitation.
+  10. AI and ML Stack, built 2026-11-15. Match curated CVE List packages
+      (PyPI, npm, crates.io), exact affected vendor and product pairs
+      from CVE List or NVD, or CWE-1427 in the CVE record. Show the
+      exact evidence and source link. Needs Review lists keyword
+      leads separately from the dashboard count and pinned preview.
+      Seed rules from published advisories and Valyu's 2026 AI-tooling
+      dataset (CC BY 4.0). Expand the rule list
+      from confirmed records. GHSA-only advisories require separate
+      advisory intake and remain open.
+  11. Zero-Days: Project Zero listings are Confirmed Zero-Day. A dated
+      positive exploitation signal on or before CVE publication can form
+      a Possible Zero-Day lead. Preserve the date's meaning; publication
+      and patch dates must not stand in for an exploitation date. The
+      fallback-date defect is fixed. Built 2026-11-17: linked confirmed
+      manual reports qualify independently of CVE publication metadata.
+      Other dated positive signals use their preserved meaning. Explicit
+      Chrome statements remain open. Keep the source and timeline visible.
+  12. Exploitation Sightings. Extended 2026-11-16 to retain CIRCL's
+      reported source, link when available, date and count for each
+      exploitation report in the existing 48-hour refresh window.
+      Filter by Shadowserver Source. A longer honeypot-specific history
+      remains open. A sighting can repeat somebody else's report.
+  13. OT & ICS, built 2026-11-15. Include CVEs in CISA's public ICSA
+      and ICSMA advisories and the Siemens ProductCERT and Schneider
+      Electric CPCERT feeds. Show original
+      product scope, explicit fixes and workarounds, and source links.
+      Group an explicitly linked CISA advisory under the matching
+      vendor advisory for the same CVE. Retain the separate source
+      links, revision dates, and guidance. Refresh each publisher
+      independently from its public index.
+  14. Trending Attention, built 2026-11-16. Intruder cvemon's hourly
+      RSS snapshot ranks social attention over the previous 24 hours.
+      Show the published rank, Hype Score, snapshot timestamp and
+      tracked exploitation evidence. Save just the latest snapshot.
+      Show when it is over three hours old. Polling waits for the scheduler.
   Malicious packages stay a separate table on the Supply chain tab (no
   CVE). Shodan's CVEDB (keyless, non-commercial; KEV, EPSS, ransomware
   flag, CPEs in one call) is a cross-check source, fetched at runtime.
@@ -582,19 +635,13 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
 - CSV / JSON / RSS exports (Phase 8), a per-vendor history and monthly chart
   (dashboards parking-lot item), and collapsible dashboard sections (needs a
   small script to remember state, with HTMX).
-- Include (2026-11-06): verdict lines. Every CVE detail page gets a short
-  "first steps" block of one to three sentences, each produced by a fixed
-  rule from the record's own fields and naming the field that fired
-  ("Treat as emergency remediation: on CISA KEV since 2026-10-13";
-  "Exploit code exists in 15 public repositories; that is capability, not
-  observed use"; "No fix reference in NVD yet: restrict exposure"). Rules
-  live in one table and the "how the score works" page lists every rule in
-  plain words. The same pattern applies to the Phase 1 enrichment verdict
-  ("blocklisted by URLhaus; AbuseIPDB 98% from 40 reporters: block"), the
-  Phase 3 alert ("new lookalike registered 2 days ago, MX set: watch for
-  phishing"), and Phase 6 pivots ("single feature class, shared hosting:
-  Weak, do not export"). No prose is generated; a line is a template with
-  values filled in.
+- Built 2026-11-16: deterministic CVE First Steps. Link up to three
+  steps to exploitation, explicit remediation or unknown patch status,
+  and public exploit-code evidence. The runbook lists the triggers.
+  Future modules use the same evidence-first approach.
+  The 2026-11-06 verdict-line decision also applies to Phase 1 enrichment,
+  Phase 3 alerts, and Phase 6 pivots. Each line uses a fixed template with
+  values from the evidence that triggered it.
 - Built 2026-11-15: Show score disagreement in CVE details and as a
   filter on the shared CVE tables. Keep exploitation evidence and SSVC
   visible alongside the scores.
@@ -717,15 +764,15 @@ one. Record also that GHSA/OSV add little as a CVE feed for the other
 tabs: nearly every entry that matters there already has a CVE in NVD.
 
 Three cheap signals (agreed 2026-11-03):
-- Patch available (built): the Fix column and the detail page show whether
-  NVD tags a reference as "Patch" or "Vendor Advisory", so "exploited and
-  unpatched" stands out.
+- Patch evidence (built, consistency fixes in the coverage audit): an
+  explicit NVD Patch reference or scoped CNA/vendor fix can support Patch.
+  A vendor advisory alone leaves patch status Unknown. Explicit no-fix
+  evidence applies to named targets in Exploited and Unfixed.
 - Score disagreement (built): flag FIRST EPSS of at least 50% with
   CVSS below 7.0, or CVSS of at least 9.0 with FIRST EPSS at most 1%.
   These are triage thresholds. The filter requires both scores.
-- Deadlines (built on the detail page): CISA's KEV due date, a federal
-  deadline that is a useful urgency proxy. It was dropped from the Dashboard
-  on 2026-11-04.
+- Deadlines: omitted from triage as decided 2026-11-12. Source due dates
+  may remain in stored records; do not present them as an analyst patch SLA.
 
 Sources review (2026-11-11; docs/research/2026-11-11-sources-review.md):
 - KEVScope (CyberMax-tools on Hugging Face) as a one-off offline
@@ -740,14 +787,18 @@ Sources review (2026-11-11; docs/research/2026-11-11-sources-review.md):
   detection exists" flag.
 - For the IOC extractor (from the Kraven downloads and saved reports
   reviewed 2026-11-11; notes in docs/research/2026-11-11-sources/):
-  - A decode helper in the standard library: Base64 to UTF-16LE
+  - Built 2026-11-17: a local decode helper in the standard library: Base64 to UTF-16LE
     (PowerShell `-enc`), Base64 plus inflate or gzip, character codes, and
-    JWT parts. Decoded text goes back through the extractor. Today the
-    encodings are only detected.
-  - PDF IOC tables: rejoin hashes that wrap onto two lines or across a page
+    JWT parts, plus plain Base64 to UTF-8. Decoded text goes back through
+    the extractor. Decode one explicit layer, with bounded input and
+    output. Display commands as text and label JWT fields unverified.
+  - Built 2026-11-17: PDF IOC rows rejoin hashes that wrap onto two lines or across a page
     break, and keep each row's context (section heading, detection name,
-    notes such as "(abused)"). Trend Micro's MuddyWater report shows every
-    case and makes a good offline test file.
+    notes such as "(abused)"). Preserve complete adjacent hashes when
+    joining would be ambiguous. Use explicit hash headings to resolve
+    32+32 fragments. Both uploaded and fetched PDFs use the repair.
+    Verify against the original Trend Micro MuddyWater PDF when available;
+    synthetic text-layer PDF fixtures cover the current implementation.
   - Browser and IDE extension IDs as an indicator type (the roadmap only
     covers language package ecosystems through OSV).
 
@@ -906,8 +957,8 @@ addresses)
   Paste sites are a low-yield venue now; most leak distribution has moved
   to Telegram and forums.
 - Repeat-leak detection for watched own-organisation selectors uses the
-  local breach index's repeat status. See Phase 7 for how the import checks
-  newly received passwords against prior salted hashes for the same account.
+  local breach index's repeat status. See Phase 7 for matching password reuse
+  across services using a single private salt.
 - GitHub secret and credential leaks for watched domains and organization
   names. CVE and exploit content on GitHub stays in Phase 2.
 - Exposed public cloud assets tied to the organization, found through search
@@ -1452,6 +1503,15 @@ code may be copied.)
   dead entries (it still lists the deprecated SSLBL IP list).
 
 ### Phase 6: Infrastructure pivoting
+
+Built 2026-11-16 on operator request: a passive C2IntelFeeds browser under
+Infrastructure. Import the publisher's 7-day C2 IPs, filtered C2 domains,
+and unverified C2 IPs. Search the local snapshot by indicator or publisher
+label. Keep publisher-checked and unverified entries distinct. Refresh on
+demand and retain the last successful snapshot on failure. Download the
+CC BY-NC-SA 4.0 data at runtime for local non-commercial use. The remaining
+windows, configuration metadata, correlation and own passive hunts follow
+the Phase 6 build order.
 - Graph model: nodes are indicators, edges are pivots with a confidence label from the plugin's pivot quality table.
 - Pivots: passive DNS (VT, OTX), certificate SHA-256 (Shodan, Censys, crt.sh), JARM, favicon hash, HTTP body hash, subdomains, WHOIS registrant and nameserver, ASN neighbors, VT relationship walks for hashes (contacted IPs and domains, dropped files).
 - Advanced fingerprint pivots (added 2026-10-28, confirmed worth doing):
@@ -1857,15 +1917,16 @@ checker built for it also serves Phase 3 brand-handle checks.
   - Preserve source row associations and provenance. Store the dataset name,
     file SHA-256, and import record count. A handle shared across records is
     a lead for correlation. Do not merge identities based on that alone.
-  - Derive a salted password hash locally for each password present during
-    import. Use a password hashing algorithm with a unique random salt per
-    hash and a separate local secret. Discard the plaintext at import.
-    Exclude session cookies, tokens, and other authentication secrets.
-  - For repeat detection, check a newly imported password against previous
-    hashes for the same service account using each prior salt. Store the
-    result as Same Password Seen Before. Keep hashes out of lookup results
-    and exports. Leave repeat status unknown when the importer has only an
-    upstream hash and cannot make the comparison.
+  - Derive a password hash locally for each password available in plaintext
+    during import. Use a password hashing algorithm with one strong,
+    randomly generated salt shared across the private corpus. Keep that
+    salt secret and separate from the database. Discard the plaintext at
+    import. Exclude session cookies, tokens, and other authentication secrets.
+  - Compare the derived hash across accounts and services. Show Same Password
+    Seen Before for matching records. A match records password reuse. It
+    does not establish that the accounts belong to the same person. Keep
+    hashes out of lookup results and exports. Leave repeat status unknown
+    when only an upstream hash is available and cannot be compared.
   - Malware hygiene: hash each file and optionally check VirusTotal before
     opening; open only in the VM.
   - Governance: suppression/deletion list to honor removal requests; local
@@ -2368,6 +2429,45 @@ checker built for it also serves Phase 3 brand-handle checks.
 
 ## Parking lot (revisit after the final phase)
 
+- Candidate for the relevant phases after the current build work
+  (2026-11-15): use Feedly's workflow patterns for case claims and
+  source lineage, hunt feasibility and validation, case report exports,
+  and verified mitigation outcomes. Evaluate the report-drafting
+  prompts in Phase 11. See [the source review](docs/research/2026-11-15-feedly-workflow-review.md)
+  for all 44 prompt dispositions and both skill bundles.
+
+- Candidate after Cases and ATT&CK lookup: add an **Attack Flow** view
+  to a case. Let an analyst assemble steps and branches from cited
+  evidence and connect them to the case's telemetry and candidate
+  detections. Evaluate MITRE CTID Attack Flow import and export.
+  Revisit draft generation from reports in optional Phase 11 AI assist.
+  FlowViz and CTID design notes are in the journal.
+
+- Revisit after v1 (2026-11-15): show exploitation evidence strength in
+  Exploitation Details once the source chain can be traced. Distinguish
+  firsthand observations, curated catalog assertions, and relayed
+  reports. Count independent observations only when their origin
+  is known. See the journal for proposed rules and test cases.
+
+- Revisit after v1 (2026-11-15): profile navigation and lookup latency
+  across modules. Start with Vulnerability Intelligence dashboard to CVE,
+  IOC enrichment, and views that scan large feeds. Measure cold and warm
+  requests, break down SQLite, template rendering, and external API time,
+  and keep an explicit refresh path where the first view can use local
+  data. See the journal for the acceptance checks.
+
+- Revisit after v1 (2026-11-17): expand the local encoding and decoding
+  workbench. Evaluate hex, Base32/Base85, URL percent encoding, HTML
+  entities, Unicode and JavaScript escapes, quoted-printable, ROT13,
+  additional bounded compression formats, and XOR with a supplied key.
+  Consider encode as well as decode, explicit character sets, byte/file
+  outputs, and visible multi-step recipes. Keep transformations local and
+  deterministic. Preserve every step, enforce resource limits, and send
+  decoded text back to IOC extraction. Automatic format suggestions must
+  explain uncertainty and require a selected transformation. Details and
+  acceptance checks are in the journal. The existing helper is sufficient
+  for the current Phase 2 slice.
+
 - Revisit after v1 (2026-11-13): add CVE-linked Sigma rules to Exploits &
   Detection. Start with SigmaHQ's emerging-threat rules. Review each additional
   rule repository's licence and link to source revisions. Match explicit CVE
@@ -2853,9 +2953,8 @@ Adopted 2026-10-27.
   or provider names, service and device hostnames, dates, and provenance.
   For lawful imports, derive salted password hashes as described in Phase 7
   and keep them in private storage. Show only the repeat-match status. Drop
-  plaintext passwords and other authentication secrets at import. Password
-  checks are performed locally against prior hashes for the same service
-  account.
+  plaintext passwords and other authentication secrets at import. Compare
+  locally derived hashes across services using the same private corpus salt.
 - Accounts: no impersonation accounts. Research-persona logins are created
   by hand, are read-only, and are stored as credentials.
 - The store lives on local/external disk, is git-ignored, may be encrypted
@@ -2899,6 +2998,10 @@ Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
 
 ## Decisions log
 
+- 2026-11-13: Use one strong randomly generated secret salt for the breach
+  corpus to identify password reuse across platforms. This supersedes the
+  per-record salt and same-service-account comparison design. Keep the salt
+  separate from the database and show only repeat status in lookup results.
 - 2026-11-13: Derive private salted password hashes at import for the local
   breach index. This supersedes the watched-account-only HMAC decision.
   A repeat indicator is computed during import and displayed without the

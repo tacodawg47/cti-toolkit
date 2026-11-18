@@ -1,0 +1,12 @@
+{% if sources %}
+  <ul class="plain">
+    {% for item in sources %}
+      <li><small>{{ item.day }} ·
+        {% if item.url %}<a href="{{ item.url }}" rel="noopener noreferrer nofollow">{{ item.source }}</a>
+        {% else %}{{ item.source }} · <a href="https://vulnerability.circl.lu/vuln/{{ cve_id }}" rel="noopener noreferrer">Vulnerability-Lookup record</a>{% endif %}
+        ({{ item.n }})</small></li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <small class="muted">Source details are unavailable for this snapshot.</small>
+{% endif %}

@@ -230,7 +230,10 @@ class FetchTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("404", err)
 
     async def test_redirect_to_http_refused(self):
+        requests = []
+
         def handler(req):
+            requests.append(req.url.scheme)
             if req.url.scheme == "https":
                 return httpx.Response(302, headers={"location": "http://example.com/plain"})
             return httpx.Response(200, content=b"evil.com")
@@ -238,6 +241,19 @@ class FetchTests(unittest.IsolatedAsyncioTestCase):
         text, kind, err = await fetch.fetch_text("https://example.com/r")
         self.assertIsNone(text)
         self.assertIn("non-HTTPS", err)
+        self.assertEqual(requests, ["https"])
+
+    async def test_local_or_credentialed_redirect_is_refused_before_request(self):
+        for location in ("https://127.0.0.1/private", "https://user:secret@example.org/private"):
+            with self.subTest(location=location):
+                def handler(req):
+                    self.assertEqual(str(req.url), "https://example.com/report")
+                    return httpx.Response(302, headers={"location": location})
+                self._install(handler)
+                text, _, error = await fetch.fetch_text("https://example.com/report")
+                self.assertIsNone(text)
+                self.assertIn("not fetched", error)
+                await base.aclose()
 
     async def test_oversized_body(self):
         self._install(lambda req: httpx.Response(
@@ -345,6 +361,71 @@ class ExtractRouteTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn("bad.example", r.text)
         self.assertIn("203.0.113.1", r.text)
+
+    def test_html_report_keeps_procedure_and_tactic_with_catalog_status(self):
+        from unittest.mock import patch
+
+        catalog = {
+            "version": "20.1",
+            "objects": {
+                "T1059.001": {"name": "Command and Scripting Interpreter: PowerShell",
+                              "tactics": ["execution"], "domains": ["enterprise"]},
+                "T1059.003": {"name": "Command and Scripting Interpreter: Windows Command Shell",
+                              "tactics": ["execution"], "domains": ["enterprise"]},
+            },
+            "tactics": {"TA0002": {"name": "Execution", "slug": "execution"}},
+        }
+        html = b"""<script>const example = "T1200";</script>
+        <table><caption>Table 4. Execution</caption>
+        <thead><tr><th>Tactic</th><th>Technique Title</th><th>ID</th><th>Use</th></tr>
+        <tr><td rowspan="2">Execution</td><td>PowerShell</td><td>T1059.001</td>
+        <td>Ran a PowerShell script.</td></tr>
+        <tr><td>Windows Command Shell</td><td>T1059.003</td><td>Launched cmd.exe.</td></tr>
+        </table><p>AML.T0040 and T9999.</p>"""
+        with patch("app.main.attack_catalog.load", return_value=catalog):
+            response = self.client.post("/extract", files={"file": ("report.html", html, "text/html")})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("https://attack.mitre.org/techniques/T1059/001/", response.text)
+        self.assertIn("Ran a PowerShell script.", response.text)
+        self.assertIn("Launched cmd.exe.", response.text)
+        self.assertEqual(response.text.count("Reported tactic Execution"), 2)
+        self.assertIn("Absent From Catalog", response.text)
+        self.assertNotIn("<code>T0040</code>", response.text)
+        self.assertNotIn("<code>T1200</code>", response.text)
+
+    def test_markdown_procedures_attach_to_the_named_technique(self):
+        from unittest.mock import patch
+
+        catalog = {"objects": {
+            "T1059.001": {"name": "PowerShell", "tactics": ["execution"]},
+            "T1059.003": {"name": "Windows Command Shell", "tactics": ["execution"]},
+        }, "tactics": {"TA0002": {"name": "Execution", "slug": "execution"}}}
+        report = r"""## Execution
+
+| Technique | ID | Observed Behavior |
+| --- | :---: | --- |
+| PowerShell | T1059.001 | Piped `a | b` and retained a \| literal. |
+
+1. **T1059.003 Windows Command Shell** — Launched cmd.exe.
+   It wrote a log afterward.
+
+- A general citation mentions T1059.001 — unrelated to this row.
+
+```markdown
+- T1059.003 — Fenced sample.
+```
+"""
+        with patch("app.main.attack_catalog.load", return_value=catalog):
+            pasted = self.client.post("/extract", data={"text": report})
+            upload = self.client.post("/extract", files={"file": ("advisory.md", report.encode(), "text/markdown")})
+        for response in (pasted, upload):
+            self.assertEqual(response.status_code, 200)
+            findings = response.text.split("<h3>ATT&amp;CK References", 1)[1].split("</section>", 1)[0]
+            first, second = findings.split('href="https://attack.mitre.org/techniques/T1059/003/"', 1)
+            self.assertIn("Piped `a | b` and retained a | literal.", first)
+            self.assertIn("Launched cmd.exe. It wrote a log afterward.", second)
+            self.assertNotIn("Fenced sample", findings)
+            self.assertNotIn("unrelated to this row", findings)
 
     def test_post_pdf_file(self):
         try:

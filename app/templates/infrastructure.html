@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Infrastructure — CTI Toolkit{% endblock %}
+{% block content %}
+<h1>Infrastructure</h1>
+<section class="card">
+  <h2>C2IntelFeeds</h2>
+  <p><small>Local snapshot of the publisher’s 7-day feeds. Treat matches as leads and validate them before acting.</small></p>
+  <form method="post" action="/infrastructure/refresh-c2">
+    <button class="small" type="submit">Refresh C2 Feeds</button>
+    {% if status.fetched_at %}<small>Fetched <time datetime="{{ status.fetched_at }}">{{ status.fetched_at[:16] | replace("T", " ") }} UTC</time></small>{% endif %}
+  </form>
+  {% if status.error %}<p class="err">{{ status.error }}{% if status.fetched_at %}. Showing the last successful snapshot.{% endif %}</p>{% endif %}
+  <p><small>Feeds by <a href="{{ repository }}" rel="noopener noreferrer">drb-ra</a> ·
+    <a href="{{ license_url }}" rel="noopener noreferrer">CC BY-NC-SA 4.0</a> ·
+    <a href="{{ dashboard }}" rel="noopener noreferrer">Publisher Dashboard</a></small></p>
+</section>
+<section class="card">
+  <form method="get" action="/infrastructure" class="filterbar">
+    <label for="c2-q">Indicator or Label</label>
+    <input type="search" id="c2-q" name="q" value="{{ q }}" maxlength="256">
+    <label for="c2-scope">Feed</label>
+    <select id="c2-scope" name="scope">
+      <option value="verified"{% if scope == "verified" %} selected{% endif %}>Publisher Checked</option>
+      <option value="unverified"{% if scope == "unverified" %} selected{% endif %}>Unverified</option>
+      <option value="all"{% if scope == "all" %} selected{% endif %}>All Feeds</option>
+    </select>
+    <button class="small" type="submit">Search</button>
+  </form>
+  {% if scope != "verified" %}<p><small>Unverified entries come from fingerprint matches. They can include legitimate tooling.</small></p>{% endif %}
+  {% if rows %}
+    <p class="muted"><small>{{ "{:,}".format(total) }} feed entries</small></p>
+    <div class="tablescroll">
+      <table>
+        <thead><tr><th>Indicator</th><th>Publisher Label</th><th>Source</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+          <tr>
+            <td><code>{{ row.indicator | replace(".", "[.]") }}</code></td>
+            <td>{{ row.label or "Unspecified" }}</td>
+            <td><a href="{{ repository }}/blob/master/feeds/{{ sources[row.feed][2] }}" rel="noopener noreferrer">{{ sources[row.feed][0] }}</a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if last > 1 %}
+      <nav class="pager" aria-label="C2 feed results">
+        {% if number > 1 %}<a href="{{ page_url(number - 1) }}">Previous</a> · {% endif %}
+        Page {{ number }} of {{ last }}
+        {% if number < last %} · <a href="{{ page_url(number + 1) }}">Next</a>{% endif %}
+      </nav>
+    {% endif %}
+  {% elif status.fetched_at %}<p class="muted">No entries match.</p>
+  {% else %}<p class="muted">Refresh the feeds to load entries.</p>{% endif %}
+</section>
+{% endblock %}

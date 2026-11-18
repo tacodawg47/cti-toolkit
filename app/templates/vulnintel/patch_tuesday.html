@@ -3,6 +3,7 @@
 {% block tab %}
 <div class="card" id="t-v">
   <h2>Patch Tuesday</h2>
+  <p><a href="{{ prefix }}/vendor-updates">Other Vendor Updates</a></p>
   <p class="muted">Microsoft advisories grouped by initial release date. Also Released covers Azure Linux and Chromium advisories published on the same day.</p>
   {% if feed.error %}<p class="err">{{ feed.error }}</p>{% endif %}
   {% if months or feed.fetched_at %}
@@ -23,7 +24,8 @@
       <button class="small" type="submit">Filter</button>
       <small class="muted">{{ t.total }} of {{ unfiltered }} advisories</small>
     </form>
-    {% if focus == "triage" %}<p class="muted"><small>Triage shows High, Important or Critical advisories, public exploit code and reported exploitation.</small></p>{% endif %}
+    {% if focus == "triage" %}<p class="muted"><small>Triage puts reported exploitation first. It includes public exploit code, disclosure,
+      Microsoft’s Exploitation More Likely assessment, Microsoft Critical severity, and CVSS High or Critical.</small></p>{% endif %}
     {% if t.rows %}
       {% include "vulnintel/_patch_rows.html" %}
       {% include "vulnintel/_pager.html" %}

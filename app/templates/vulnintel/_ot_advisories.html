@@ -1,0 +1,38 @@
+{% macro product_scope(advisory) %}
+  {% if advisory.sectors %}<p class="muted"><small>{{ advisory.sectors | join(" · ") }}</small></p>{% endif %}
+  {% if advisory.states %}
+    <ul class="plain">
+      {% for item in advisory.states[:20] %}
+        <li><strong>{{ item.status }}</strong> · {{ item.name }}</li>
+      {% endfor %}
+      {% if advisory.states | length > 20 %}<li><small>See the advisory for all affected versions and product statuses.</small></li>{% endif %}
+    </ul>
+  {% endif %}
+  {% if advisory.remediations %}
+    <ul class="plain">
+      {% for item in advisory.remediations[:12] %}
+        <li><strong>{{ item.label }}</strong>{% if item.products %} · {{ item.products[:8] | join(", ") }}{% if item.products | length > 8 %} and {{ item.products | length - 8 }} more{% endif %}{% else %} <small>· Product scope unspecified</small>{% endif %}
+          {% if item.details %}<br><small>{{ item.details | truncate(350, true) }}</small>{% endif %}
+          {% if item.url %}<br><small><a href="{{ item.url }}" rel="noopener noreferrer nofollow">Remediation Reference</a></small>{% endif %}</li>
+      {% endfor %}
+      {% if advisory.remediations | length > 12 %}<li><small>See the advisory for additional remediation entries.</small></li>{% endif %}
+    </ul>
+  {% endif %}
+{% endmacro %}
+{% for advisory in ot_advisories %}
+  <div class="ot-advisory">
+    <p><a href="{{ advisory.url }}" rel="noopener noreferrer">{{ advisory.advisory_id }}</a>
+      <strong>{{ advisory.title }}</strong> · {{ advisory.publisher }}
+      {% if advisory.kind != "Vendor" %} · {{ advisory.kind }}{% endif %}
+      <small>Revised {{ advisory.revised | day }}</small></p>
+    {{ product_scope(advisory) }}
+    {% for coverage in advisory.cisa_advisories %}
+      <details>
+        <summary>CISA Advisory Coverage</summary>
+        <p><a href="{{ coverage.url }}" rel="noopener noreferrer">{{ coverage.advisory_id }}</a>
+          · {{ coverage.kind }} <small>Revised {{ coverage.revised | day }}</small></p>
+        {{ product_scope(coverage) }}
+      </details>
+    {% endfor %}
+  </div>
+{% endfor %}

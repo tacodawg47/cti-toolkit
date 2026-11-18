@@ -1,15 +1,20 @@
 <div class="tablescroll">
 <table>
-  <tr><th>CVE and Advisory</th><th>Released</th><th>Impact</th><th>Severity / CVSS</th>
+  <tr><th>CVE and Advisory</th><th>Released</th><th>Impact</th><th>Microsoft Severity</th><th>CVSS</th>
       <th>Microsoft Assessment</th><th>Remediation</th>{% if t.rows[0].actions is defined %}<th>Actions</th>{% endif %}</tr>
   {% for r in t.rows %}
     <tr>
       <td>{% with id = r.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}<br>
         <a href="{{ r.url }}" target="_blank" rel="noopener noreferrer">{{ r.title }}</a>
+        {% if r.source_url %}<br><small><a href="{{ r.source_url }}" rel="noopener noreferrer">Microsoft Monthly CVRF</a>
+          · {{ r.document_id }} · Revised {{ r.source_revised | day }}</small>{% endif %}
+        {% if r.customer_action %}<br><small>Microsoft Customer Action Required {{ r.customer_action }}</small>{% endif %}
         {% if r.products %}<details><summary>Affected Products</summary><small>{{ r.products | join(", ") }}</small></details>{% endif %}</td>
       <td>{{ r.released }}</td>
       <td>{{ r.impact or "Unknown" }}</td>
-      <td>{{ (r.severity | title) if r.severity else "Unknown" }}{% if r.cvss is not none %} · {{ r.cvss }}{% endif %}</td>
+      <td>{{ r.vendor_severity or "Unknown" }}</td>
+      <td>{% if r.cvss is not none %}{{ r.cvss }}{% else %}Unknown{% endif %}
+        {% if r.severity %}<small>{{ r.severity | title }}</small>{% endif %}</td>
       <td><small>Exploited {{ r.exploited or "Unknown" }}<br>
         Publicly disclosed {{ r.disclosed or "Unknown" }}{% if r.exploitability %}<br>{{ r.exploitability }}{% endif %}</small></td>
       <td>{% if r.fixes %}

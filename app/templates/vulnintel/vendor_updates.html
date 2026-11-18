@@ -1,0 +1,36 @@
+{% extends "vulnintel/layout.html" %}
+{% block title %}Vendor Updates | CTI Toolkit{% endblock %}
+{% block tab %}
+<section class="card">
+  <h2>Vendor Updates</h2>
+  <p>Direct publisher notices and product-specific remediation. <a href="{{ prefix }}/views/patch-tuesday">Microsoft Patch Tuesday</a> and <a href="{{ prefix }}/views/ot">OT &amp; ICS</a> have dedicated views.</p>
+  <p class="muted">RSS and Atom notices are references. A notice alone does not establish exploitation or an available fix. Initial coverage follows each publisher's current feed window. Red Hat and SUSE load up to 50 changed advisories per refresh from the last 45 days. Refresh again to continue pending batches.</p>
+  <details><summary>Refresh Publishers</summary>
+    {% for key, label in publishers.items() %}{% set status = statuses.get('vendor_' + key, {}) %}
+    <div class="section">
+      <form method="post" action="{{ prefix }}/refresh-vendors/{{ key }}"><button class="small" type="submit">Refresh {{ label }}</button></form>
+      <small>{{ status.entries or 0 }} notices{% if status.fetched_at %} · {{ status.fetched_at | ago }}{% endif %}{% if status.version %} · {{ status.version }}{% endif %}</small>
+      {% if status.error %}<p class="err">{{ status.error }}</p>{% endif %}
+    </div>
+    {% endfor %}
+  </details>
+</section>
+<section class="card" id="t-vendor">
+  <form method="get" class="filterbar">
+    <label>Publisher <select name="vendor_source"><option value="">All Publishers</option>{% for key, label in publishers.items() %}<option value="{{ key }}"{% if source == key %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <label>Published Month <select name="vendor_month"><option value="">All Months</option>{% for value in t.months %}<option value="{{ value }}"{% if month == value %} selected{% endif %}>{{ value }}</option>{% endfor %}</select></label>
+    <label><input type="checkbox" name="vendor_watchlist" value="1"{% if watched %} checked{% endif %}> Watchlist</label>
+    <button class="small" type="submit">Filter</button>
+  </form>
+  <p>{{ t.total }} notices · {{ t.start }}-{{ t.end }} shown</p>
+  {% if t.rows %}<table><thead><tr><th>Notice</th><th>Published / Updated</th><th>Referenced CVEs</th></tr></thead><tbody>
+  {% for row in t.rows %}<tr>
+    <td><small>{{ row.publisher }} · {{ row.advisory_id }}</small><br><a href="{{ row.url }}" target="_blank" rel="noopener noreferrer">{{ row.title }}</a>{% if row.summary %}<details><summary>Publisher Summary</summary><p>{{ row.summary }}</p></details>{% endif %}</td>
+    <td>{{ row.published | day }}<br><small>{{ row.updated | day }}</small></td>
+    <td>{% for cve in row.cves[:8] %}<a href="{{ prefix }}/cve/{{ cve }}#vendor-advisories">{{ cve }}</a>{% if not loop.last %}, {% endif %}{% else %}<span class="muted">No CVE Listed In Feed</span>{% endfor %}{% if row.cves | length > 8 %}<details><summary>{{ row.cves | length - 8 }} More CVEs</summary>{% for cve in row.cves[8:] %}<a href="{{ prefix }}/cve/{{ cve }}#vendor-advisories">{{ cve }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</details>{% endif %}</td>
+  </tr>{% endfor %}</tbody></table>{% else %}<p class="muted">No notices match. Refresh a publisher above to load its current notices.</p>{% endif %}
+  {% if t.page > 1 %}<a href="{{ tlink('vendor', page=t.page-1) }}">Previous</a>{% endif %}
+  <small>Page {{ t.page }} of {{ t.pages }}</small>
+  {% if t.page < t.pages %}<a href="{{ tlink('vendor', page=t.page+1) }}">Next</a>{% endif %}
+</section>
+{% endblock %}

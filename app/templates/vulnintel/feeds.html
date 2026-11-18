@@ -2,6 +2,7 @@
 {% block tab %}
 <div class="card">
   <h3>Feeds</h3>
+  <p><a href="{{ prefix }}/vendor-updates">Refresh Fortinet, Palo Alto, Cisco, Red Hat, SUSE and Chrome Notices</a></p>
   <table>
     <tr><th>Feed</th><th>Last fetched</th><th>Entries</th><th>Version</th><th>Status</th></tr>
     {% for key, label in feed_labels.items() %}
@@ -39,11 +40,32 @@
   </form>
   <form method="post" action="{{ prefix }}/refresh-msrc" style="margin-top: 8px;">
     <button type="submit" class="small">Refresh Microsoft Advisories</button>
-    <small>The first load downloads advisories changed in the last 45 days. Later runs fetch new or revised documents. No key is required.</small>
+    <small>The first load downloads advisories changed in the last 45 days and recent monthly releases.
+      Monthly records fill per-CVE feed gaps. Later runs fetch new or revised documents. No key is required.</small>
   </form>
   <form method="post" action="{{ prefix }}/refresh-redhat-vex" style="margin-top: 8px;">
     <button type="submit" class="small">Refresh Red Hat VEX</button>
     <small>Checks revisions for Known Exploited CVEs in Red Hat's change index. The first load may take several minutes.</small>
+  </form>
+  <form method="post" action="{{ prefix }}/refresh-ot" style="margin-top: 8px;">
+    <button type="submit" class="small">Refresh CISA Industrial and Medical Advisories</button>
+    <small>The first load downloads the public advisory archive. Later runs fetch new and revised advisories.</small>
+  </form>
+  <form method="post" action="{{ prefix }}/refresh-ot/siemens" style="margin-top: 8px;">
+    <button type="submit" class="small">Refresh Siemens ProductCERT</button>
+    <small>Loads the public Siemens advisory feed. The first load downloads the advisory history.</small>
+  </form>
+  <form method="post" action="{{ prefix }}/refresh-ot/schneider" style="margin-top: 8px;">
+    <button type="submit" class="small">Refresh Schneider Electric CPCERT</button>
+    <small>Loads the public Schneider Electric change index and new or revised advisories.</small>
+  </form>
+  <form method="post" action="{{ prefix }}/refresh-trending" style="margin-top: 8px;">
+    <button type="submit" class="small">Refresh Trending Attention</button>
+    <small>Downloads the public Intruder cvemon snapshot without a key.</small>
+  </form>
+  <form method="post" action="{{ prefix }}/refresh-sightings" style="margin-top: 8px;">
+    <button type="submit" class="small">Refresh Exploitation Sightings</button>
+    <small>Refreshes the latest 48 hours of public Vulnerability-Lookup sightings.</small>
   </form>
 </div>
 

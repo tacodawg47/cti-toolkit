@@ -9,10 +9,13 @@ Run from the project root:
 """
 
 import gzip
+import io
 import json
 import shutil
 import tempfile
 import unittest
+import zipfile
+from html import unescape
 from pathlib import Path
 
 import httpx
@@ -20,8 +23,10 @@ import httpx
 from app.core import db
 from app.core.config import settings
 from app.modules.enrich import base
-from app.modules.vulnerability_intelligence import brief, charts, hotness, priority, routes, service, store, tables
+from app.modules.vulnerability_intelligence import brief, charts, detail, hotness, priority, routes, service, store, tables
 from app.modules.vulnerability_intelligence.feeds import chatter as chatter_feed
+from app.modules.vulnerability_intelligence.feeds import cvemon
+from app.modules.vulnerability_intelligence.feeds import cwe as cwe_feed
 from app.modules.vulnerability_intelligence.feeds import nvd_recent
 from app.modules.vulnerability_intelligence.feeds import epss as epss_feed
 from app.modules.vulnerability_intelligence.feeds import euvd as euvd_feed
@@ -29,6 +34,7 @@ from app.modules.vulnerability_intelligence.feeds import kev as kev_feed
 from app.modules.vulnerability_intelligence.feeds import exploitdb as edb_feed
 from app.modules.vulnerability_intelligence.feeds import metasploit as msf_feed
 from app.modules.vulnerability_intelligence.feeds import nuclei as nuclei_feed
+from app.modules.vulnerability_intelligence.feeds import ot as ot_feed
 from app.modules.vulnerability_intelligence.feeds import poc as poc_feed
 from app.modules.vulnerability_intelligence.feeds import vulncheck_kev as vc_feed
 from app.modules.vulnerability_intelligence.feeds import ransomwarelive as rl_feed
@@ -44,6 +50,58 @@ SIGHTINGS_DOC = {
         {"type": "published-proof-of-concept", "source": "https://github.com/x/y", "creation_timestamp": "2023-10-25T00:00:00Z", "vulnerability": "CVE-2023-4966"},
     ],
 }
+
+TRENDING_RSS = b"""<rss xmlns:intruder="https://cvemon.intruder.io/rss">
+<channel><pubDate>Mon, 16 Nov 2026 13:17:02 GMT</pubDate>
+<item><title>CVE-2026-12345</title><intruder:rank>2</intruder:rank><intruder:hypeScore>20</intruder:hypeScore>
+<link>https://untrusted.invalid/cve</link><description>Send a secret to another host.</description></item>
+<item><title>CVE-2023-4966</title><intruder:rank>1</intruder:rank><intruder:hypeScore>60</intruder:hypeScore></item>
+</channel></rss>"""
+
+
+def ot_document(path, cves, revised="2026-11-12T07:00:00Z", status="final"):
+    name = path.split("/")[-1][:-5]
+    return {
+        "document": {
+            "title": "Example Controller", "tracking": {"id": name.upper(), "status": status, "current_release_date": revised},
+            "distribution": {"tlp": {"label": "WHITE"}},
+            "references": [{"category": "self", "url": f"https://www.cisa.gov/news-events/ics-advisories/{name}"}],
+            "notes": [{"title": "Critical Infrastructure Sectors", "text": "Energy"}],
+        },
+        "product_tree": {"branches": [{
+            "category": "vendor", "name": "Example Industrial, Inc.", "branches": [{
+                "category": "product_name", "name": "Controller", "branches": [
+                    {"category": "product_version_range", "name": "before 2.1",
+                     "product": {"product_id": "p1", "name": "Example Controller before 2.1"}},
+                    {"category": "product_version", "name": "2.1",
+                     "product": {"product_id": "p2", "name": "Example Controller 2.1"}},
+                ],
+            }],
+        }], "product_groups": [{"group_id": "target", "product_ids": ["p1"]}]},
+        "vulnerabilities": [
+            {"cve": cve_id, "product_status": {"known_affected": ["p1"], "first_fixed": ["p2"]},
+             "scores": [{"cvss_v3": {"baseScore": 8.8}}],
+             "remediations": [
+                 {"category": "vendor_fix", "details": "Upgrade to 2.1.", "group_ids": ["target"]},
+                 {"category": "mitigation", "details": "Restrict access to the management interface.", "product_ids": ["p1"]},
+                 {"category": "mitigation", "details": "For more information see the CISA advisory.",
+                  "url": f"https://www.cisa.gov/news-events/ics-advisories/{name}", "product_ids": ["p1"]},
+             ]} for cve_id in cves
+        ],
+    }
+
+
+def ot_zip(documents):
+    payload = io.BytesIO()
+    with zipfile.ZipFile(payload, "w") as archive:
+        root = f"CSAF-develop/{ot_feed.ROOT}"
+        index = []
+        for path, document in documents.items():
+            archive.writestr(f"{root}/{path}", json.dumps(document))
+            index.append(f'{path},{document["document"]["tracking"]["current_release_date"]}\n')
+        archive.writestr(f"{root}/changes.csv", "".join(index))
+    return payload.getvalue()
+
 
 KEV_DOC = {
     "title": "CISA Catalog of Known Exploited Vulnerabilities",
@@ -95,7 +153,7 @@ GITHUB_DOC = {
     "total_count": 2, "incomplete_results": False,
     "items": [
         {"full_name": "someone/CVE-2023-4966", "html_url": "https://github.com/someone/CVE-2023-4966",
-         "description": "PoC", "stargazers_count": 12, "created_at": "2023-10-25T00:00:00Z",
+         "description": "PoC for CVE-2023-4966", "stargazers_count": 12, "created_at": "2023-10-25T00:00:00Z",
          "pushed_at": "2023-11-01T00:00:00Z", "fork": False, "archived": False, "owner": {"login": "someone"}},
         {"full_name": "other/scanner", "html_url": "https://github.com/other/scanner", "description": None,
          "stargazers_count": 0, "created_at": "2024-01-01T00:00:00Z", "pushed_at": "2024-01-01T00:00:00Z",
@@ -243,10 +301,37 @@ class GithubSummariseTests(unittest.TestCase):
         self.assertTrue(github.claim(cve, "someone/CVE_2024_3400-proof-of-concept"))
         self.assertTrue(github.claim(cve, "someone/research", "Exploit code for CVE-2024-3400"))
         self.assertIsNone(github.claim(cve, "someone/CVE-2024-34000-poc"))
+        self.assertIsNone(github.claim(cve, "someone/research", f"No public PoC for {cve}"))
         self.assertIsNone(github.claim(cve, "someone/research", readme=f"{cve}\nUnrelated PoC"))
+        evidence = github.claim_evidence(cve, "someone/research", readme=f"exploit script for {cve}")
+        self.assertEqual((evidence["field"], evidence["excerpt"]), ("README", f"exploit script for {cve}"))
 
 
 class RouteHelperTests(unittest.TestCase):
+    def test_first_report_uses_only_dated_exploitation_evidence(self):
+        rep = {
+            "kev": [{"source": "vulncheck", "date_added": "2026-11-15",
+                     "citations": [{"date": "2026-11-14"}]},
+                    {"source": "euvd", "date_added": "2026-10-01"},
+                    {"source": "gp0", "date_added": "2026-10-02"}],
+            "ssvc": {"exploitation": "none", "timestamp": "2026-10-03"},
+            "microsoft": {"exploited": "No", "revised": "2026-10-04"},
+            "sightings": {"first": {"confirmed": "2026-11-10", "published-proof-of-concept": "2026-11-11"}},
+            "first_recent_exploitation_sighting": "2026-11-16",
+        }
+        reports = [{"exploitation": "unknown", "reported_on": "2026-10-05", "source_name": "Unverified lead"}]
+        self.assertEqual(detail.first_exploitation_report(rep, reports),
+                         {"day": "2026-11-14", "source": "VulnCheck KEV"})
+        rep["sightings"]["first"]["exploited"] = "2026-11-13"
+        self.assertEqual(detail.first_exploitation_report(rep, reports),
+                         {"day": "2026-11-13", "source": "Vulnerability-Lookup"})
+        reports.append({"exploitation": "reported", "reported_on": "2026-11-12",
+                        "exploited_on": "2026-11-08", "source_name": "Incident responder"})
+        self.assertEqual(detail.first_exploitation_report(rep, reports),
+                         {"day": "2026-11-12", "source": "Incident responder"})
+        self.assertIsNone(detail.first_exploitation_report(
+            {"kev": [{"source": "euvd", "date_added": "2026-10-01"}]}, []))
+
     def test_group_references_dedupes_and_groups(self):
         cve = nvd.summarise(NVD_DOC)
         groups = dict(routes.group_references(cve["references"]))
@@ -262,6 +347,25 @@ class RouteHelperTests(unittest.TestCase):
 
 
 class StoreTests(TempDbMixin, unittest.TestCase):
+    def test_watchlist_schema_preserves_existing_entries_and_optional_context(self):
+        with db.connect() as conn, conn:
+            conn.execute("DROP TABLE tech_watchlist")
+            conn.execute("""CREATE TABLE tech_watchlist (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, vendor TEXT NOT NULL, product TEXT NOT NULL DEFAULT '',
+                note TEXT NOT NULL DEFAULT '', added_at TEXT NOT NULL)""")
+            conn.execute("INSERT INTO tech_watchlist VALUES (1, 'Citrix', '', 'Vendor watch', '2026-11-10')")
+        store.init_schema()
+        entry = store.list_watchlist()[0]
+        self.assertEqual((entry["id"], entry["vendor"], entry["note"], entry["added_at"]),
+                         (1, "Citrix", "Vendor watch", "2026-11-10"))
+        self.assertEqual(entry["version"], "")
+        store.init_schema()
+        context = {"version": "13.1", "exposure": "External", "importance": "High",
+                   "owner": "Example Team", "confirmed_on": "2026-11-17"}
+        self.assertTrue(store.update_watchlist_context(1, **context))
+        self.assertFalse(store.update_watchlist_context(9999, **context))
+        self.assertEqual(store.list_watchlist()[0]["owner"], "Example Team")
+
     def test_kev_upsert_and_queries(self):
         rows, _ = kev_feed.parse(json.dumps(KEV_DOC).encode())
         self.assertEqual(store.upsert_kev(rows, "cisa"), 2)
@@ -358,6 +462,73 @@ class ServiceTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         await base.aclose()
 
+    async def test_ot_revisions_replace_membership_and_retry_failed_download(self):
+        path = "2026/icsa-26-316-01.json"
+        older = "CVE-2026-20001"
+        current = "CVE-2026-20002"
+        snapshot = ot_zip({path: ot_document(path, [older])})
+        revision = "2026-11-14T07:00:00Z"
+        fetches = []
+        available = False
+
+        def handler(req):
+            fetches.append(str(req.url))
+            if str(req.url) == ot_feed.ARCHIVE:
+                return httpx.Response(200, content=snapshot)
+            if req.url.path.endswith("/changes.csv"):
+                return httpx.Response(200, text=f'{path},{revision}\n{path},2026-11-12T07:00:00Z\n')
+            if req.url.path.endswith(path):
+                return (httpx.Response(200, json=ot_document(path, [current], revised=revision))
+                        if available else httpx.Response(503))
+            raise AssertionError(req.url)
+
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        self.assertTrue((await ot_feed.refresh())["ok"])
+        self.assertIn(older, ot_feed.evidence_for([older]))
+        self.assertFalse((await ot_feed.refresh())["ok"])
+        self.assertIn(older, ot_feed.evidence_for([older]))
+        available = True
+        self.assertTrue((await ot_feed.refresh())["ok"])
+        self.assertEqual(set(ot_feed.evidence_for([current, older])), {current})
+        self.assertTrue((await ot_feed.refresh())["ok"])
+        self.assertEqual(fetches.count(f"{ot_feed.BASE}/{path}"), 2)
+
+    async def test_ot_siemens_rate_limit_preserves_progress_and_stops_next_batch(self):
+        publisher = ot_feed.PUBLISHERS["siemens"]
+        paths = [f"ssa-{n:06}.json" for n in range(1, 10)]
+        updated = "2026-11-12T07:00:00Z"
+        entries = [{"id": path[:-5].upper(), "updated": updated,
+                    "content": {"src": f"{publisher.base}/{path}"}} for path in paths]
+        entries.append({"id": "SSA-987654", "updated": updated,
+                        "content": {"src": "https://example.test/ssa-987654.json"}})
+        limited = True
+        requested = []
+
+        def handler(req):
+            url = str(req.url)
+            if url == publisher.index:
+                return httpx.Response(200, json={"feed": {"entry": entries}})
+            path = url.rsplit("/", 1)[-1]
+            self.assertIn(path, paths)
+            self.assertEqual(url, f"{publisher.base}/{path}")
+            requested.append(path)
+            if limited and path != paths[0]:
+                return httpx.Response(429)
+            return httpx.Response(200, json=ot_document(path, ["CVE-2026-20001"]))
+
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        result = await ot_feed.refresh("siemens")
+        self.assertFalse(result["ok"])
+        self.assertIn("rate limit", result["error"])
+        self.assertEqual(set(requested), set(paths[:8]))
+        self.assertEqual(result["entries"], 1)
+        limited = False
+        requested.clear()
+        result = await ot_feed.refresh("siemens")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["entries"], 9)
+        self.assertEqual(set(requested), set(paths[1:]))
+
     async def test_report_assembles_everything(self):
         base.set_client(httpx.AsyncClient(transport=_transport()))
         rows, _ = kev_feed.parse(json.dumps(KEV_DOC).encode())
@@ -404,6 +575,12 @@ class ServiceTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
         self.assertIn("500", store.feed_status()["cisa_kev"]["error"])
 
     async def test_feeds_refresh_end_to_end(self):
+        cwe_zip = io.BytesIO()
+        with zipfile.ZipFile(cwe_zip, "w") as archive:
+            archive.writestr("cwec_v5.0.xml", b'<Weakness_Catalog xmlns="http://cwe.mitre.org/cwe-7" Version="5.0">'
+                             b'<Weaknesses><Weakness ID="131" Name="Incorrect Buffer Size Calculation"/>'
+                             b'</Weaknesses></Weakness_Catalog>')
+
         def handler(req):
             if "cisa.gov" in req.url.host:
                 return httpx.Response(200, json=KEV_DOC)
@@ -427,6 +604,10 @@ class ServiceTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
                 return httpx.Response(200, text=GP0_CSV if req.url.params.get("sheet") == "2026" else GP0_INTRO)
             if req.url.host == "raw.githubusercontent.com" and "Ransomware-Vulnerability-Matrix" in req.url.path:
                 return httpx.Response(200, text=RVM_EDGE)
+            if req.url.host == "cwe.mitre.org":
+                return httpx.Response(200, content=cwe_zip.getvalue())
+            if req.url.host == "cvemon.intruder.io":
+                return httpx.Response(200, content=TRENDING_RSS)
             raise AssertionError(req.url.host)
         base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
         from app.modules.vulnerability_intelligence import feeds
@@ -435,6 +616,8 @@ class ServiceTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
         self.assertEqual(failed, [], results)                # chatter may be empty: no sightings in the mock
         self.assertEqual(store.kev_count(), 6)                # 2 CISA + 2 EUVD + 2 Project Zero, all distinct
         self.assertEqual(store.epss_count(), 1)
+        self.assertEqual(cwe_feed.weakness("CWE-131")["name"], "Incorrect Buffer Size Calculation")
+        self.assertEqual(store.trending_attention_for("CVE-2023-4966")["rank"], 1)
         self.assertEqual(store.feed_status()["cisa_kev"]["version"], "2026.11.03")
         self.assertEqual(store.exploit_counts(), {"exploitdb": 1, "metasploit": 1, "nuclei": 1})
         self.assertEqual(store.get_cve("CVE-2023-4966")["cvss_score"], 7.5)     # via the NVD recent feed
@@ -481,10 +664,10 @@ class RouteTests(TempDbMixin, unittest.TestCase):
     def test_cve_page(self):
         rows, _ = kev_feed.parse(json.dumps(KEV_DOC).encode())
         store.upsert_kev(rows, "cisa")
-        r = self.client.get("/vulnerability-intelligence/cve/CVE-2023-4966")
+        r = self.client.get("/vulnerability-intelligence/cve/CVE-2023-4966?refresh=1")
         self.assertEqual(r.status_code, 200)
         for needle in ("P1 Emergency", "Sensitive information disclosure.", "7.5", "CWE-119",
-                       "Known exploited", "someone/CVE-2023-4966", "Vendor advisory", "12.1-55.300",
+                       "Exploitation Details", "someone/CVE-2023-4966", "Vendor advisory", "12.1-55.300",
                        '<a href="#references">Patch Reference</a>',
                        '<p class="cvetitle">Citrix NetScaler Buffer Overflow</p>',   # CISA's name as the title
                        "<li>On a known-exploited list"):                          # bullets start with a capital
@@ -494,6 +677,45 @@ class RouteTests(TempDbMixin, unittest.TestCase):
         self.assertNotIn("CVSS 7.5", bullets)
         r = self.client.get("/vulnerability-intelligence/cve/not-a-cve")
         self.assertIn("not a CVE identifier", r.text)
+
+    def test_local_detail_connects_status_to_dated_sources_without_waiting_on_network(self):
+        from app.core import cache
+        from app.modules.vulnerability_intelligence.feeds import cvelist
+
+        cve_id = "CVE-2026-119618"
+        record = cve5(cve_id, "Apache Software Foundation", "Apache HTTP Server", ssvc="none")
+        record["containers"]["cna"]["problemTypes"][0]["descriptions"][0]["cweId"] = "CWE-362"
+        store.save_cve_records([cvelist.parse_record(record)])
+        kev, _, _ = vc_feed.parse_page({"data": [{**VC_ITEM, "cve": [cve_id]}]})
+        store.upsert_kev(kev, "vulncheck")
+        store.upsert_poc_repos(poc_feed.parse_items([
+            gh_repo(f"{cve_id}-proof-of-concept", "2026-11-14"),
+            {**gh_repo(cve_id, "2026-11-14"), "description": "Advisory roundup"},
+        ]))
+        article = "https://research.example.test/validation"
+        sightings = vulnlookup.summarise({"data": [{
+            "type": "confirmed", "source": article, "creation_timestamp": "2026-11-14T00:00:00Z",
+        }]})
+        cache.put(vulnlookup.VENDOR, cve_id, {"status": "ok", **sightings}, 300)
+
+        def unexpected(req):
+            self.fail(f"Local CVE detail made a network request to {req.url.host}")
+
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(unexpected)))
+        result = self.client.get(f"/vulnerability-intelligence/cve/{cve_id}")
+        self.assertEqual(result.status_code, 200)
+        body = result.text
+        for expected in ("Exploitation Reported", "First Reported Exploitation", "VulnCheck KEV",
+                         "2026-10-19", "Race Condition", "/data/definitions/362.html", "Apache HTTP Server",
+                         "redhat.com/security/cve/cve-2026-99999", "Vulnerability Confirmed", article):
+            self.assertIn(expected, body)
+        self.assertLess(body.index('id="affected-products"'), body.index('id="exploitation-details"'))
+        self.assertEqual(body.count('<time datetime="2026-10-19">'), 1)
+        self.assertNotIn("Exploitation none", body)
+        self.assertNotIn("Date Listed", body)
+        self.assertIn("Claimed PoC", body.split('id="exploits"', 1)[1])
+        self.assertNotIn(f'href="https://github.com/user/{cve_id}"', body)
+        self.assertNotIn("OTX pulses", body)
 
     def test_exploits_tab(self):
         r = self.client.get("/vulnerability-intelligence/exploits", params={"cve": "CVE-2023-4966"})
@@ -976,6 +1198,33 @@ class EuvdAndChatterFeedTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         await base.aclose()
 
+    async def test_trending_ignores_item_links_and_keeps_snapshot_on_failure(self):
+        def handler(req):
+            self.assertEqual(str(req.url), cvemon.URL)
+            return httpx.Response(200, content=TRENDING_RSS)
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        self.assertTrue((await cvemon.refresh())["ok"])
+        row = store.trending_attention_for("CVE-2026-12345")
+        self.assertEqual(row, {"rank": 2, "score": 20, "snapshot": "2026-11-16T13:17:02+00:00"})
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(
+            lambda req: httpx.Response(200, content=b'<!DOCTYPE rss SYSTEM "https://untrusted.invalid/">'
+                                               + TRENDING_RSS))))
+        self.assertFalse((await cvemon.refresh())["ok"])
+        self.assertEqual(store.trending_attention_for("CVE-2026-12345"), row)
+
+    async def test_authenticated_bulk_refreshes_never_follow_redirects(self):
+        from unittest.mock import patch
+        hosts = []
+
+        def handler(req):
+            hosts.append(req.url.host)
+            return httpx.Response(302, headers={"Location": "https://untrusted.invalid/redirect"})
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        with patch.object(settings, "nvd_api_key", "fake-nvd-key"), patch.object(settings, "vulncheck_api_key", "fake-token"):
+            self.assertFalse((await nvd_recent.refresh())["ok"])
+            self.assertFalse((await vc_feed.refresh())["ok"])
+        self.assertEqual(hosts, ["services.nvd.nist.gov", "api.vulncheck.com"])
+
     async def test_euvd_feed_pages_until_short_page(self):
         pages = []
 
@@ -1342,7 +1591,7 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
     def test_cve_page_shows_ransomware_groups(self):
         store.upsert_ransomware_cves([("CVE-2023-4966", "lockbit3")])
         r = self.client.get("/vulnerability-intelligence/cve/CVE-2023-4966")
-        self.assertIn("Ransomware groups known to exploit it", r.text)
+        self.assertIn("Ransomware Groups Known to Exploit It", r.text)
         self.assertIn("lockbit3", r.text)
         self.assertIn("P1 Emergency", r.text)
 
@@ -1352,7 +1601,7 @@ class PocRouteTests(TempDbMixin, unittest.TestCase):
         store.upsert_exploits("exploitdb", edb_feed.parse(EDB_CSV))
         r = self.client.get("/vulnerability-intelligence/cve/CVE-2023-4966")
         for needle in ("auxiliary", "citrix_netscaler_adc_bleed", "Exploit-DB", "51600",
-                       "Exploitation sightings", "dl.shadowserver.org", "2 exploitation sightings", "P1 Emergency"):
+                       "Exploitation Sightings", "dl.shadowserver.org", "2 exploitation sightings", "P1 Emergency"):
             self.assertIn(needle, r.text)
         r = self.client.get("/vulnerability-intelligence/exploits", params={"cve": "CVE-2023-4966"})
         self.assertIn("Metasploit Modules", r.text)
@@ -1550,7 +1799,7 @@ class OtxCveTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
         self.assertTrue(second["cached"])
         self.assertEqual(len(calls), 1)
 
-    async def test_report_with_ssvc_and_otx(self):
+    async def test_report_with_ssvc(self):
         def handler(req):
             if req.url.host == "services.nvd.nist.gov":
                 return httpx.Response(200, json={"vulnerabilities": []})
@@ -1570,12 +1819,11 @@ class OtxCveTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
         self.assertEqual(rep["priority"].level, "P1")              # SSVC active, nothing else
         self.assertEqual(rep["ssvc"]["exploitation"], "active")
         self.assertEqual(store.get_ssvc("CVE-2024-3400")["automatable"], "yes")
-        self.assertEqual(rep["otx"]["count"], 3)
         self.assertEqual(rep["cwe_fallback"], "CWE-77")
         self.assertEqual(rep["cvss_fallback"]["cvss_score"], 10.0)
 
 
-class SsvcOtxPageTests(TempDbMixin, unittest.TestCase):
+class SsvcDetailPageTests(TempDbMixin, unittest.TestCase):
     def setUp(self):
         super().setUp()
         from fastapi.testclient import TestClient
@@ -1587,8 +1835,6 @@ class SsvcOtxPageTests(TempDbMixin, unittest.TestCase):
                 return httpx.Response(200, json=CVE5_WITH_SSVC)
             if req.url.host == "vulnerability.circl.lu":
                 return httpx.Response(200, json={"metadata": {"count": 0}, "data": []})
-            if req.url.host == "otx.alienvault.com":
-                return httpx.Response(200, json=OTX_CVE_DOC)
             if req.url.host == "services.nvd.nist.gov":
                 return httpx.Response(200, json=NVD_DOC)
             if req.url.host == "api.github.com":
@@ -1601,21 +1847,14 @@ class SsvcOtxPageTests(TempDbMixin, unittest.TestCase):
         asyncio.run(base.aclose())
         super().tearDown()
 
-    def test_page_shows_ssvc_and_pulses(self):
+    def test_page_shows_ssvc_without_querying_otx(self):
         settings.otx_api_key = "test-otx"
         r = self.client.get("/vulnerability-intelligence/cve/CVE-2023-4966")
         self.assertEqual(r.status_code, 200)
         self.assertIn("CISA SSVC", r.text)
-        self.assertIn('<span class="verdict-malicious">active</span>', r.text)
+        self.assertIn("Active exploitation", r.text)
         self.assertIn("2024-04-17", r.text)
-        self.assertIn("OTX pulses", r.text)
-        self.assertIn("https://otx.alienvault.com/pulse/bbb", r.text)
-        self.assertIn("UPSTYLE", r.text)
-        self.assertIn("Context, not evidence", r.text)
-
-    def test_page_without_otx_key(self):
-        r = self.client.get("/vulnerability-intelligence/cve/CVE-2023-4966")
-        self.assertIn("Add OTX_API_KEY to .env", r.text)
+        self.assertNotIn("OTX pulses", r.text)
 
 
 CIRCL_KEV_ITEMS = [
@@ -1669,7 +1908,8 @@ class ViewTests(TempDbMixin, unittest.TestCase):
         super().setUp()
         rows, _ = kev_feed.parse(json.dumps(KEV_DOC).encode())          # CVE-2023-4966 (Citrix), CVE-2026-118527 (Ivanti)
         store.upsert_kev(rows, "cisa")
-        store.upsert_kev([{**rows[0], "date_added": "2023-10-10"}], "shadowserver")   # earlier listing elsewhere
+        store.upsert_kev([{**rows[0], "date_added": "2023-10-10",
+                           "dates": {"source_reported": "2023-10-10"}}], "shadowserver")
         store.upsert_exploits("metasploit", [{"ref": "exploit/x", "cve_id": "CVE-2023-4966", "title": "t", "url": None,
                                              "date": None, "kind": "exploit", "platform": None, "verified": 0}])
         store.upsert_exploits("nuclei", [{"ref": "cves/2025/CVE-2025-1111.yaml", "cve_id": "CVE-2025-1111", "title": "t",
@@ -1712,6 +1952,60 @@ class ViewRouteTests(ViewTests):
         from fastapi.testclient import TestClient
         from app.main import app
         self.client = TestClient(app, base_url="http://127.0.0.1")
+
+    def test_optional_watchlist_context_keeps_vendor_matching_and_validates_date(self):
+        from app.modules.vulnerability_intelligence import views
+
+        prefix = "/vulnerability-intelligence/watchlist"
+        response = self.client.post(prefix + "/add", data={"vendor": "Citrix", "owner": "Example Team"})
+        self.assertEqual(response.status_code, 200)
+        entry = next(item for item in store.list_watchlist() if item["owner"] == "Example Team")
+        before = views.watchlist_hits()
+        payload = {"entry_id": entry["id"], "version": "13.1", "exposure": "External",
+                   "importance": "Critical", "owner": "Second Team", "confirmed_on": "2026-11-17"}
+        page = self.client.post(prefix + "/context", data=payload)
+        self.assertEqual(page.status_code, 200)
+        self.assertIn('value="Second Team"', page.text)
+        self.assertEqual(views.watchlist_hits(), before)
+        bad = self.client.post(prefix + "/context", data={**payload, "confirmed_on": "not a date"})
+        self.assertEqual(bad.status_code, 422)
+        denied = self.client.post(prefix + "/context", data=payload, headers={"Sec-Fetch-Site": "cross-site"})
+        self.assertEqual(denied.status_code, 403)
+        self.assertEqual(next(item for item in store.list_watchlist() if item["id"] == entry["id"])["confirmed_on"],
+                         "2026-11-17")
+
+    def test_trending_view_rank_and_exploitation_are_independent(self):
+        from unittest.mock import AsyncMock, patch
+        store.replace_trending_attention(cvemon.parse(TRENDING_RSS))
+        page = self.client.get("/vulnerability-intelligence/views/trending")
+        self.assertEqual(page.status_code, 200)
+        self.assertLess(page.text.index("CVE-2023-4966"), page.text.index("CVE-2026-12345"))
+        self.assertIn("Hype Score 60", page.text)
+        self.assertEqual(page.text.count(">Exploitation Reported</a>"), 1)
+        self.assertIn("https://cvemon.intruder.io/cves/CVE-2026-12345", page.text)
+        self.assertNotIn("untrusted.invalid", page.text)
+        with patch.object(nvd, "fetch", new_callable=AsyncMock) as fetch:
+            cve = self.client.get("/vulnerability-intelligence/cve/CVE-2026-12345")
+            fetch.assert_not_awaited()
+        self.assertIn("First Steps", cve.text)
+        self.assertIn("Patch status is unknown", cve.text)
+        self.assertNotIn("Prioritize exposure checks and hunting", cve.text)
+
+    def test_sightings_view_preserves_sources_and_filters_shadowserver(self):
+        today = store._since(0)
+        rows, sources = vulnlookup._recent_summary([
+            {"vulnerability": "CVE-2023-4966", "type": "exploited", "source": "https://dl.shadowserver.org/report",
+             "creation_timestamp": f"{today}T01:00:00"},
+            {"vulnerability": "CVE-2026-12345", "type": "exploited", "source": "https://example.org/test",
+             "creation_timestamp": f"{today}T02:00:00"},
+        ], 2)
+        store.replace_recent_sightings(rows, sources)
+        page = self.client.get("/vulnerability-intelligence/views/sightings?v_tag=shadowserver_sighting")
+        self.assertIn("https://dl.shadowserver.org/report", page.text)
+        self.assertNotIn("CVE-2026-12345", page.text)
+        cve = self.client.get("/vulnerability-intelligence/cve/CVE-2026-12345")
+        self.assertIn("https://example.org/test", cve.text)
+        self.assertIn("because Vulnerability-Lookup reports exploitation", cve.text)
 
     def test_views_pages(self):
         r = self.client.get("/vulnerability-intelligence/views")
@@ -1834,6 +2128,165 @@ class ViewRouteTests(ViewTests):
         dashboard = self.client.get("/vulnerability-intelligence").text
         self.assertIn('id="t-pin-edge"', dashboard)
         self.assertIn("Edge Match", dashboard)
+
+    def test_ot_view_filters_advisory_types_and_links_product_scoped_remediation(self):
+        from app.modules.vulnerability_intelligence import views
+
+        industrial = "2026/icsa-26-316-01.json"
+        medical = "2026/icsma-26-295-01.json"
+        draft = "2026/icsma-26-295-02.json"
+        shared, industrial_only, medical_only, draft_only = (f"CVE-2026-{n}" for n in range(20001, 20005))
+        medical_doc = ot_document(medical, [shared, medical_only])
+        medical_doc["vulnerabilities"][1]["remediations"] = []
+        snapshot = ot_zip({
+            industrial: ot_document(industrial, [shared, industrial_only]),
+            medical: medical_doc,
+            draft: ot_document(draft, [draft_only], status="draft"),
+        })
+
+        def handler(req):
+            self.assertEqual(str(req.url), ot_feed.ARCHIVE)
+            return httpx.Response(200, content=snapshot)
+
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        prefix = "/vulnerability-intelligence"
+        url = f"{prefix}/views/ot"
+        denied = self.client.post(f"{prefix}/refresh-ot", headers={"Sec-Fetch-Site": "cross-site"})
+        self.assertEqual(denied.status_code, 403)
+        refreshed = self.client.post(f"{prefix}/refresh-ot", follow_redirects=False)
+        self.assertEqual(refreshed.status_code, 303)
+        self.assertEqual(refreshed.headers["location"], url)
+        self.assertEqual(views.BY_SLUG["ot"].count(), 3)
+        result = self.client.get(url, params={"v_tag": "ot_medical", "v_vendor": "Example Industrial, Inc."})
+        self.assertEqual(result.status_code, 200)
+        for expected in (shared, medical_only, "Advisory Evidence", "First Fixed", "Example Controller 2.1",
+                         "Vendor Fix", "Example Controller before 2.1", "Restrict access to the management interface."):
+            self.assertIn(expected, result.text)
+        self.assertNotIn("For more information see the CISA advisory", result.text)
+        self.assertNotIn(industrial_only, result.text)
+        self.assertNotIn(draft_only, result.text)
+        cve = self.client.get(f"{prefix}/cve/{medical_only}")
+        self.assertEqual(cve.status_code, 200)
+        self.assertIn("Industrial and Medical Advisories", cve.text)
+        self.assertIn('<a href="#ot-advisories">OT Advisory Fix</a>', cve.text)
+        self.assertIn("No Exploitation Reported", cve.text)
+        self.client.post(f"{prefix}/views/pins", data={"pinned": "ot"})
+        dashboard = self.client.get(prefix).text
+        self.assertIn('id="t-pin-ot"', dashboard)
+        self.assertIn("Advisory Evidence", dashboard)
+
+    def test_ot_vendor_refresh_filters_and_groups_only_explicit_advisory_links(self):
+        from app.modules.vulnerability_intelligence import views
+
+        cisa_path = "2026/icsa-26-316-01a.json"
+        siemens = ot_feed.PUBLISHERS["siemens"]
+        schneider = ot_feed.PUBLISHERS["schneider"]
+        original = "ssa-123456.json"
+        other = "ssa-654321.json"
+        s_path = "2026/sevd-2026-314-01.json"
+        shared = "CVE-2026-20001"
+        vendor_only = "CVE-2026-20006"
+        date = "2026-11-12T07:00:00Z"
+        cisa_doc = ot_document(cisa_path, [shared])
+        cisa_doc["document"]["references"].append(
+            {"category": "external", "url": "https://cert-portal.siemens.com/productcert/html/ssa-123456.html"})
+        snapshot = ot_zip({cisa_path: cisa_doc})
+
+        def handler(req):
+            url = str(req.url)
+            if url == ot_feed.ARCHIVE:
+                return httpx.Response(200, content=snapshot)
+            if url == siemens.index:
+                return httpx.Response(200, json={"feed": {"entry": [
+                    {"id": name[:-5].upper(), "updated": date, "content": {"src": f"{siemens.base}/{name}"}}
+                    for name in (original, other)
+                ]}})
+            if url == schneider.index:
+                return httpx.Response(200, text=f"{s_path},{date}\n")
+            if url == f"{schneider.base}/{s_path}":
+                return httpx.Response(200, json=ot_document(s_path, [vendor_only]))
+            path = url.rsplit("/", 1)[-1]
+            self.assertIn(path, (original, other))
+            self.assertEqual(url, f"{siemens.base}/{path}")
+            return httpx.Response(200, json=ot_document(path, [shared]))
+
+        base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        prefix = "/vulnerability-intelligence"
+        self.assertEqual(self.client.post(f"{prefix}/refresh-ot/missing").status_code, 404)
+        for endpoint in ("refresh-ot", "refresh-ot/siemens", "refresh-ot/schneider"):
+            self.assertEqual(self.client.post(f"{prefix}/{endpoint}", follow_redirects=False).status_code, 303)
+        self.assertEqual(views.BY_SLUG["ot"].count(), 2)
+        self.assertEqual(len(ot_feed.evidence_for([shared])[shared]), 2)
+        result = self.client.get(f"{prefix}/views/ot", params={"v_tag": "ot_siemens"})
+        self.assertIn(shared, result.text)
+        self.assertNotIn(vendor_only, result.text)
+        self.assertIn("SSA-123456", result.text)
+        self.assertIn("SSA-654321", result.text)
+        self.assertIn("ICSA-26-316-01A", result.text)
+        self.assertIn("CISA Advisory Coverage", result.text)
+        self.assertEqual(result.text.count('class="ot-advisory"'), 2)
+        result = self.client.get(f"{prefix}/views/ot", params={"v_tag": "ot_schneider"})
+        self.assertIn(vendor_only, result.text)
+        self.assertNotIn(shared, result.text)
+        self.assertIn("Schneider Electric CPCERT", result.text)
+        detail = self.client.get(f"{prefix}/cve/{shared}")
+        self.assertIn("ICSA-26-316-01A", detail.text)
+        self.assertIn("SSA-123456", detail.text)
+
+    def test_ai_stack_keeps_keyword_leads_separate_and_shows_evidence(self):
+        from app.modules.vulnerability_intelligence import views
+        from app.modules.vulnerability_intelligence.feeds import cvelist
+
+        product = cve5("CVE-2026-12421", "LangChain AI", "langchain_core")
+        package = cve5("CVE-2026-12422", "n/a", "n/a")
+        package["containers"]["cna"]["affected"][0].update(
+            packageName="torch", collectionURL="https://pypi.org/")
+        package["containers"]["cna"]["affected"].append(
+            {"packageName": "langchain_core", "collectionURL": "https://pypi.org/"})
+        collision = cve5("CVE-2026-12423", "CIENA", "MCP")
+        collision["containers"]["cna"]["affected"][0].update(
+            packageName="mcp", collectionURL="https://www.npmjs.com/")
+        collision["containers"]["cna"]["title"] = "MCP servers can receive untrusted input"
+        legacy_collision = cve5("CVE-2026-12424", "Other Vendor", "torch")
+        legacy_collision["containers"]["cna"]["affected"][0]["packageName"] = "torch"
+        weakness = cve5("CVE-2026-12425")
+        weakness["containers"]["adp"] = [{"problemTypes": [{"descriptions": [{"cweId": "CWE-1427"}]}]}]
+        rejected = cve5("CVE-2026-12426", "langflow-ai", "langflow", state="REJECTED")
+        rejected["containers"]["cna"]["title"] = "LLM prompt injection"
+        substring = cve5("CVE-2026-12427")
+        substring["containers"]["cna"]["title"] = "Affected spellmaker library"
+        store.save_cve_records([cvelist.parse_record(rec) for rec in
+                                (product, package, collision, legacy_collision, weakness, rejected, substring)])
+        store.save_cve({"cve_id": "CVE-2026-12428", "products": [{"vendor": "ollama", "product": "ollama"}]})
+        store.save_cve({"cve_id": "CVE-2026-12429", "description": "A prompt-injection flaw affects the widget."})
+        store.save_cve({"cve_id": "CVE-2026-12430", "status": "Rejected", "description": "An LLM flaw."})
+
+        url = "/vulnerability-intelligence/views/ai-stack"
+        view = views.BY_SLUG["ai-stack"]
+        rows = {row["cve_id"]: row["ai_matches"] for row in view.rows()}
+        self.assertEqual(set(rows), {"CVE-2026-12421", "CVE-2026-12422", "CVE-2026-12425", "CVE-2026-12428"})
+        self.assertEqual(view.count(), len(rows))
+        self.assertEqual(rows["CVE-2026-12428"][0].source, "NVD")
+        self.assertEqual(rows["CVE-2026-12425"][0].kind, "Weakness")
+        matched = self.client.get(url)
+        self.assertEqual(matched.status_code, 200)
+        self.assertIn("LangChain AI / langchain_core", matched.text)
+        self.assertIn("torch (PyPI)", matched.text)
+        self.assertIn("langchain_core (PyPI)", matched.text)
+        self.assertIn("CWE-1427", matched.text)
+        self.assertNotIn("CVE-2026-12423", matched.text)
+        leads = self.client.get(url, params={"needs_review": "true"})
+        self.assertEqual(leads.status_code, 200)
+        self.assertIn('name="needs_review" value="true"', leads.text)
+        self.assertIn("mcp servers", leads.text)
+        self.assertIn("prompt-injection", leads.text)
+        for cve in ("CVE-2026-12422", "CVE-2026-12426", "CVE-2026-12427", "CVE-2026-12430"):
+            self.assertNotIn(cve, leads.text)
+        self.client.post("/vulnerability-intelligence/views/pins", data={"pinned": "ai-stack"})
+        dashboard = self.client.get("/vulnerability-intelligence").text
+        self.assertIn('id="t-pin-ai-stack"', dashboard)
+        self.assertIn("Match Evidence", dashboard)
+        self.assertNotIn("CVE-2026-12423", dashboard)
 
     def test_watchlist_filter_on_both_views(self):
         from app.modules.vulnerability_intelligence.feeds import cvelist
@@ -2326,35 +2779,43 @@ class MicrosoftAdvisoryTests(TempDbMixin, unittest.TestCase):
         from app.main import app
         from app.modules.vulnerability_intelligence.feeds import msrc
 
-        ids = [f"CVE-2026-{9010 + i}" for i in range(4)]
+        ids = [f"CVE-2026-{9010 + i}" for i in range(7)]
         paths = {cve: f"2026/msrc_{cve.lower()}.json" for cve in ids}
 
-        def advisory(cve, released, severity, exploited="No", cna="Microsoft"):
+        def advisory(cve, released, severity, exploited="No", cna="Microsoft",
+                     disclosed="No", forecast="Exploitation Less Likely", rating="Moderate"):
             return {"document": {"tracking": {"initial_release_date": released,
-                                              "current_release_date": "2026-11-13T08:00:00Z"}},
+                                              "current_release_date": "2026-11-13T08:00:00Z"},
+                                 "aggregate_severity": {"text": rating}},
                     "product_tree": {"branches": [{"category": "product_name", "name": "Windows Widget",
                                                   "product": {"product_id": "1", "name": "Windows Widget"}}]},
                     "vulnerabilities": [{"cve": cve, "title": f"{cna} Widget Vulnerability",
                                          "notes": [{"title": "Assigning CNA", "text": cna}],
                                          "product_status": {"known_affected": ["1"]},
-                                         "scores": [{"cvss_v3": {"baseScore": 7.0, "baseSeverity": severity}}],
+                                         "scores": [{"cvss_v3": {"baseScore": 7.0 if severity == "HIGH" else 6.5,
+                                                                "baseSeverity": severity}}],
                                          "threats": [{"category": "exploit_status", "details":
-                                                      f"Publicly Disclosed:Yes;Exploited:{exploited};"
-                                                      "Latest Software Release:Exploitation More Likely"}],
+                                                      f"Publicly Disclosed:{disclosed};Exploited:{exploited};"
+                                                      f"Latest Software Release:{forecast}"}],
                                          "remediations": [{"category": "vendor_fix", "product_ids": ["1"],
                                                            "details": "10.0.9:Security Update:https://support.microsoft.com/help/1234",
                                                            "url": "https://support.microsoft.com/help/1234"}]}]}
 
-        docs = {paths[ids[0]]: advisory(ids[0], "2026-11-10", "HIGH", "Yes"),
-                paths[ids[1]]: advisory(ids[1], "2026-11-10", "MEDIUM"),
+        docs = {paths[ids[0]]: advisory(ids[0], "2026-11-10", "MEDIUM", "Yes"),
+                paths[ids[1]]: advisory(ids[1], "2026-11-10", "MEDIUM", rating="Important"),
                 paths[ids[2]]: advisory(ids[2], "2026-11-10", "HIGH", cna="Chromium"),
-                paths[ids[3]]: advisory(ids[3], "2026-11-12", "HIGH")}
+                paths[ids[3]]: advisory(ids[3], "2026-11-12", "HIGH"),
+                paths[ids[4]]: advisory(ids[4], "2026-11-10", "MEDIUM", forecast=msrc.MORE_LIKELY),
+                paths[ids[5]]: advisory(ids[5], "2026-11-10", "MEDIUM", disclosed="Yes"),
+                paths[ids[6]]: advisory(ids[6], "2026-11-10", "MEDIUM", rating="Critical")}
         docs[paths[ids[0]]]["vulnerabilities"][0]["remediations"].append(
             {"category": "workaround", "details": "Disable the affected component", "product_ids": ["1"]})
         calls = []
         fail = {paths[ids[1]]}
 
         def handle(req):
+            if req.url.host == "api.msrc.microsoft.com":
+                return httpx.Response(200, json={"value": []})
             path = req.url.path.removeprefix("/csaf/advisories/")
             if path == "changes.csv":
                 content = "".join(f'"{name}","2026-11-13T08:00:00Z"\n' for name in docs)
@@ -2371,9 +2832,16 @@ class MicrosoftAdvisoryTests(TempDbMixin, unittest.TestCase):
                     self.assertIn("1 Microsoft advisories failed", store.feed_status()[msrc.FEED]["error"])
                     fail.clear()
                     calls.clear()
-                    self.assertEqual((await msrc.refresh())["entries"], 4)
+                    self.assertEqual((await msrc.refresh())["entries"], 7)
                     self.assertEqual(calls, [paths[ids[1]]])
                     self.assertIsNone(store.feed_status()[msrc.FEED]["error"])
+                    with db.connect() as conn, conn:
+                        conn.execute("""UPDATE msrc_advisories SET advisory=json_remove(advisory, '$.vendor_severity')
+                                        WHERE cve_id=?""", (ids[0],))
+                    calls.clear()
+                    self.assertTrue((await msrc.refresh())["ok"])
+                    self.assertEqual(calls, [paths[ids[0]]])
+                    self.assertEqual(msrc.get_advisory(ids[0])["vendor_severity"], "Moderate")
 
         asyncio.run(load())
         self.assertEqual(store.get_kev(ids[0])[0]["date_added"], "2026-11-13")
@@ -2382,6 +2850,9 @@ class MicrosoftAdvisoryTests(TempDbMixin, unittest.TestCase):
         triage = client.get(url)
         self.assertEqual(triage.status_code, 200)
         self.assertIn(ids[0], triage.text)
+        self.assertIn("Microsoft Severity", triage.text)
+        for cve in ids[4:]:
+            self.assertLess(triage.text.index(ids[0]), triage.text.index(cve))
         self.assertIn("Windows Widget", triage.text)
         self.assertIn("10.0.9", triage.text)
         for label in ("Patch", "Mitigate", "Hunt"):
@@ -2583,7 +3054,7 @@ class MoreViewTests(ViewTests):
         store.upsert_ransomware_cves([("CVE-2025-2222", "akira")])
         listing = client.get("/vulnerability-intelligence/views").text
         for v in views.VIEWS:
-            self.assertIn(v.title, listing)
+            self.assertIn(v.title, unescape(listing))
             r = client.get(f"/vulnerability-intelligence/views/{v.slug}")
             self.assertEqual(r.status_code, 200, v.slug)
         r = client.get("/vulnerability-intelligence/views/ransomware")
