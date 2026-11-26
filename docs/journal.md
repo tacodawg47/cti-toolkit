@@ -1609,6 +1609,98 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-26: Approved the 5F.1 Commit and Push
+
+After the exact 14-file proposal, the operator explicitly approved both the
+named commit and its push in the current chat. Rechecked main at 8df28b0,
+the empty index, the approved paths and the existing origin/main destination.
+The destination resolves to the project's existing GitHub repository with no
+credential-bearing URL components, and .githooks remains configured. No
+unrelated local file is part of this approval.
+
+Updated the handoff, closeout and manifest to record the approval rather than
+leave an obsolete pending-approval state. Added exact manifest-based commands
+to the shared-evidence runbook. This entry is prepared for the approved
+checkpoint; actual commit and push results belong in the closing chat message
+to avoid a self-referential commit hash. No implementation changed, so the
+final 529-test result remains the acceptance evidence. Stop at this boundary.
+
+### 2026-11-26: Subphase 5F.1 Complete, Shared Evidence and Source Registry
+
+Implemented only the first foundation subphase. Read the foundation scope,
+current handoff/session runbook, newest research notes, existing core and
+vulnerability/infrastructure schemas and evidence views, Phase 2 closeout,
+focused Phase 1 review guidance and saved source research. No upstream source
+was fetched or newly judged. The operator confirmed Phase 2 commit 8df28b0
+was already pushed and verified; older pending-checkpoint notes are history.
+
+Added app/core/evidence_models.py, evidence_schema.py and evidence.py. Core
+startup runs a versioned additive migration in a serialized transaction.
+It creates sources, document captures, observations, citations and scoped
+source links plus its own version ledger. No legacy data backfill, table/view
+replacement or SQLite user_version takeover. Shared connections enforce
+foreign keys without changing legacy connections' behavior.
+
+Sources carry explicit collection class/method, terms decision/date/reference,
+rate-limit notes, reliability and a separate dated license finding. Unknown
+sources register automatically as F, unreviewed and disabled when existing
+evidence is saved. Trusted local source review is explicit. The sole starter
+entry is the existing RVM provider, using the 2026-11-11 saved license finding
+and reference. This is historical metadata, not a current upstream terms
+review or collection authorization. Existing manual routes are unchanged;
+future source jobs must check the gate before each bounded unit and retry.
+
+Document source record, local capture key, upstream revision, original-byte
+digest, publisher and optional job-run association remain distinct. Unknown
+source dates stay null; date-only precision is retained and aware instants
+normalize to UTC. Observed, published, collected and source first/last-seen
+dates never substitute for one another. Observations keep separate assertions
+for each document. A mention produces no malicious or exploitation verdict.
+Bounded excerpts/locators, unresolved citation hops and scoped source lineage
+preserve provenance. Replays are idempotent; conflicting metadata requires
+new keys. Explicit citation resolution preserves the original reference and
+can itself be safely replayed, including the original unresolved input.
+
+Documented later job and bounded-archive contracts in the new shared-evidence
+runbook. Raw bodies, archive paths and pruning are absent here. Future raw
+retention must have finite byte/age budgets and sensitivity rules while
+retaining indicator/provenance history. No scheduler, collector, AI, alert UI,
+source-review UI or new dependency was added. Dedicated entity/assessment
+catalogs, automatic corroboration, review history and source-health expiry
+remain later consumers rather than unused foundation machinery.
+
+The venv launcher first failed to create its known installed base interpreter
+inside the managed sandbox. Running the authorized offline tests outside that
+launcher restriction worked; no environment change or reinstall. Initial
+targeted tests found a reused pydantic class-validator signature mistake and
+an incomplete legacy test fixture. Corrected both. Review also separated
+capture identity from source revision, preserved resolved citation replays,
+and rejected malformed timezone offsets and UTC overflow explicitly.
+
+All 18 focused tests pass. Final full suite: 529 tests in 68.220 seconds,
+528 passed, one existing skip, no failures/errors. Migration tests preserve
+legacy rows/views and user_version, exercise rollback/retry and concurrent
+initialization, and verify FK integrity and source defaults. Provenance tests
+exercise four independent source assertions, typed/unknown dates, correction
+history and citation chains. The normal app lifespan and six existing pages
+returned 200 on a temporary database with network refusal. Existing
+Starlette/httpx deprecation, invalid synthetic PDF diagnostics and asyncio
+timing notices remain. No live database migration, app restart or provider
+refresh was performed. Linux was not executed in this Windows pass.
+
+The operator approved read-only Git inspection in this chat. It confirmed
+main at 8df28b0 with an empty index. Git warned that the global ignore file
+was inaccessible in the sandbox and about normal LF/CRLF conversion; no
+configuration changed. The unrelated Feedly rules and local Claude settings
+were left untouched. Commit and push remain individually pending. The exact
+14-path proposal and message are in
+docs/review/2026-11-26-5f1-checkpoint-files.md. No staging or remote contact.
+
+**Subphase 5F.1 Complete.** Acceptance and limits are in
+docs/review/2026-11-26-5f1-closeout.md. Updated paired status summaries,
+roadmap, test runbook and handoff. Stop here after checkpoint handling.
+Next chat: 5F.2 Durable Job Runner, using the ready-to-paste handoff prompt.
+
 ### 2026-11-26: Approved the Exact Phase 2 Checkpoint Commit
 
 The operator explicitly approved staging and committing the 119-path proposal

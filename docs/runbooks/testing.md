@@ -1,10 +1,10 @@
 # Runbook: Running the tests
 
-Written 2026-10-28. Updated 2026-11-25.
+Written 2026-10-28. Updated 2026-11-26.
 
-The current suite ran 511 tests, with 510 passing and one skipped, verified
-at the 2026-11-25 closeout. They use Python's built-in `unittest`, so no
-extra dependency is needed, and they never touch the network: importing the
+The current suite ran 529 tests, with 528 passing and one skipped, verified
+at the 2026-11-26 subphase 5F.1 closeout. They use Python's built-in `unittest`,
+so no extra dependency is needed, and they never touch the network: importing the
 `tests` package replaces the shared HTTP client with one that refuses every
 request, so a test that forgets to mock fails loudly instead of spending
 quota. Tests that need HTTP install an `httpx.MockTransport` (built into
@@ -36,6 +36,7 @@ import base (so `import app...` works), and `-v` lists each test.
 
 | File | Covers |
 |---|---|
+| `tests/test_shared_evidence.py` | 18 shared-corpus acceptance tests: additive/repeated/concurrent migrations, atomic rollback/retry and newer-version refusal, unchanged legacy rows/views, explicit source eligibility, dated license findings, distinct source times, idempotent captures and citation resolution, scoped lineage, FK integrity, bounded metadata/reads, job identifiers and six offline startup/page checks. Commands and future integration contracts: [Shared Evidence](shared-evidence.md). |
 | `tests/test_indicators.py` | `refang` (defanged input) and `detect_type` (hash/ip/url/domain/unknown) |
 | `tests/test_virustotal.py` | VT URL id, path building, and the malicious/suspicious/clean/unknown heuristic |
 | `tests/test_vendors.py` | every other vendor's `_summarise`; `normalise` and `canonical` (ports, punycode, IPv6); `fetch_json` branches (404, non-JSON, wrong shape, oversized body, total timeout, non-HTTPS, redirects); an end-to-end AbuseIPDB and URLhaus lookup with a mock transport and a temp database (cache round trip); the rate-limiter loop with a fake clock; the registry's crash handling, aggregate line, and the private-IP, Tranco and hashlookup gates with the "query anyway" override; the Tranco loader; config host validation; allowed Host headers; health-page path display |

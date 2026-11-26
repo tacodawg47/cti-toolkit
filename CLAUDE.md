@@ -92,10 +92,12 @@ validation and remaining limits. Its final suite ran 511 tests: 510 passed,
 one skipped; all 26 local acceptance pages returned 200. These are prior
 verified results, not an automatic rerun in a new session.
 
-Read docs/handoff.md for the active task, checkpoint state and next-chat
-prompt after the roadmap and current journal entry. The next planned work
-is 5F.1, Shared Evidence Model and Source Registry; foundation subphases
-are in ROADMAP.md. Follow docs/runbooks/session-handoff.md at every boundary.
+Subphase 5F.1 Complete, 2026-11-26. Shared evidence and source registry
+acceptance ran 529 tests: 528 passed and one existing skip. See
+docs/review/2026-11-26-5f1-closeout.md and docs/runbooks/shared-evidence.md.
+The next planned work is 5F.2, Durable Job Runner. Read docs/handoff.md for
+the checkpoint and next-chat prompt after the roadmap and current journal
+entry. Follow docs/runbooks/session-handoff.md at every boundary.
 
 Data catch-up is optional during the build only. Scheduled freshness,
 visible stale/failure states and tested recovery are required before v1

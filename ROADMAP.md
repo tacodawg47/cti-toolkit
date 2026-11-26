@@ -1321,14 +1321,15 @@ they are.
 
 **Foundation slice: scheduler and alerting**
 
-Session boundaries, decided 2026-11-26. All five subphases are not started.
+Session boundaries, decided 2026-11-26. 5F.1 is complete; 5F.2 to 5F.5
+are not started.
 These divide the existing foundation scope; they do not bring forward the
 collectors or change the numbered Build order. A subphase can be split again
 at a tested milestone if its scope proves too large.
 
 | Subphase | Deliverable | Done When |
 |---|---|---|
-| 5F.1 | Shared evidence model and source registry | Local schema and access layer preserve source identity, citation links and distinct timestamps; reviewed source metadata and collection eligibility are explicit; migration and provenance tests pass. Define archive and job integration contracts. |
+| 5F.1 Complete 2026-11-26 | Shared evidence model and source registry | Additive schema/access layer preserve source identity, document and citation links, scoped lineage and distinct timestamps. Unknown sources are F and collection-disabled. Historical license findings stay separate from terms decisions. All 18 migration/provenance tests pass; full suite 529 tests, 528 passed and one existing skip. Archive and job contracts are documented. See docs/review/2026-11-26-5f1-closeout.md. |
 | 5F.2 | Durable job runner | Progress, bounded retries, cancellation and interrupted-job recovery work against temporary databases. Source work is registered explicitly and duplicate execution is controlled. |
 | 5F.3 | Scheduled feed refresh and source health | Existing approved feeds use the runner with source-specific schedules, quotas and checkpoints. Last attempt/success and stale/failed/incomplete states are visible. Downtime and provider failures have recovery tests. |
 | 5F.4 | Saved reports and original-source archives | Extraction can save documents and indicator sightings with provenance. Original-response storage has size/retention limits and sensitive-data handling. Wire the agreed bulk enrichment workflow through jobs, preserving source lookup controls. |
@@ -1336,7 +1337,15 @@ at a tested milestone if its scope proves too large.
 
 At each boundary update the table's status, dated review, journal and
 docs/handoff.md. Commit and push remain separately approved operations.
-The next chat starts at 5F.1 using the prompt in docs/handoff.md.
+The next chat starts at 5F.2 using the prompt in docs/handoff.md.
+
+5F.1 design, decided 2026-11-26: add shared metadata tables alongside legacy
+stores, without reinterpreting their evidence or dates. Keep local capture
+identity separate from upstream revision for reliable replays. Preserve
+unknown dates and unresolved citation hops. The source registry defaults to
+disabled; existing manual routes remain compatible until explicit runner/feed
+integration. Define bounded raw-body retention separately from permanent
+indicator/provenance metadata. See docs/runbooks/shared-evidence.md.
 
 - APScheduler in-process with the jobs table and generic job runner. Unblocks
   Phase 1 bulk paste (background job with ETA), Phase 2 scheduled feed
