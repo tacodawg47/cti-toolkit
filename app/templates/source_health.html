@@ -1,0 +1,27 @@
+{% if source_health %}
+<details class="card" {% if active == 'feeds' %}open{% endif %}>
+  <summary><strong>Source Freshness and Coverage</strong>:
+    {{ source_health | rejectattr('states', 'equalto', ['Current']) | list | length }} sources need attention.
+    Last-good data remains available.</summary>
+  <p class="muted">Retrieval age, execution attempts and complete coverage are separate.
+    A complete checkpoint covers the stated feed window or snapshot, not all history.
+    Legacy fetch times do not establish scheduled coverage. Page loads do not refresh feeds.</p>
+  <div style="overflow-x:auto"><table>
+    <thead><tr><th>Source</th><th>State</th><th>Last Attempt (UTC)</th>
+      <th>Validated Retrieval (UTC)</th><th>Last-Good Snapshot Age</th><th>Complete Coverage (UTC)</th>
+      <th>Schedule</th></tr></thead>
+    <tbody>{% for source in source_health %}<tr>
+      <td>{{ source.label }}</td><td>{{ source.states | join(', ') }}
+        {% if source.error %}<small>{{ source.error }}</small>{% endif %}</td>
+      <td>{{ source.last_attempt or 'Never' }}{% if source.execution %}<small>{{ source.execution }}</small>{% endif %}</td>
+      <td>{{ source.last_retrieval or 'Never' }}</td>
+      <td>{% if source.age_seconds is not none %}{{ (source.age_seconds / 3600) | round(1) }} hours<small>{{ source.last_good_at }}</small>{% else %}Not Established{% endif %}</td>
+      <td>{{ source.coverage_at or 'Not Established' }}{% if source.coverage %}<small>{{ source.coverage }}</small>{% endif %}</td>
+      <td>{{ 'Enabled' if source.enabled else 'Disabled' }};
+        every {{ (source.cadence / 3600) | round(1) }} hours;
+        stale after {{ (source.stale_after / 3600) | round(1) }} hours.
+        <small>{{ source.eligibility }}</small></td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+</details>
+{% endif %}

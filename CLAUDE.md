@@ -95,12 +95,15 @@ validation and remaining limits. Its final suite ran 511 tests: 510 passed,
 one skipped; all 26 local acceptance pages returned 200. These are prior
 verified results, not an automatic rerun in a new session.
 
-Subphase 5F.2 Complete, 2026-11-26. Durable job runner acceptance ran 553
-tests: 552 passed and one existing skip, including 24 new runner tests.
-See docs/review/2026-11-26-5f2-closeout.md and docs/runbooks/durable-jobs.md.
-5F.1 commit 6341acc was pushed and verified, as confirmed by the operator.
-The live database has not been migrated or restarted for either subphase.
-The next planned work is 5F.3, Scheduled Feed Refresh and Source Health.
+Subphase 5F.3 Complete, 2026-11-26. Scheduled feed/health acceptance ran 585
+tests: 584 passed and one existing skip, including 32 new scheduler tests.
+See docs/review/2026-11-26-5f3-closeout.md and docs/runbooks/scheduled-feeds.md.
+All 31 schedules and the worker default off. No source was enabled/contacted.
+5F.2 commit eff4b41 was pushed and verified, confirmed by the operator.
+The live database has not been migrated or restarted for 5F.1 to 5F.3.
+The 5F.3 commit is approved. Reconcile its execution and separate push status
+with the closing chat result; prepared notes are not a new Git authorization.
+The next planned work is 5F.4, Saved Reports and Original-Source Archives.
 Read docs/handoff.md for
 the checkpoint and next-chat prompt after the roadmap and current journal
 entry. Follow docs/runbooks/session-handoff.md at every boundary.

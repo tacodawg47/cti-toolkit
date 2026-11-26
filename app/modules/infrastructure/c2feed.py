@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 from ...core.db import connect
 from ...core.indicators import DOMAIN_PATTERN
+from ...core.feed_scope import current, validated
 from ..vulnerability_intelligence.http import fetch_bytes
 
 REPO = "https://github.com/drb-ra/C2IntelFeeds"
@@ -72,7 +73,7 @@ def parse(body: bytes, key: str) -> set[tuple[str, str, str]]:
     return rows
 
 
-async def refresh() -> None:
+async def refresh() -> dict:
     """Replace all three feed snapshots together after successful validation."""
     async with _REFRESH_LOCK:
         rows = set()
@@ -82,7 +83,10 @@ async def refresh() -> None:
                 err = f"HTTP {status}"
             if not err:
                 try:
-                    rows.update(parse(body, key))
+                    parsed = parse(body, key)
+                    if current.get() is not None and not parsed:
+                        raise ValueError("Empty scheduled C2 snapshot")
+                    rows.update(parsed)
                 except (ValueError, csv.Error):
                     err = "invalid CSV"
             if err:
@@ -90,14 +94,17 @@ async def refresh() -> None:
                     conn.execute("""INSERT INTO c2_feed_status (singleton, error) VALUES (1, ?)
                                     ON CONFLICT(singleton) DO UPDATE SET error=excluded.error""",
                                  (f"{label}: {err}",))
-                return
+                return {"ok": False}
         fetched = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        await validated()
         with connect() as conn, conn:
             conn.execute("DELETE FROM c2_feed_rows")
             conn.executemany("INSERT INTO c2_feed_rows (feed, indicator, label) VALUES (?, ?, ?)", rows)
             conn.execute("""INSERT INTO c2_feed_status (singleton, fetched_at) VALUES (1, ?)
                             ON CONFLICT(singleton) DO UPDATE SET fetched_at=excluded.fetched_at, error=NULL""",
                          (fetched,))
+        await validated(ingested=True)
+        return {"ok": True, "entries": len(rows)}
 
 
 def page(query: str, scope: str, number: int) -> dict:

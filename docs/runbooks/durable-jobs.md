@@ -1,5 +1,13 @@
 # Durable Job Runner
 
+Update 2026-11-26: 5F.3 adds opt-in production feed registrations and a
+durable scheduler. See [Scheduled Feeds](scheduled-feeds.md). The original
+5F.2 scope and contracts below remain historical. `Retry` now accepts an
+optional bounded `after_seconds` to honor persisted provider cooldowns.
+`run_next(registered_only=True)` limits a worker to its registered tasks.
+The feed worker submits coroutines to the existing app loop and drains
+active saves before shutdown. All schedules and its worker default off.
+
 Written 2026-11-26. Subphase 5F.2. No new dependency. This is an opt-in core
 API with no registered production tasks, startup worker, scheduler or routes.
 Normal approved startup adds its tables through `db.init_db()`. Tests use

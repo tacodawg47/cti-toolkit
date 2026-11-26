@@ -78,6 +78,9 @@ def init_db() -> None:
         from .job_schema import migrate as migrate_jobs
 
         migrate_jobs(conn)
+        from .feed_schema import migrate as migrate_feeds
+
+        migrate_feeds(conn)
         # Drop expired cache rows so the table doesn't grow without bound.
         conn.execute("DELETE FROM cache WHERE expires_at < ?",
                      (datetime.now(timezone.utc).isoformat(),))

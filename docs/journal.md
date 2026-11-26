@@ -1609,6 +1609,78 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-26: Subphase 5F.3 Complete, Scheduled Feed Refresh and Source Health
+
+Checkpoint update: the operator individually approved the exact 58-path
+proposal and message Add scheduled feed refresh and source health. Stage
+only 5F.3 content from the three shared documents, retaining prototype work
+unstaged. Execution is prepared; its actual result belongs in the closing
+chat message. Separate push approval is still pending.
+
+Implemented only 5F.3 after the required foundation, newest research,
+handoff, closeout and runbook reading. Inspected the runner, async client,
+limiter, source queues, ingestion/status semantics and legacy consumers.
+The operator confirms 5F.2 commit eff4b41 was pushed and verified. Approved
+read-only Git inspection confirmed main at that commit, an empty index and
+.githooks configured. No repeat 5F.2 checkpoint was attempted.
+
+Added versioned feed schedule, request reservation, cooldown and capture
+progress tables. Registered 31 explicit existing feed surfaces, including
+C2IntelFeeds, with individual cadence/stale thresholds and finite budgets.
+All schedule switches and the application worker default off. No source
+metadata was approved or enabled. Proposals reuse existing adapters and saved
+research; they are not fresh current-terms judgments. Actual enabling still
+needs direct approval and review of the exact surface and quota.
+
+APScheduler is not installed, so used a small stdlib asyncio timer with
+durable due work. The runner thread submits coroutines to the existing app
+loop, preserving shared HTTP/locks/quotas without fresh loops per job.
+Scheduled transports reserve finite requests/bytes, apply durable courtesy
+quotas and shared provider limits, recheck eligibility after waits, and
+persist 429 cooldowns. Retry-After can extend runner backoff. Shutdown drains
+legacy sibling tasks and save threads before releasing ownership/client.
+
+Persist capture endpoint/digest metadata before ingestion. Replays retain
+original capture key, collection time and originating run; changed bytes get
+another capture. Keep validated retrieval, ingestion units, source windows
+and completed coverage separate. Scheduled legacy success is staged until
+completion. Empty/malformed snapshots retain last-good data. NVD and vendor
+queues retain unfinished windows/revisions. CVE delta validation cannot
+advance a skipped record's checkpoint. Group facts commit before their
+per-group checkpoints. Large initial loads and metadata backfills stay manual.
+
+Added source health to consuming pages. Last-good snapshot age is separate
+from a partial validated retrieval. Old NVD windows and old EPSS score dates
+remain visibly stale/incomplete during catch-up. Existing source publication
+dates are not relabeled as retrieval time. Rolling sightings remain only a
+48-hour snapshot, not downtime history. No archives or saved reports were added.
+
+The first full suite passed 571 tests with one existing skip. Expanded checks
+then found the infrastructure test's module-only initialization lacked core
+scheduler tables. Changed health to read legacy state without migrations on
+GET. Focused scheduler/infrastructure acceptance passed 33 tests in 19.486
+seconds. Final full suite: 585 tests in 92.493 seconds, 584 passed and one
+existing skip. This includes 32 new schedule/health/bridge/recovery cases and
+the existing Windows process-death/duplicate-execution checks. Existing
+Starlette/httpx, invalid-PDF and asyncio diagnostics remain. The installed
+venv needed the authorized execution path outside its launcher restriction.
+No package, interpreter or security setting changed.
+
+No live migration, restart, provider traffic, source enabling, install or
+external submission occurred. Linux and a browser visual walkthrough were
+not run. The runbook records all policies, commands, activation gates and
+limits. V1 operational acceptance still requires approved live configuration
+and foundation acceptance. Saved reports/archives are 5F.4; alerts are 5F.5.
+
+**Subphase 5F.3 Complete.** See docs/review/2026-11-26-5f3-closeout.md.
+Read-only Git inspection is complete and the exact commit was approved;
+execution is prepared and separate push approval remains pending. The
+approved message is Add scheduled feed refresh and source health. Preserve
+the separate actor-profile prototype and its notes in these
+shared docs; stage only 5F.3 content. Exclude its files/review/runbook, Feedly
+rules, local Claude settings, runtime data, secrets and conversation exports.
+Stop here after the approved checkpoint. Next chat: 5F.4 using docs/handoff.md.
+
 ### 2026-11-26: Authorized the 5F.2 Checkpoint and Required On-Screen Handover
 
 The operator directly instructed commit and push after reviewing the 5F.2

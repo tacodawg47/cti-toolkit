@@ -6,6 +6,7 @@ database schema and opens the one shared HTTP client that every vendor module
 reuses; on shutdown it closes that client.
 """
 
+import asyncio
 from contextlib import asynccontextmanager
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -17,6 +18,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import __version__
 from .core import db
+from .core.feed_scheduler import Scheduler, health as feed_health
 from .core.allowlist import allowlist
 from .core.config import PROJECT_ROOT, settings
 from .core.indicators import MAX_INDICATOR_LEN, canonical, detect_type, normalise
@@ -32,6 +34,7 @@ from .modules.infrastructure import c2feed, routes as infra_routes
 from .modules.vulnerability_intelligence import routes as vulnintel_routes
 from .modules.vulnerability_intelligence import service as vulnintel_service
 from .modules.vulnerability_intelligence import store as vulnintel_store
+from .modules.vulnerability_intelligence.scheduled import catalog as feed_catalog
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -59,9 +62,18 @@ async def lifespan(app: FastAPI):
     vulnintel_service.seed_aliases()  # shipped nicknames, added once, never overwritten
     allowlist.load()                 # Tranco top list, if data/tranco.csv exists
     base.set_client(base.new_client())
+    scheduler = Scheduler(feed_catalog(), asyncio.get_running_loop())
+    await asyncio.to_thread(scheduler.initialize)
+    stopped = asyncio.Event()
+    worker = asyncio.create_task(scheduler.serve(stopped)) if settings.scheduled_feeds_enabled else None
+    app.state.feed_scheduler = scheduler
     try:
         yield
     finally:
+        stopped.set()
+        if worker is not None:
+            # No cancellation of a worker thread, active HTTP or committed saves.
+            await worker
         await base.aclose()
 
 
@@ -258,6 +270,8 @@ async def health(request: Request):
         {"keys": keys, "versions": versions, "quotas": quotas,
          "shodan_account": await shodan.account_info(),
          "tranco": tranco,
+         "source_health": await asyncio.to_thread(feed_health, feed_catalog()),
+         "scheduled_feeds_enabled": settings.scheduled_feeds_enabled,
          "bind": f"{settings.host}:{settings.port}",
          "data_dir": _display_path(settings.data_dir)},
     )

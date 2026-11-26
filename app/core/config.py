@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     # Server: local only by design.
     host: str = "127.0.0.1"
     port: int = 8000
+    # A second explicit switch, in addition to per-source review and schedule.
+    # Default startup creates metadata but dispatches no provider work.
+    scheduled_feeds_enabled: bool = False
 
     @field_validator("host")
     @classmethod

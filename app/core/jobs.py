@@ -39,8 +39,10 @@ class Failure(str, Enum):
 class Retry(Exception):
     """Only these fixed codes are persisted. Exception/source text is not logged."""
 
-    def __init__(self, code: Failure = Failure.TRANSIENT):
+    def __init__(self, code: Failure = Failure.TRANSIENT, *, after_seconds: int = 0):
         self.code = Failure(code)
+        _integer(after_seconds, 0, 31536000)
+        self.after_seconds = after_seconds
         super().__init__(self.code.value)
 
 
@@ -209,7 +211,7 @@ class Runner:
             raise Cancelled()
         return row
 
-    def _finish(self, conn, run_id, outcome, code=None, coverage=None):
+    def _finish(self, conn, run_id, outcome, code=None, coverage=None, after_seconds=0):
         row = self._owned(conn, run_id, allow_cancel=True)
         now = self._now()
         stamp = self._stamp(now)
@@ -223,7 +225,7 @@ class Runner:
             raise ValueError("Invalid execution outcome")
         conn.execute("UPDATE durable_job_runs SET state=?, finished_at=?, error_code=? WHERE id=?",
                      (outcome, stamp, code, run_id))
-        delay = min(86400, row["retry_seconds"] * 2 ** (row["attempts"] - 1))
+        delay = max(after_seconds, min(86400, row["retry_seconds"] * 2 ** (row["attempts"] - 1)))
         conn.execute("""UPDATE durable_jobs SET state=?, error_code=?, available_at=?, completed_at=?,
             coverage_checkpoint=CASE WHEN ? THEN ? ELSE coverage_checkpoint END,
             coverage_completed_at=CASE WHEN ? THEN ? ELSE coverage_completed_at END WHERE id=?""",
@@ -238,7 +240,7 @@ class Runner:
         for row in conn.execute("SELECT id FROM durable_job_runs WHERE state='running'").fetchall():
             self._finish(conn, row["id"], "interrupted", "interrupted")
 
-    def run_next(self) -> str | None:
+    def run_next(self, *, registered_only=False) -> str | None:
         """Recover abandoned executions, then claim at most one due job.
 
         None means busy/no due work. An unhandled BaseException leaves its run
@@ -250,8 +252,13 @@ class Runner:
                 return None
             with self._connect(write=True) as conn:
                 self._recover(conn)
-                row = conn.execute("""SELECT * FROM durable_jobs WHERE state='queued' AND available_at<=?
-                    ORDER BY available_at, created_at, id LIMIT 1""", (self._stamp(self._now()),)).fetchone()
+                selection = ""
+                values = [self._stamp(self._now())]
+                if registered_only:
+                    selection = " AND task IN (" + ",".join("?" for _ in self._tasks) + ")"
+                    values.extend(self._tasks)
+                row = conn.execute("SELECT * FROM durable_jobs WHERE state='queued' AND available_at<=?" + selection +
+                                   " ORDER BY available_at, created_at, id LIMIT 1", values).fetchone()
                 if row is None:
                     return None
                 run_id = uuid4().hex
@@ -283,7 +290,7 @@ class Runner:
                     self._finish(conn, run_id, "cancelled")
             except Retry as exc:
                 with self._connect(write=True) as conn:
-                    self._finish(conn, run_id, "failed", exc.code.value)
+                    self._finish(conn, run_id, "failed", exc.code.value, after_seconds=exc.after_seconds)
             except PermissionError:
                 self._terminal(run_id, "source_ineligible")
             except Exception:

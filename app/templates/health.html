@@ -2,6 +2,9 @@
 {% block title %}Health — CTI Toolkit{% endblock %}
 {% block content %}
 <h1>System Health</h1>
+<p>Scheduled Feed Worker: {{ "Enabled" if scheduled_feeds_enabled else "Disabled" }}.
+Each source also requires its own approved review and enabled schedule.</p>
+{% include "source_health.html" %}
 
 <div class="card">
   <h3>Server</h3>

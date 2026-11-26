@@ -1,5 +1,11 @@
 # Shared Evidence and Source Registry
 
+Update 2026-11-26: [Scheduled Feeds](scheduled-feeds.md) now applies this
+registry gate to 31 opt-in feed surfaces. It persists endpoint/digest capture
+metadata before ingestion, verifies replay identity and separates retrieval,
+committed units and coverage. No source is newly approved or enabled. Raw
+archives and saved report observations remain 5F.4.
+
 Written 2026-11-26. Subphase 5F.1. This is a local metadata store, not a
 collector or an original-response archive. No new dependency is required.
 

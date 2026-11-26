@@ -71,7 +71,7 @@ portfolio project.
 | Database | SQLite with FTS5 | Zero setup, full-text search for collected messages |
 | HTTP | httpx (async) | Concurrent vendor calls |
 | Models | pydantic | Normalized schemas across vendors |
-| Jobs | APScheduler in-process + jobs table | Scheduled monitors, long-running scans |
+| Jobs | Durable jobs + in-process asyncio timer | Persistent schedules without a new dependency; later scheduling needs can revisit APScheduler |
 | Graph UI | Cytoscape.js (single vendored file) | Pivot graph rendering |
 | Browser automation | Playwright (Python) | JavaScript-heavy pages and session capture (Phase 5) |
 | Challenge handling | FlareSolverr or a compatible solver (sidecar container, chosen by test) | Cloudflare and DDoS-Guard challenges on criminal-operated sources (Phase 5) |
@@ -1321,7 +1321,7 @@ they are.
 
 **Foundation slice: scheduler and alerting**
 
-Session boundaries, decided 2026-11-26. 5F.1 and 5F.2 are complete; 5F.3 to 5F.5
+Session boundaries, decided 2026-11-26. 5F.1 to 5F.3 are complete; 5F.4 and 5F.5
 are not started.
 These divide the existing foundation scope; they do not bring forward the
 collectors or change the numbered Build order. A subphase can be split again
@@ -1331,13 +1331,22 @@ at a tested milestone if its scope proves too large.
 |---|---|---|
 | 5F.1 Complete 2026-11-26 | Shared evidence model and source registry | Additive schema/access layer preserve source identity, document and citation links, scoped lineage and distinct timestamps. Unknown sources are F and collection-disabled. Historical license findings stay separate from terms decisions. All 18 migration/provenance tests pass; full suite 529 tests, 528 passed and one existing skip. Archive and job contracts are documented. See docs/review/2026-11-26-5f1-closeout.md. |
 | 5F.2 Complete 2026-11-26 | Durable job runner | Trusted registration, distinct work/run identity, durable progress, bounded retries, cancellation and interrupted-job recovery pass temporary-database acceptance. Serial process-held execution lock and transactional claims control duplicates. Shared eligibility and original capture replay contracts preserved. Final suite 553 tests, 552 passed and one existing skip. See docs/review/2026-11-26-5f2-closeout.md. |
-| 5F.3 | Scheduled feed refresh and source health | Existing approved feeds use the runner with source-specific schedules, quotas and checkpoints. Last attempt/success and stale/failed/incomplete states are visible. Downtime and provider failures have recovery tests. |
+| 5F.3 Complete 2026-11-26 | Scheduled feed refresh and source health | 31 explicit existing feed surfaces have opt-in schedules, bounded requests, shared-loop async/quota integration, durable cooldowns and separate capture/progress/coverage state. Last-good age and never-loaded/stale/failed/incomplete states are visible at consumption. Final suite 585 tests: 584 passed and one existing skip. No source enabling, live migration, restart or traffic. See docs/review/2026-11-26-5f3-closeout.md. |
 | 5F.4 | Saved reports and original-source archives | Extraction can save documents and indicator sightings with provenance. Original-response storage has size/retention limits and sensitive-data handling. Wire the agreed bulk enrichment workflow through jobs, preserving source lookup controls. |
 | 5F.5 | Alert inbox and foundation acceptance | Evidence-linked alerts, deduplication and review state work; selector matching has integration coverage; cross-feature freshness, recovery and restart checks meet the foundation requirements. Email/webhooks and collector playbooks remain later work. |
 
 At each boundary update the table's status, dated review, journal and
 docs/handoff.md. Commit and push remain separately approved operations.
-The next chat starts at 5F.3 using the prompt in docs/handoff.md.
+The next chat starts at 5F.4 using the prompt in docs/handoff.md.
+
+5F.3 design, decided 2026-11-26: dispatch durable due work with a stdlib async
+timer because APScheduler is not installed. Submit feed coroutines from the
+runner thread to the existing app loop, preserving shared clients, locks and
+provider quotas. Add finite scheduled request quotas and persisted cooldowns.
+Default all schedules and the worker off. Keep source queues and original
+capture replay identities; stage success until scoped coverage is verified.
+Keep large initial archives/reloads behind explicit manual actions. See
+docs/runbooks/scheduled-feeds.md. Activation/live v1 acceptance remains separate.
 
 5F.2 design, decided 2026-11-26: add an opt-in synchronous runner with no
 production registrations or startup dispatch. Serialize execution per local
@@ -1354,7 +1363,7 @@ disabled; existing manual routes remain compatible until explicit runner/feed
 integration. Define bounded raw-body retention separately from permanent
 indicator/provenance metadata. See docs/runbooks/shared-evidence.md.
 
-- APScheduler in-process with the jobs table and generic job runner. Unblocks
+- In-process async timer with durable due work and the generic job runner. Unblocks
   Phase 1 bulk paste (background job with ETA), Phase 2 scheduled feed
   refresh, Phase 3 scheduled alerts, and the Phase 6 changes feed.
 - In-app alert inbox first; email or webhook later.

@@ -119,6 +119,20 @@ async def fetch_json(
                         -> (200, None, "vendor returned unexpected JSON")
       - 200 + JSON      -> (200, body, None)
     """
+    from ...core import feed_scope
+    if feed_scope.current.get() is not None:
+        status, raw, error = await feed_scope.fetch(url, method=method, headers=headers,
+                                                   params=params, data=data, json_body=json,
+                                                   max_bytes=MAX_BODY_BYTES)
+        if error or status != 200:
+            return status, None, error
+        try:
+            body = _json.loads(raw)
+        except ValueError:
+            return 200, None, "vendor returned a non-JSON response"
+        if not isinstance(body, list if expect == "list" else dict):
+            return 200, None, "vendor returned unexpected JSON"
+        return 200, body, None
     client = get_client()
     try:
         async with asyncio.timeout(TOTAL_TIMEOUT):

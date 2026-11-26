@@ -100,6 +100,19 @@ class RateLimiter:
         }
 
     async def acquire(self, vendor: str) -> None:
+        from .feed_scope import current
+        scope = current.get()
+        if scope is not None:
+            # Scheduled HTTP reserves the registered provider at the actual
+            # request boundary, after eligibility/budget checks. No double spend.
+            await scope.check()
+            return
+        await self._acquire(vendor)
+
+    async def _acquire(self, vendor: str) -> None:
+        # Public NVD calls share the same IP allowance when there is no key.
+        if vendor == "nvd_keyless" and not settings.nvd_api_key:
+            vendor = "nvd"
         limits = LIMITS.get(vendor)
         if not limits:
             return  # no configured limit for this vendor

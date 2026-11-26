@@ -1,5 +1,12 @@
 # V1 Data Freshness Requirements
 
+Update 2026-11-26: Subphase 5F.3 passed offline schedule/health/recovery and
+compatibility acceptance. See [Closeout](../review/2026-11-26-5f3-closeout.md)
+and [Scheduled Feeds](scheduled-feeds.md). All schedules and the worker
+remain off. No live migration, enabling or restart occurred. These results
+do not establish v1 operational acceptance; approved live configuration,
+source-specific review and the later foundation acceptance remain required.
+
 Written 2026-11-24. This records the operator's requirement, not a delivered
 scheduler. Bulk catch-up may be postponed during the build. Once v1 is used
 for actual investigations, freshness is important and is not optional.
