@@ -1609,6 +1609,122 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-26: Authorized the 5F.2 Checkpoint and Required On-Screen Handover
+
+The operator directly instructed commit and push after reviewing the 5F.2
+proposal. They also requested that the subphase instructions explicitly
+require a complete handover prompt printed on screen for the next session.
+Updated session-handoff.md and the paired AGENTS.md/CLAUDE.md rules: print
+the full ready-to-paste prompt in a fenced text block in the final response,
+in addition to saving docs/handoff.md. A link, summary or offer is insufficient.
+The requested documentation adds session-handoff.md to the earlier 18-path
+proposal, giving 19 exact checkpoint paths with the same approved message,
+`Add durable job runner`. No implementation changed after final acceptance,
+so the verified 553-test result remains applicable.
+
+Pre-checkpoint inspection still shows main at 6341acc and an empty index.
+An unrelated untracked prototypes/ directory appeared since the earlier
+inspection; it remains untouched and excluded alongside Feedly rules and
+local Claude settings. Both checkpoint actions are authorized in this chat.
+This entry is prepared before execution; report the actual commit and push
+result in the closing message rather than chase a self-referential hash in
+tracked notes. Stop at the 5F.2 boundary and print the 5F.3 prompt directly.
+
+### 2026-11-26: Inspected the 5F.2 Checkpoint After Approval
+
+The operator approved read-only Git inspection separately from commit/push.
+Confirmed main at 6341acc (`Add shared evidence model and source registry`),
+an empty index and .githooks configured. Reviewed tracked diffs and the exact
+18-path proposal. The only unrelated local paths are feedly-review-rules.md
+and .claude/settings.local.json, which remain untouched and excluded. Tracked
+whitespace checks passed. Git reported its existing inaccessible global-ignore
+warning and normal LF/CRLF notices; no configuration changed. No staging,
+commit, push or remote contact occurred. Updated closeout, manifest and
+handoff to reflect inspection completion. Commit approval and later separate
+push approval remain pending. Repeatable inspection commands are in the
+durable-jobs runbook. Acceptance remains the final 553-test result; only
+checkpoint documentation changed. Stop at the 5F.2 boundary.
+
+### 2026-11-26: Subphase 5F.2 Complete, Durable Job Runner
+
+Implemented only the durable runner. Read focused foundation scope, newest
+research notes, handoff, 5F.1 closeout and source/replay/session/freshness
+contracts in the required order. Inspected the core connection model,
+source-specific vendor and NVD queues, async locks and limiter, normal app
+lifespan, existing temporary-database tests and focused Phase 1 review notes.
+No source was fetched or newly reviewed. The operator confirms 5F.1 commit
+6341acc was pushed to origin/main and verified. Older pending notes do not
+authorize or require repeating that checkpoint.
+
+Added job_schema.py, job_lock.py and jobs.py under app/core. Normal startup
+adds versioned job tables but starts no worker. Explicit trusted Task objects
+bind handler, parameter model, version, source/method and retry policy. Unique
+task/work identity returns the same job on duplicate enqueue, including
+terminal jobs. Each attempt has a separate execution ID. Conflicting policy
+or parameters cannot reinterpret saved work. Removed/changed registrations
+fail closed. No dynamic import, shell dispatch, automatic destination or
+content-derived approval exists.
+
+Chose serial execution per canonical local database path. SQLite write
+transactions serialize enqueues/claims; an OS-held sidecar lock spans the
+handler. A slow live handler cannot lose ownership to an expired lease.
+Windows uses msvcrt and Linux flock. Real process death releases the lock;
+the next explicit dispatch records interrupted attempts and saved backoff,
+preserving progress within the original total attempt budget. There is no
+automatic startup dispatcher yet. Handlers must be bounded and cooperative,
+with no detached work. A hung handler blocks runner throughput. Cancellation
+is durable and observed at work boundaries or on return; it does not kill a
+thread or retract an in-flight request. No exactly-once external-effect claim.
+
+Kept separate execution attempt, validated retrieval, ingestion progress and
+explicit complete-coverage fields. Failed attempts do not refresh retrieval
+or coverage. Known totals cannot be erased or changed. Retry requests use
+fixed typed codes, exponential persisted delay capped at one day, and 1 to 10
+total attempts including interruptions. Other errors are terminal; provider
+exception text is never persisted. No generic terminal-job reset was added.
+
+Reused 5F.1 require_collection with an optional existing connection, keeping
+eligibility checks in the runner's transaction without duplicating policy.
+Check before enqueue, handler invocation, cooperative units, retries and
+successful return. A document helper persists metadata before evidence
+writes, retaining original capture key, originating run ID and time across
+later attempts. Deterministic observation/citation keys complete replay after
+interrupted writes. Adapters must verify original input/digest/revision rather
+than attach a fresh changed response to old capture metadata. No raw archive
+or retroactive FK/backfill of legacy opaque document job IDs was introduced.
+
+Existing manual source routes, durable source-specific queues and async
+limiter remain unchanged. Their quota/async bridge, global source health and
+scheduled dispatch need explicit 5F.3 adapters and tests. No production task
+was registered, source enabled, live database migrated, app restarted or
+provider contacted. No dependency was added/installed. JSON and document
+snapshot budgets bound each job; job history has no pruning yet.
+
+The venv launcher hit its recorded sandbox interpreter restriction. Authorized
+offline test execution outside that restriction worked without environment
+changes. All 20 initial runner tests passed, then simultaneous legacy startup
+exposed SQLite returning BUSY on the fresh-file WAL transition. Added a narrow
+five-second retry deadline for BUSY/LOCKED with 50 ms polling and tests for
+deadline/non-lock errors. Expanded acceptance to 24 runner tests, including
+progress-total preservation, source revocation after restart and completed
+coverage retention. Focused suite: 42 tests passed in 8.624 seconds. Final
+full suite: 553 tests in 71.144 seconds, 552 passed and one existing skip.
+Existing Starlette/httpx warning, synthetic invalid-PDF messages and asyncio
+timing notices remain. Six normal-lifespan GET pages returned 200 offline;
+legacy rows/views and user_version were preserved. Real spawned-process crash
+and independent competing-process checks ran on Windows. Linux was not run.
+
+**Subphase 5F.2 Complete.** Dated acceptance and limits are in
+docs/review/2026-11-26-5f2-closeout.md. Updated roadmap, paired summaries,
+testing/shared-evidence runbooks and handoff, with repeatable commands in
+docs/runbooks/durable-jobs.md. Read-only Git inspection was requested but not
+yet approved. No Git operation, staging, commit or push has occurred in this
+pass. Exact 18-file proposal: docs/review/2026-11-26-5f2-checkpoint-files.md,
+message `Add durable job runner`. Individual commit and separate push
+approval remain pending. Unrelated Feedly rules and local Claude settings
+were untouched. Stop here. Next chat: 5F.3 Scheduled Feed Refresh and Source
+Health, after resolving any pending checkpoint.
+
 ### 2026-11-26: Approved the 5F.1 Commit and Push
 
 After the exact 14-file proposal, the operator explicitly approved both the

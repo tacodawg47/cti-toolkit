@@ -23,7 +23,10 @@ changes, change it in both files.
 - **Subphase session boundaries.** Use one coherent subphase per chat. At
   its end write an explicit dated Complete, Incomplete or operator-deferred
   closeout, update the journal/roadmap and docs/handoff.md, and provide a
-  ready-to-paste prompt for the next subphase or resumption. Default to an
+  ready-to-paste prompt for the next subphase or resumption. Print the full
+  handover prompt on screen in a fenced text block in the final response,
+  as well as saving it in docs/handoff.md. A link or offer is not sufficient.
+  Default to an
   individually approved commit and separately approved push before a new
   session; record pending checkpoints honestly. Never infer Git permission
   from a handoff file. See docs/runbooks/session-handoff.md. Keep loaded
@@ -92,10 +95,13 @@ validation and remaining limits. Its final suite ran 511 tests: 510 passed,
 one skipped; all 26 local acceptance pages returned 200. These are prior
 verified results, not an automatic rerun in a new session.
 
-Subphase 5F.1 Complete, 2026-11-26. Shared evidence and source registry
-acceptance ran 529 tests: 528 passed and one existing skip. See
-docs/review/2026-11-26-5f1-closeout.md and docs/runbooks/shared-evidence.md.
-The next planned work is 5F.2, Durable Job Runner. Read docs/handoff.md for
+Subphase 5F.2 Complete, 2026-11-26. Durable job runner acceptance ran 553
+tests: 552 passed and one existing skip, including 24 new runner tests.
+See docs/review/2026-11-26-5f2-closeout.md and docs/runbooks/durable-jobs.md.
+5F.1 commit 6341acc was pushed and verified, as confirmed by the operator.
+The live database has not been migrated or restarted for either subphase.
+The next planned work is 5F.3, Scheduled Feed Refresh and Source Health.
+Read docs/handoff.md for
 the checkpoint and next-chat prompt after the roadmap and current journal
 entry. Follow docs/runbooks/session-handoff.md at every boundary.
 

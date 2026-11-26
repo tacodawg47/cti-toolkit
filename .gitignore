@@ -23,6 +23,7 @@ data/
 *.sqlite
 *.sqlite3
 *.log
+*.runner.lock
 logs/
 
 # Telegram session files are equivalent to credentials

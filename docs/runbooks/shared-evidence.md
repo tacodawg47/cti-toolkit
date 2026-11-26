@@ -127,6 +127,13 @@ does not imply that all of an aggregator's other data has that origin.
 
 ## Job Integration Contract for 5F.2
 
+Implemented 2026-11-26 in the opt-in [Durable Runner](durable-jobs.md).
+`require_collection()` also accepts an existing SQLite connection so runner
+transactions use this same gate. Existing manual routes remain unchanged.
+`Context.document()` persists original capture metadata and its originating
+run ID before ingestion. Legacy opaque run IDs remain valid passive metadata;
+there is no retroactive FK or legacy job backfill.
+
 - Register permitted work in trusted application code. Never derive a callable,
   import path, destination or command from document contents or registry text.
 - Future source jobs must check `require_collection()` before each bounded

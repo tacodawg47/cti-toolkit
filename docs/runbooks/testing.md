@@ -2,8 +2,8 @@
 
 Written 2026-10-28. Updated 2026-11-26.
 
-The current suite ran 529 tests, with 528 passing and one skipped, verified
-at the 2026-11-26 subphase 5F.1 closeout. They use Python's built-in `unittest`,
+The current suite ran 553 tests, with 552 passing and one skipped, verified
+at the 2026-11-26 subphase 5F.2 closeout. They use Python's built-in `unittest`,
 so no extra dependency is needed, and they never touch the network: importing the
 `tests` package replaces the shared HTTP client with one that refuses every
 request, so a test that forgets to mock fails loudly instead of spending
@@ -36,6 +36,7 @@ import base (so `import app...` works), and `-v` lists each test.
 
 | File | Covers |
 |---|---|
+| `tests/test_jobs.py` | 24 durable-runner acceptance tests: registration/parameter limits, additive migration rollback/retry and schema guards, actual process-death recovery, independent process exclusion, concurrent enqueues/claims, immutable logical identity, bounded retries/backoff, queued/running/interrupted cancellation, source revocation on units/retries/restart, separate retrieval/coverage checkpoints, evidence replay with originating run identity, progress bounds and startup WAL contention handling. Commands and handler limits: [Durable Jobs](durable-jobs.md). |
 | `tests/test_shared_evidence.py` | 18 shared-corpus acceptance tests: additive/repeated/concurrent migrations, atomic rollback/retry and newer-version refusal, unchanged legacy rows/views, explicit source eligibility, dated license findings, distinct source times, idempotent captures and citation resolution, scoped lineage, FK integrity, bounded metadata/reads, job identifiers and six offline startup/page checks. Commands and future integration contracts: [Shared Evidence](shared-evidence.md). |
 | `tests/test_indicators.py` | `refang` (defanged input) and `detect_type` (hash/ip/url/domain/unknown) |
 | `tests/test_virustotal.py` | VT URL id, path building, and the malicious/suspicious/clean/unknown heuristic |

@@ -1321,7 +1321,7 @@ they are.
 
 **Foundation slice: scheduler and alerting**
 
-Session boundaries, decided 2026-11-26. 5F.1 is complete; 5F.2 to 5F.5
+Session boundaries, decided 2026-11-26. 5F.1 and 5F.2 are complete; 5F.3 to 5F.5
 are not started.
 These divide the existing foundation scope; they do not bring forward the
 collectors or change the numbered Build order. A subphase can be split again
@@ -1330,14 +1330,21 @@ at a tested milestone if its scope proves too large.
 | Subphase | Deliverable | Done When |
 |---|---|---|
 | 5F.1 Complete 2026-11-26 | Shared evidence model and source registry | Additive schema/access layer preserve source identity, document and citation links, scoped lineage and distinct timestamps. Unknown sources are F and collection-disabled. Historical license findings stay separate from terms decisions. All 18 migration/provenance tests pass; full suite 529 tests, 528 passed and one existing skip. Archive and job contracts are documented. See docs/review/2026-11-26-5f1-closeout.md. |
-| 5F.2 | Durable job runner | Progress, bounded retries, cancellation and interrupted-job recovery work against temporary databases. Source work is registered explicitly and duplicate execution is controlled. |
+| 5F.2 Complete 2026-11-26 | Durable job runner | Trusted registration, distinct work/run identity, durable progress, bounded retries, cancellation and interrupted-job recovery pass temporary-database acceptance. Serial process-held execution lock and transactional claims control duplicates. Shared eligibility and original capture replay contracts preserved. Final suite 553 tests, 552 passed and one existing skip. See docs/review/2026-11-26-5f2-closeout.md. |
 | 5F.3 | Scheduled feed refresh and source health | Existing approved feeds use the runner with source-specific schedules, quotas and checkpoints. Last attempt/success and stale/failed/incomplete states are visible. Downtime and provider failures have recovery tests. |
 | 5F.4 | Saved reports and original-source archives | Extraction can save documents and indicator sightings with provenance. Original-response storage has size/retention limits and sensitive-data handling. Wire the agreed bulk enrichment workflow through jobs, preserving source lookup controls. |
 | 5F.5 | Alert inbox and foundation acceptance | Evidence-linked alerts, deduplication and review state work; selector matching has integration coverage; cross-feature freshness, recovery and restart checks meet the foundation requirements. Email/webhooks and collector playbooks remain later work. |
 
 At each boundary update the table's status, dated review, journal and
 docs/handoff.md. Commit and push remain separately approved operations.
-The next chat starts at 5F.2 using the prompt in docs/handoff.md.
+The next chat starts at 5F.3 using the prompt in docs/handoff.md.
+
+5F.2 design, decided 2026-11-26: add an opt-in synchronous runner with no
+production registrations or startup dispatch. Serialize execution per local
+database with an OS-held lock so slow live work cannot be reclaimed by lease
+expiry. Keep source queues and async quotas owned by their current modules
+until explicit 5F.3 adapters. Retain attempt/retrieval/coverage separately and
+persist original capture identity before ingestion. See docs/runbooks/durable-jobs.md.
 
 5F.1 design, decided 2026-11-26: add shared metadata tables alongside legacy
 stores, without reinterpreting their evidence or dates. Keep local capture

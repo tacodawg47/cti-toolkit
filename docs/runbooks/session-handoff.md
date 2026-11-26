@@ -21,8 +21,26 @@ next agreed milestone, rather than at an arbitrary message count.
 5. Prepare the Git checkpoint under the approval workflow below. Update the
    handoff accurately if approval, a commit or a push is still pending.
 6. Tell the operator explicitly which subphase ended, what passed, where its
-   closeout lives and which prompt starts the next chat. Do not silently
-   begin the next subphase in the old chat.
+   closeout lives and which prompt starts the next chat. Print the full
+   ready-to-paste handover prompt on screen in a fenced text block in the
+   final response, as well as saving it in `docs/handoff.md`. A file link,
+   summary or offer to provide the prompt does not satisfy this requirement.
+   Do not silently begin the next subphase in the old chat.
+
+## On-Screen Handover Prompt
+
+Required explicitly by the operator on 2026-11-26. At the end of each
+subphase, include the complete next-session prompt directly in the final
+response. Print it after the approved checkpoint actions finish, or include
+the actual pending checkpoint if those actions remain unfinished. Use a
+fenced `text` block so the operator can copy it into a new chat immediately.
+
+Include the repository path, next subphase or incomplete-work resumption,
+required reading, verified acceptance, actual checkpoint status, scope,
+done-when criteria, exclusions and approval rules. Do not require the
+operator to open a file to obtain the prompt. If the checkpoint's containing
+commit ID cannot appear in its own saved handoff, give the actual ID and
+verified push result in the final response and reconcile it next session.
 
 ## Git Checkpoint Before a New Session
 

@@ -2,73 +2,95 @@
 
 Updated: 2026-11-26.
 
-**Ended: Subphase 5F.1 Complete.** Shared evidence schema, versioned migration,
-validated access layer, source registry and later job/archive contracts are
-implemented. See [Closeout](review/2026-11-26-5f1-closeout.md) and
-[Shared Evidence Runbook](runbooks/shared-evidence.md).
+**Ended: Subphase 5F.2 Complete.** Opt-in durable runner supports trusted
+registration, distinct logical work and execution identities, progress,
+bounded retries, cancellation, restart recovery and duplicate-execution
+control. See [Closeout](review/2026-11-26-5f2-closeout.md) and
+[Durable Jobs](runbooks/durable-jobs.md) for handler contracts and limits.
 
-Acceptance: all 18 new tests passed. Final full offline suite ran 529 tests:
-528 passed and one existing skip. Migration preserved legacy rows/views;
-six existing pages returned 200 through the normal app lifespan on a temporary
-database. No live database migration, app restart or provider refresh. Phase 2
-deferrals and v1 operational freshness requirements remain.
+Acceptance: 24 new runner tests and 18 shared-evidence tests passed. Final
+offline suite ran 553 tests in 71.144 seconds: 552 passed and one existing
+skip. Real Windows process-crash and competing-process tests passed. Six
+existing startup/page checks returned 200 on a temporary database. No live
+database migration, restart, source enabling, provider traffic or dependency
+change. Linux execution was not performed. V1 freshness remains outstanding.
 
-Checkpoint: approved read-only Git inspection confirmed main at 8df28b0 and
-an empty index. The operator confirms that Phase 2 commit was already pushed
-and verified in the previous chat; do not repeat it. The operator explicitly
-approved the named 5F.1 commit and its push in this chat. This handoff is
-prepared for those operations. Exact approved files/message:
-[14-Path Proposal](review/2026-11-26-5f1-checkpoint-files.md). The closing chat
-message records the actual result. Saved notes are not Git permission.
+Checkpoint: the operator confirms 5F.1 commit `6341acc`, `Add shared evidence
+model and source registry`, was pushed to `origin/main` and verified. Do not
+repeat it. Approved read-only Git inspection confirmed main at 6341acc,
+an empty index and .githooks configured. Changes match the proposal and
+tracked whitespace checks passed. The operator then directly instructed commit
+and push and requested an explicit on-screen handover rule. Both checkpoint
+actions are authorized. This handoff is prepared for execution; the closing
+chat message records the actual commit and push result. Do not infer a pending
+checkpoint from this pre-commit note without reconciling that result.
+The exact 19-path proposal and message `Add durable job runner` are in
+[Checkpoint Files](review/2026-11-26-5f2-checkpoint-files.md). Reconcile the
+current operator message and closing chat result before deciding what remains.
+Saved notes never grant Git permission.
 
-Local work: the proposal names all 5F.1 code/tests/docs. Preserve and exclude
-`feedly-review-rules.md`, `.claude/settings.local.json`, secrets, runtime data
-and conversation exports. Source metadata stays disabled by default. The
-historical RVM license finding is not a current terms approval. Existing
-manual feeds retain their own behavior until explicit runner integration.
+The handover prompt must also be printed directly in the final response, in
+a fenced text block. See the updated session-handoff runbook and paired rules.
 
-Next: **5F.2 Durable Job Runner**. No job execution or scheduling has started.
-Follow [Session Handoff](runbooks/session-handoff.md) at this boundary.
+Preserve/exclude `feedly-review-rules.md`, `.claude/settings.local.json`,
+the unrelated untracked `prototypes/` directory,
+secrets, runtime data and conversation exports. Source metadata remains
+disabled by default. Existing manual feeds/queues/async limits are unchanged.
+Runner execution is serial per canonical local database path. No startup
+dispatcher or production task exists. Handlers must use cooperative checks,
+finite source budgets and verified replay input. 5F.3 must bridge async feed
+clients/quotas explicitly; do not create a fresh event loop per job around
+the shared async limiter. Follow [Session Handoff](runbooks/session-handoff.md).
 
 ## Next-Chat Prompt
 
 ```text
-Continue the CTI Toolkit in this repository. Follow AGENTS.md and its required
-reading order. Read focused ROADMAP.md foundation sections, the newest
-Research notes in docs/journal.md, docs/handoff.md, the 2026-11-26 5F.1 closeout
-and docs/runbooks/shared-evidence.md, session-handoff.md and v1-data-freshness.md.
+Continue the CTI Toolkit at C:\Users\Robert\Projects\cti-toolkit.
+Implement only 5F.3: Scheduled Feed Refresh and Source Health.
 
-5F.1 is complete: final offline suite ran 529 tests, 528 passed and one
-existing skip. Read the shared schema/access layer and integration contracts.
-The live database was not migrated or restarted in that pass. Phase 2 commit
-8df28b0 was already pushed and verified in the previous session. Do not repeat
-it. Reconcile the latest operator message and closing checkpoint result with
-the handoff before deciding whether the 5F.1 checkpoint is still pending.
-Obtain Git inspection approval if needed; every commit and push requires its
-own approval in this chat. Preserve the separate Feedly rules and local Claude
-settings and exclude all secrets, runtime data and conversation exports.
+Follow AGENTS.md and its required reading order. Read focused ROADMAP.md
+foundation sections, newest Research notes in docs/journal.md, docs/handoff.md,
+docs/review/2026-11-26-5f2-closeout.md, docs/runbooks/durable-jobs.md,
+shared-evidence.md, session-handoff.md and v1-data-freshness.md.
 
-Implement only 5F.2: Durable Job Runner. Inspect existing queues, rate limits
-and thread/SQLite patterns first. Build durable progress, bounded retries,
-cancellation, interrupted-job recovery and duplicate-execution control using
-temporary-database offline tests. Register source work explicitly in trusted
-code and use the 5F.1 eligibility and evidence replay contracts. Preserve
-separate execution IDs, logical work identity and success/coverage checkpoints.
-Source content cannot choose callables, destinations or approval decisions.
+5F.2 is complete: final offline suite ran 553 tests, 552 passed and one
+existing skip, including 24 runner tests. The live database has not been
+migrated or restarted for 5F.1/5F.2. 5F.1 commit 6341acc was pushed to
+origin/main and verified, as confirmed by the operator. Reconcile the latest
+operator message/closing checkpoint result before deciding whether 5F.2 Git
+work remains. Every Git inspection, commit and push needs current-chat
+approval; commit and push are separately approved. Preserve unrelated Feedly
+rules/local Claude settings and exclude secrets, runtime data and exports.
 
-Done when crash/restart, concurrent claims, retry bounds, cancellation and
-duplicate-execution tests pass; existing modules remain compatible; repeatable
-commands, design decisions and remaining limits are documented. Do not quietly
-schedule feeds or enable sources: scheduled refresh/source health are 5F.3,
-saved reports/archives 5F.4 and alerts 5F.5. Collectors and AI remain outside
-this pass. New dependencies, installs, external transfers and other system
-changes follow AGENTS.md approval rules. Routine project edits and offline
-tests need no additional permission.
+Inspect the runner, existing source-specific queues, async clients and quotas
+before integrating feeds. Register permitted source work in trusted code.
+Design/test a compatible async bridge or durable quota adapter; the shared
+async limiter must not be reused across fresh event loops per job. Keep
+requests, time, bytes and retries bounded. Check source eligibility before
+each bounded unit/retry and preserve logical work/run/capture identities.
+Source content cannot choose callables, commands, destinations or approvals.
 
-Work through this one subphase. At the boundary state Subphase 5F.2 Complete
-only if acceptance passes, write a dated closeout and update journal, roadmap,
-paired status summaries and handoff. Prepare exact commit files/message for
-individual approval and request push approval separately. Provide a ready-to-
-paste 5F.3 prompt and stop. If incomplete, record actual status and a resume
-prompt instead of claiming completion.
+Implement explicit source-specific schedules and health for existing reviewed,
+configured feeds using the runner. Preserve separate last attempt, validated
+retrieval and complete-coverage checkpoints; retain prior good data. Surface
+never-loaded, stale, failed and incomplete states where analysts consume it.
+Test downtime/restart gap recovery, 429/quota handling, provider failures,
+partial pagination and success without skipping unfinished windows. Keep
+large historical reloads behind their existing explicit action. Review terms,
+cadence and quotas before enabling any source; registry notes and old manual
+routes do not confer new collection permission. Do not initiate provider
+traffic or migrate/restart the live app without direct approval.
+
+Done when meaningful offline scheduler/health/recovery and compatibility tests
+pass and design limits/repeatable commands are documented. Saved reports and
+archives are 5F.4; alerts 5F.5. Collectors and AI remain outside this pass.
+New dependencies, installs, external transfers and other system changes follow
+AGENTS.md approval rules. Routine project edits/offline tests need no prompt.
+
+Work through this one subphase, then stop. State Subphase 5F.3 Complete only
+if acceptance passes. Write a dated closeout, update journal, roadmap, paired
+status summaries and handoff, and paste a ready-to-use 5F.4 prompt directly in
+the final response. Prepare exact commit files/message for individual approval
+and request push approval separately after the commit. If incomplete, record
+actual status and provide a resume prompt rather than claiming completion.
 ```

@@ -56,9 +56,13 @@ def get_source(source_id: str) -> Source | None:
         return Source(**dict(row)) if row else None
 
 
-def require_collection(source_id: str, access_method: str) -> Source:
-    """Future workers must recheck before each bounded work unit, including retries."""
-    source = get_source(source_id)
+def require_collection(source_id: str, access_method: str, *, connection: sqlite3.Connection | None = None) -> Source:
+    """Recheck each bounded unit/retry, optionally in the runner's transaction."""
+    if connection is None:
+        source = get_source(source_id)
+    else:
+        row = connection.execute("SELECT * FROM evidence_sources WHERE source_id=?", (source_id,)).fetchone()
+        source = Source(**dict(row)) if row else None
     if source is None or not source.eligible or source.access_method != access_method:
         raise PermissionError("Source is not eligible for this collection method")
     return source
