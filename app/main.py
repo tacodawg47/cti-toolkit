@@ -24,7 +24,7 @@ from .core.ratelimit import LIMITS, rate_limiter
 from .core.templating import templates
 from .core.web import reject_cross_site
 from .modules.enrich import base, registry, shodan
-from .modules.extract import attack, attack_catalog, decode, extractor, markdown
+from .modules.extract import atlas, attack, attack_catalog, content, decode, extractor, markdown, tlds
 from .modules.extract import fetch as extract_fetch
 from .modules.extract import pdf as extract_pdf
 from .modules.extract.html import Document, parse_document
@@ -128,24 +128,37 @@ def extract_page(request: Request):
     return _extraction_page(request, {})
 
 
+@app.get("/extract/decoder", response_class=HTMLResponse)
+def decoder_page(request: Request):
+    return _extraction_page(request, {"extract_tab": "decoder"})
+
+
 def _extraction_page(request: Request, context: dict, document: Document | None = None, *, status_code: int = 200):
     catalog = attack_catalog.load()
     context.update(catalog_version=catalog.get("version"), decode_modes=decode.MODES)
     if document is not None:
-        context["result"] = extractor.extract(document.text)
+        content.prepare_text(document)
+        context["result"] = extractor.extract(document.indicator_text or "", report_mode=True,
+                                               report_references=document.references)
+        context["result"].references.extend(document.references)
+        content.attach_context(context["result"], document)
         for item in context["result"].by_type("hash"):
-            item.context = document.hash_context.get(item.value, [])
+            item.context.extend(document.hash_context.get(item.value, []))
         document.text = document.text[:extractor.MAX_TEXT_CHARS]
         context["attack_findings"] = attack.extract(document, catalog)
+        context["atlas_findings"] = atlas.extract(document)
+        context["attack_layout_limited"] = document.layout_limited
         context["plain_list"] = extractor.plain_list
         context["type_order"] = extractor.TYPE_ORDER
+        context.update(artifacts=document.artifacts, images=document.images, recovered=document.recovered, document_format=document.format)
+        context["text"], context["url"] = "", ""
     return templates.TemplateResponse(request, "extract.html", context, status_code=status_code)
 
 
 @app.post("/extract/decode", response_class=HTMLResponse)
 async def decode_text(request: Request, encoded: str = Form(""), mode: str = Form("base64")):
     reject_cross_site(request)
-    context = {"encoded": encoded[:decode.MAX_INPUT], "decode_mode": mode}
+    context = {"encoded": encoded[:decode.MAX_INPUT], "decode_mode": mode, "extract_tab": "decoder"}
     try:
         decoded = decode.decode(encoded, mode)
     except ValueError as exc:
@@ -159,6 +172,8 @@ async def decode_text(request: Request, encoded: str = Form(""), mode: str = For
 async def refresh_attack(request: Request):
     reject_cross_site(request)
     error = await attack_catalog.refresh()
+    if not error:
+        error = await tlds.refresh()
     if error:
         return _extraction_page(request, {"error": error}, status_code=502)
     return RedirectResponse("/extract", status_code=303)

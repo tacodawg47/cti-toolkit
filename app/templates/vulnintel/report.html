@@ -2,9 +2,8 @@
 {% block title %}{{ report.title }} | CTI Toolkit{% endblock %}
 {% block tab %}
 <section class="card">
-  <p><a href="{{ prefix }}/exploitation-reports">Exploitation Reports</a></p>
+  <p class="muted">Archived Local Report. Manual intake and editing have been removed.</p>
   <h2>{{ report.title }}</h2>
-  {% if existing %}<p role="status">This source report was already saved. Showing the original entry.</p>{% endif %}
   <p><strong>{{ report.assessment }}</strong> · {{ report.product }}</p>
   <dl>
     <dt>Source</dt>
@@ -29,17 +28,5 @@
   {% if report.linked_cve %}
     <p>{% with id = report.linked_cve %}{% include "vulnintel/_cve_link.html" %}{% endwith %} · Linked {{ report.linked_at | day }}</p>
   {% else %}<p class="muted">No CVE linked.</p>{% endif %}
-  {% if error %}<p class="err" role="alert">{{ error }}</p>{% endif %}
-  <form method="post" action="{{ prefix }}/exploitation-reports/{{ report.id }}/link">
-    <p><label>CVE ID <input type="text" name="cve_id" maxlength="40" value="{{ report.linked_cve or '' }}"
-                           placeholder="CVE-2026-12345" required></label></p>
-    <button type="submit">{{ "Update CVE Link" if report.linked_cve else "Link CVE" }}</button>
-  </form>
-  {% if report.linked_cve %}
-    <form method="post" action="{{ prefix }}/exploitation-reports/{{ report.id }}/link">
-      <input type="hidden" name="remove" value="true">
-      <button type="submit" class="small">Remove CVE Link</button>
-    </form>
-  {% endif %}
 </section>
 {% endblock %}

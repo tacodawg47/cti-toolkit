@@ -58,6 +58,7 @@ def parse_document(text: str) -> Document:
     """Keep the original input and recover only explicitly structured procedures."""
     lines = text[:MAX_TEXT_CHARS].splitlines()
     tables = []
+    prose = []
     heading = ""
     fence = ""
     i = 0
@@ -77,6 +78,19 @@ def parse_document(text: str) -> Document:
         title = _HEADING.match(line)
         if title:
             heading = title[1].strip(" #")[:300]
+            if any(ident.startswith("T") for ident in ids(heading)):
+                body = []
+                following = i
+                while following < len(lines) and len(body) < 40:
+                    candidate = lines[following]
+                    if _HEADING.match(candidate) or _LIST.match(candidate) or _FENCE.match(candidate) or _cells(candidate):
+                        break
+                    body.append(candidate)
+                    following += 1
+                paragraph = " ".join(part.strip() for part in body if part.strip())[:4000]
+                if paragraph:
+                    tables.append(Table(heading, [["ID", "Use"], [heading, paragraph]], "Markdown Heading Block"))
+                    i = following
             continue
         header = _cells(line)
         divider = _cells(lines[i]) if len(header) >= 2 and i < len(lines) else []
@@ -89,7 +103,7 @@ def parse_document(text: str) -> Document:
                     break
                 rows.append(row[:len(header)])
                 i += 1
-            tables.append(Table(heading, rows))
+            tables.append(Table(heading, rows, "Markdown Table"))
             continue
         item = _LIST.match(line)
         row = _list_row(item[2]) if item else None
@@ -104,5 +118,7 @@ def parse_document(text: str) -> Document:
                     break
             row[1] = row[1][:4000].strip()
             if row[1]:
-                tables.append(Table(heading, [["ID", "Use"], row]))
-    return Document(text, tables)
+                tables.append(Table(heading, [["ID", "Use"], row], "Markdown List"))
+                continue
+        prose.append(line)
+    return Document(text, tables, prose=prose, format="Markdown")

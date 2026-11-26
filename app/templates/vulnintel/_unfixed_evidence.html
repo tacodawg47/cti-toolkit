@@ -1,0 +1,17 @@
+{% for source in unfixed_sources %}
+  {% if source.source == 'redhat_vex' %}
+    {% with vendor_vex = source %}{% include "vulnintel/_vendor_vex.html" %}{% endwith %}
+  {% else %}
+  <article>
+    <h4><a href="{{ source.url }}" rel="noopener noreferrer" target="_blank">{{ source.publisher }}</a></h4>
+    <p class="muted"><small>{{ source.reference }} · Revised {{ source.revised | day }}</small></p>
+    {% if source.fixed_count %}<p class="muted">The publisher also lists fixed targets. A fix for one target does not resolve the targets below.</p>{% endif %}
+    <ul class="plain">{% for finding in source.unfixed %}
+      <li><strong>{{ 'No Fix Planned' if finding.category == 'no_fix_planned' else 'No Fix Available' }}</strong> {{ finding.details }}
+        <ul>{% for name in finding.products %}<li>{{ name }}</li>{% endfor %}</ul>
+        {% for mitigation in finding.mitigations %}<p><strong>Workaround or Mitigation</strong> {{ mitigation.details }}<br><small>Applies to {{ mitigation.products | join(', ') }}</small></p>{% endfor %}
+      </li>
+    {% endfor %}</ul>
+  </article>
+  {% endif %}
+{% endfor %}

@@ -15,8 +15,9 @@ from .html import Document
 
 MAX_PAGES = 500
 _HASH_LINE = re.compile(r"^\s*([a-fA-F0-9]{4,64})(?:[ \t]+(.*))?\s*$")
-_HASH_KIND = re.compile(r"\b(SHA[ -]?256|SHA[ -]?1|MD5)\b", re.I)
+_HASH_KIND = re.compile(r"\b(SHA[ -]?256|SHA[ -]?1|MD5)s?\b", re.I)
 _PAGE_FURNITURE = re.compile(r"^(?:page\s+)?[0-9]{1,4}(?:\s*(?:of|/)\s*[0-9]{1,4})?$", re.I)
+_DETECTION_NAME = re.compile(r"(?:[A-Za-z][A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]+){1,5}|(?:HKTL|BKDR|TROJ)_[A-Za-z0-9_.-]+)")
 
 
 def hash_document(text: str) -> Document:
@@ -31,12 +32,15 @@ def hash_document(text: str) -> Document:
         line = lines[i]
         kind = _HASH_KIND.findall(line)
         if kind and not _HASH_LINE.match(line):
+            headings = []
             lengths = {{"sha256": 64, "sha1": 40, "md5": 32}[value.lower().replace("-", "").replace(" ", "")]
                        for value in kind}
             target = next(iter(lengths)) if len(lengths) == 1 else None
         match = _HASH_LINE.match(line)
         if not match:
-            if line.strip() and len(line.strip()) < 180 and not _PAGE_FURNITURE.fullmatch(line.strip()):
+            if (line.strip() and len(line.strip()) < 180
+                    and not _PAGE_FURNITURE.fullmatch(line.strip())
+                    and not _DETECTION_NAME.fullmatch(line.strip())):
                 headings = [*headings[-2:], line.strip()]
             output.append(line)
             i += 1
@@ -73,10 +77,18 @@ def hash_document(text: str) -> Document:
             output.append(line)
             evidence = f"PDF line {i + 1}"
         if len(value) in (32, 40, 64):
+            # A two-column PDF may place the row's detection name on its
+            # own line. Keep only the next nonblank line, never a prior row.
+            if not note:
+                for following in lines[end:end + 3]:
+                    if following.strip():
+                        if _DETECTION_NAME.fullmatch(following.strip()):
+                            note = following.strip()
+                        break
             details = " · ".join(part for part in (evidence, *headings, note) if part)
             context.setdefault(value.lower(), []).append(details)
         i = end
-    return Document("\n".join(output), hash_context=context)
+    return Document("\n".join(output), hash_context=context, prose=[], pages=text[:1000000].split("\f"), format="PDF")
 
 
 def pdf_text(data: bytes) -> tuple[str | None, str | None]:
@@ -101,7 +113,7 @@ def pdf_text(data: bytes) -> tuple[str | None, str | None]:
             parts.append(page.extract_text() or "")
     except Exception as exc:      # pypdf raises many types; none is actionable here
         return None, f"could not read the PDF: {type(exc).__name__}"
-    return "\n".join(parts), None
+    return "\n\f\n".join(parts), None
 
 
 def pdf_document(data: bytes) -> tuple[Document | None, str | None]:

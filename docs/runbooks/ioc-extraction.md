@@ -9,6 +9,84 @@ routed to the vulnerability intelligence module.
 
 ## What it extracts
 
+Updated 2026-11-24: explicit Chrome, Firefox and VS Code IDs appear under
+Software Extension References. Copy IDs and ecosystem-labelled lists, with
+manual official store links where the identity supports one. They do not
+become file hashes, email addresses or ordinary enrichment inputs. See
+[the repeatable feature checks](manual-refresh-and-extension-references.md).
+Plural PDF hash headings and standalone detection names are supported.
+The original MuddyWater check recovers 105 complete hashes; one out-of-order
+cross-page row remains unsupported. See the 2026-11-24 acceptance review.
+
+Updated 2026-11-19: **Report Extraction** and **Decoder Tool** are separate
+tabs at `/extract` and `/extract/decoder`. Successful report extraction
+clears its text, URL and file inputs. Failed inputs remain for correction.
+Individual indicators and plain lists have Copy buttons. Values are trimmed;
+the space before the Copy button is outside the indicator value.
+
+Report mode separates linked citations from IOC enrichment. Common plain
+reference hosts such as GitHub, Go and urlscan remain full references.
+Explicit defanged hosting URLs remain indicator candidates. Domains require
+a known delegated or special-use suffix as well as filename filtering.
+The ATT&CK catalog refresh also loads IANA's small TLD list into ignored
+`data/iana-tlds.txt`; before that, a limited common-suffix fallback applies.
+There is no DNS lookup of extracted indicators during this validation.
+
+Recognizable HTML code blocks and pasted fenced code are shown under
+**Rules, Queries and Command Lines**. Recognized YARA, Sigma, KQL, SPL and
+CQL are labelled; unknown blocks stay Code Sample. Standalone pasted
+YARA rules and common command lines are also recognized. Contents are
+inert, excluded from ordinary IOC enrichment and never executed, deployed
+or certified valid. Plain pasted queries without explicit boundaries may
+still need manual selection. Row context preserves adjacent hash/IP labels.
+
+Explicit `AML.T` IDs appear under **ATLAS References**, separately from
+ATT&CK. Official ATLAS catalog validation and names remain future work.
+Command-to-technique candidate mappings were removed on 2026-11-20.
+Only explicitly reported technique IDs are listed. Commands and rules
+remain verbatim artifacts. Inferred TTPs wait for optional Phase 11 AI
+assist and analyst review. AI output will still require validation.
+
+Image references have an explicit Load Image button. Images are not
+automatically requested or enriched. Clicking contacts the image host from
+the browser with no referrer. Local IP literals and credential-like query
+parameters are refused. This is not a proxy or a guarantee about a named
+host's DNS destination. Never use previews for suspected malicious links.
+
+Some Next.js pages stream article models as JSON inside script elements.
+The parser can recover bounded declarative native HTML models without
+executing JavaScript. It only replaces visible text when it recovers more
+hashes. This fixes the checked ReversingLabs report, not all dynamic sites.
+Unsupported components, OCR and unrestricted browser rendering remain out
+of scope. Inputs, embedded data and recovered content have size/work caps.
+
+Offline regression checks:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m unittest tests.test_report_quality tests.test_extract tests.test_decode_pdf tests.test_attack_layouts -v
+```
+
+On Linux replace the Python path with `.venv/bin/python`.
+
+Repeat the two original URL checks with the local app running:
+
+```powershell
+$endpoint = 'http://127.0.0.1:8000/extract'
+$rlUrl = 'https://www.reversinglabs.com/blog/threat-researchers-notebook-detection-strategies-for-artex-and-related-forks'
+$rl = Invoke-WebRequest -Method Post -Uri $endpoint -Body @{url=$rlUrl} -TimeoutSec 90
+$rl.Content -match '193\s+hashes'
+$googleUrl = 'https://cloud.google.com/blog/topics/threat-intelligence/armory-castle-exploits-vsphere'
+$google = Invoke-WebRequest -Method Post -Uri $endpoint -Body @{url=$googleUrl} -TimeoutSec 90
+$google.Content -match '11\s+IPs'
+([regex]::Matches($google.Content, '<summary>YARA ')).Count
+```
+
+Expected on the checked revisions: True, True and 6. These requests fetch
+the public reports without executing page scripts or submitting extracted
+IOCs to enrichment. Source revisions can change counts. Check the source
+before changing expectations. After a restart, wait until startup completes
+in the server log before issuing requests against the large local database.
+
 | Type | Pattern | Notes |
 |---|---|---|
 | IPv4 | four dotted octets, each 0–255 | a version number like `1.2.3.4` has the same shape and is extracted too; private, loopback, reserved and documentation-range (`203.0.113.x`) addresses are tagged and dimmed |
@@ -40,6 +118,42 @@ the enrichment box instead.
 3. Click **Extract**. Results are grouped by type. Click **Enrich** on a row
    to run the Phase 1 vendors on it. Open **plain list** under a group to
    copy the values for another tool.
+4. Expand **Report Context** beside an IOC before interpreting it. This is
+   up to 280 nearby characters from the extracted text, with indicators
+   refanged. It keeps the earliest mention. It is not an exact original-file
+   locator, a full quotation or a maliciousness verdict. PDF hash-row context
+   remains available separately. Viewing context makes no extra request.
+
+To repeat the local context checks without any provider lookup:
+
+```powershell
+.venv/Scripts/python.exe -m unittest tests.test_extract -v
+```
+
+For a manual check, paste `Training sample: bad[.]example is not malicious.`
+and select **Extract**. The domain's Report Context must preserve the
+negative wording and display the refanged name. Pasted markup and commands
+remain escaped text. These rendering checks do not test a future AI model's
+resistance to prompt injection; that has its own Phase 11 acceptance work.
+
+If the app is stopped, the reviewed Windows background start used for this
+pass is below. If port 8000 is occupied, use the verified restart procedure
+in [running-the-app.md](running-the-app.md), not a second server.
+
+```powershell
+$toolkitPython = (Resolve-Path -LiteralPath '.venv/Scripts/python.exe').Path
+$toolkitProcess = Start-Process -FilePath $toolkitPython -ArgumentList @('-B', 'run.py') -WorkingDirectory (Get-Location).Path -WindowStyle Hidden -PassThru -RedirectStandardOutput 'data/report-context.stdout.log' -RedirectStandardError 'data/report-context.stderr.log'
+$toolkitProcess.Id
+$extractPage = Invoke-WebRequest -Uri 'http://127.0.0.1:8000/extract' -TimeoutSec 20
+$contextPage = Invoke-WebRequest -Uri 'http://127.0.0.1:8000/extract' -Method Post -Body @{ text = 'Training sample: bad[.]example is not malicious.' } -TimeoutSec 20
+$extractPage.StatusCode
+$contextPage.StatusCode
+$contextPage.Content.Contains('Report Context')
+$contextPage.Content.Contains('Training sample: bad.example is not malicious.')
+```
+
+Expect two 200 status codes and two True values. These requests exercise
+local extraction only. They do not submit the example to a provider.
 
 The URL fetch is for vendor blogs and advisories. It validates the initial
 HTTPS URL and each redirect before requesting it. It refuses embedded
@@ -68,17 +182,104 @@ malicious URLs.
 4. Expand the table evidence beside a technique to view the report's
    procedure and stated tactic. The excerpt belongs to the report.
    The catalog supplies the official name, domains, and mappings used
-   to flag a reported mismatch. Unstructured text and PDFs show IDs
-   without attached procedure text. ATLAS IDs are outside this view.
+   to flag a reported mismatch. Evidence also works for HTML lists, grids,
+   pre/br blocks and ID-bearing headings. Markdown headings can supply a
+   paragraph. Prose fallback is explicitly labelled, with Low confidence
+   for three or more IDs in one sentence. ATLAS IDs are outside this view.
+5. PDF procedures require a one-to-one paragraph association. Flattened
+   ID columns followed by prose, multiple IDs in one PDF paragraph and
+   associations across page boundaries stay as IDs only. No OCR runs.
+   A structured-layout limit notice means a smaller section may recover
+   more evidence. These labels describe association, not source credibility
+   or an independently verified behavior.
 
 For Windows, with the local app running:
 
 ```powershell
 Invoke-WebRequest -Method POST -Uri 'http://127.0.0.1:8000/extract/refresh-attack'
-.\.venv\Scripts\python.exe -B -m unittest tests.test_extract
+.\.venv\Scripts\python.exe -B -m unittest tests.test_extract tests.test_attack_layouts tests.test_decode_pdf
 ```
 
 [MITRE ATT&CK data and attribution](https://attack.mitre.org/resources/attack-data-and-tools/).
+
+For a harmless live check after the normal app restart, save the following
+as an HTML file and upload it at `/extract`:
+
+```html
+<h2>Execution</h2>
+<ul><li>T1059.001 PowerShell - Ran encoded commands.</li>
+<li>T1059.003 Windows Command Shell - Launched cmd.exe.</li></ul>
+```
+
+With the catalog loaded, each ID should show its own procedure, HTML List,
+Source Structure and reported tactic Execution. Removing the procedure
+phrases leaves names and IDs without invented behavior. No link, image or
+script in an uploaded HTML document is fetched or executed. The synthetic
+test file does not establish coverage of all original publisher reports.
+
+### Repeat Original Publisher Acceptance
+
+Checked 2026-11-19: the 12 named survey pages and Recorded Future PDF.
+Results and limits are in
+[the acceptance review](../review/2026-11-19-publisher-acceptance.md).
+The helper downloads only its fixed publisher URL list and never fetches
+page assets or executes page code. Raw captures remain in git-ignored data/.
+The default operation is offline analysis; --fetch explicitly enables GETs.
+The per-file cap is 6 MiB and per-run combined transfer cap is 30 MiB.
+
+From the project root, the exact fetch command is:
+
+```powershell
+.venv/Scripts/python.exe -B -I -S -c "import sys, runpy; from pathlib import Path; sys.path[:0] = [str(Path.cwd()), str(Path('.venv/Lib/site-packages').resolve())]; sys.argv = ['check_report_layouts.py', 'data/phase2-acceptance-2026-11-19', '--fetch']; runpy.run_path('scripts/check_report_layouts.py', run_name='__main__')"
+```
+
+The original run used a 5 MiB cap. After a HEAD response established the
+PDF's 5,895,616-byte size, raised it to 6 MiB and retried only that source:
+
+```powershell
+.venv/Scripts/python.exe -B -I -S -c "import sys, runpy; from pathlib import Path; sys.path[:0] = [str(Path.cwd()), str(Path('.venv/Lib/site-packages').resolve())]; sys.argv = ['check_report_layouts.py', 'data/phase2-acceptance-2026-11-19', '--fetch', '--only', 'recordedfuture-pdf']; runpy.run_path('scripts/check_report_layouts.py', run_name='__main__')"
+```
+
+We disable Python startup hooks with -I -S, then add only the trusted project
+and existing site-packages paths. No downloaded report is imported as code.
+Review the fixed URL list before future live runs and use a new dated
+capture directory when preserving an earlier snapshot.
+
+Scan only the incoming publisher captures with the approved Defender
+process, using an elevated PowerShell. The completed scans used:
+
+```powershell
+$defenderExe = Join-Path $env:ProgramData 'Microsoft\Windows Defender\Platform\CurrentVersion\MpCmdRun.exe'
+$defenderSignature = Get-AuthenticodeSignature -LiteralPath $defenderExe
+if ($defenderSignature.Status -ne 'Valid' -or $defenderSignature.SignerCertificate.Subject -notmatch 'Microsoft') { throw 'Defender executable signature verification failed.' }
+$incomingReports = (Resolve-Path -LiteralPath 'data/phase2-acceptance-2026-11-19/incoming').Path
+& $defenderExe -Scan -ScanType 3 -File $incomingReports
+$LASTEXITCODE
+$reportPdf = (Resolve-Path -LiteralPath 'data/phase2-acceptance-2026-11-19/incoming/recordedfuture-pdf.pdf').Path
+& $defenderExe -Scan -ScanType 3 -File $reportPdf
+$LASTEXITCODE
+```
+
+The directory scan preceded the PDF retry on the original run; scanning the
+whole dedicated incoming directory after a fresh fetch covers all files.
+Do not substitute Downloads, the project root or a personal folder. Check
+the explicit detection output as well as exit status. This process permits
+Microsoft cloud analysis for these public project downloads. No global
+Defender setting is changed. See [scan semantics](defender-artifact-scan.md).
+
+After scanning, the offline analysis command is:
+
+```powershell
+.venv/Scripts/python.exe -B -I -S -c "import sys, runpy; from pathlib import Path; sys.path[:0] = [str(Path.cwd()), str(Path('.venv/Lib/site-packages').resolve())]; sys.argv = ['check_report_layouts.py', 'data/phase2-acceptance-2026-11-19']; runpy.run_path('scripts/check_report_layouts.py', run_name='__main__')"
+```
+
+downloads.json records source, size and digest. analysis.json holds the local
+findings, evidence kinds and catalog version. Inspect original structures
+and representative source-aligned cells, rather than accepting procedure
+counts as proof. Labels-only matrices must stay without procedure text.
+Source descriptions can be generic; association is not credibility or
+independent confirmation of observed behavior. A changed digest/layout
+requires renewed acceptance. Do not commit the captures or extracted text.
 
 ## PDF support
 

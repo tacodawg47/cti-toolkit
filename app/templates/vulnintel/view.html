@@ -5,7 +5,6 @@
   <h2 style="margin: 0 0 6px;">{{ view.title }} <small class="muted">{{ "{:,}".format(t.unfiltered) }} CVEs</small></h2>
   <p><small>{% if needs_review %}Keyword leads from CVE titles and descriptions. Verify the affected product before acting.
     {% else %}{{ view.rule }}{% endif %}</small></p>
-  {% if view.slug == "zero-day" %}<p><a href="{{ prefix }}/exploitation-reports">Exploitation Reports</a></p>{% endif %}
   {% if view.slug == "edge" %}
     <p class="muted"><small>Initial product list informed by
       <a href="https://github.com/BushidoUK/Ransomware-Vulnerability-Matrix" rel="noopener noreferrer" target="_blank">Ransomware Vulnerability Matrix by BushidoToken</a> (CC BY 4.0).</small></p>
@@ -30,6 +29,8 @@
     <p class="muted"><small>
       {% if vex_status.fetched_at %}Red Hat VEX checked {{ vex_status.fetched_at | day }} · {% endif %}
       <a href="{{ prefix }}/feeds">Refresh Red Hat VEX</a>
+      · <a href="{{ prefix }}/vendor-updates">Vendor Advisories</a>
+      · <a href="{{ prefix }}/feeds">OT &amp; ICS Feeds</a>
     </small></p>
     {% if vex_status.error %}
       <p class="err"><small>{{ vex_status.error }} Showing the last stored evidence.</small></p>

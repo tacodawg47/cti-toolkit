@@ -3,14 +3,26 @@
 {% block tab %}
 <section class="card">
   <h2>Vendor Updates</h2>
-  <p>Direct publisher notices and product-specific remediation. <a href="{{ prefix }}/views/patch-tuesday">Microsoft Patch Tuesday</a> and <a href="{{ prefix }}/views/ot">OT &amp; ICS</a> have dedicated views.</p>
-  <p class="muted">RSS and Atom notices are references. A notice alone does not establish exploitation or an available fix. Initial coverage follows each publisher's current feed window. Red Hat and SUSE load up to 50 changed advisories per refresh from the last 45 days. Refresh again to continue pending batches.</p>
+  <p>Direct publisher notices and product-specific remediation, including Microsoft MSRC. <a href="{{ prefix }}/views/patch-tuesday">Microsoft Patch Tuesday</a> and <a href="{{ prefix }}/views/ot">OT &amp; ICS</a> also have dedicated views.</p>
+  <p class="muted">RSS and Atom notices are references. A notice alone does not establish exploitation or an available fix. Initial coverage follows each publisher's current feed window. Red Hat and SUSE refreshes check the last 45 days of changes and save a resumable queue. This includes revisions to older notices, not complete historical coverage.</p>
   <details><summary>Refresh Publishers</summary>
     {% for key, label in publishers.items() %}{% set status = statuses.get('vendor_' + key, {}) %}
     <div class="section">
       <form method="post" action="{{ prefix }}/refresh-vendors/{{ key }}"><button class="small" type="submit">Refresh {{ label }}</button></form>
       <small>{{ status.entries or 0 }} notices{% if status.fetched_at %} · {{ status.fetched_at | ago }}{% endif %}{% if status.version %} · {{ status.version }}{% endif %}</small>
       {% if status.error %}<p class="err">{{ status.error }}</p>{% endif %}
+      {% if key in imports %}{% set job = imports[key] %}
+      <p><small>Tracked Advisories: {{ job.tracked }} · Completed: {{ job.done }} · Pending: {{ job.pending }} · Failed: {{ job.failed }}{% if job.index_checked %}<br>Index Checked {{ job.index_checked | ago }} · Change Window From {{ job.cutoff | day }}{% endif %}</small></p>
+      {% if not job.index_checked %}<p class="muted"><small>Refresh this publisher to build its saved import queue. Existing notices remain available.</small></p>{% endif %}
+      {% if job.pending or job.failed %}
+      <form method="post" action="{{ prefix }}/vendor-imports/{{ key }}">
+        <label>Run Limit <select name="batches"><option value="1">50 Advisories</option><option value="5">250 Advisories</option><option value="10">500 Advisories</option></select></label>
+        <button class="small" type="submit">Continue Saved Import</button>
+        {% if job.failed %}<button class="small" type="submit" name="retry" value="1">Retry Failed and Continue</button>{% endif %}
+      </form>
+      <p class="muted"><small>Each run stops before starting another request after its 60-second or 128 MiB body budget. Failed requests reserve their full body allowance. An in-flight request can finish later. Pending work survives restart. Continue does not fetch the index again.</small></p>
+      {% if job.failures %}<details><summary>Failed Advisories</summary><ul>{% for item in job.failures %}<li>{{ item.advisory_id }} · {{ item.attempts }} attempts · {{ item.error }}</li>{% endfor %}</ul></details>{% endif %}
+      {% endif %}{% endif %}
     </div>
     {% endfor %}
   </details>

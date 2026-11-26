@@ -11,6 +11,7 @@
 {% set reasons = [] %}
 {% for r in pri.reasons if not r.startswith(("CVSS ", "EPSS ", "CISA SSVC")) %}{% set _ = reasons.append(r) %}{% endfor %}
 <div class="card">
+  {% if not rep.cve %}<p class="muted">NVD metadata has not been loaded locally. Missing scores, weakness and products are not evidence that NVD lacks them.</p><form method="post" action="{{ prefix }}/cve/{{ rep.cve_id }}/load-nvd"><button type="submit" class="small">Load NVD Scores and Products</button> <label><input type="checkbox" name="keyless" value="1"> Use Public API Without Key</label></form>{% endif %}
   <h2 style="margin: 0 0 4px;">{{ rep.cve_id }}
     <span class="pri{% if pri.level != 'N/A' %} pri-{{ pri.level }}{% endif %}">{{ pri.level }}{% if pri.label %} {{ pri.label }}{% endif %}</span></h2>
   {% if rep.title %}<p class="cvetitle">{{ rep.title }}</p>{% endif %}
@@ -109,10 +110,24 @@
 {% include "vulnintel/_vendor_advisories.html" %}
 {% include "vulnintel/_exploitation_details.html" %}
 
-{% if vendor_vex %}
-<section class="card" id="redhat-vex">
-  <h3>Red Hat Affected Releases Without a Fix</h3>
-  {% include "vulnintel/_vendor_vex.html" %}
+{% if scope_candidates or scope_result %}
+<details class="card" id="advisory-scope"{% if scope_result %} open{% endif %}>
+  <summary>Update Advisory Scope</summary>
+  <p class="muted">Older stored advisories may lack verified product-ID scope for no-fix findings. Fetch one original document to reassess it. This does not refresh other feeds.</p>
+  {% if scope_result %}<p role="status"{% if not scope_result.ok %} class="err"{% endif %}>{{ scope_result.message }} <small>{{ scope_result.attempted_at }}</small></p>{% endif %}
+  {% for candidate in scope_candidates %}<form method="post" action="{{ prefix }}/cve/{{ rep.cve_id }}/advisory-scope">
+    <input type="hidden" name="origin" value="{{ candidate.origin }}"><input type="hidden" name="source" value="{{ candidate.source }}"><input type="hidden" name="reference" value="{{ candidate.reference }}">
+    <p>{{ candidate.title }} · {{ candidate.source }}<br><button class="small" type="submit">Fetch This Advisory</button></p>
+  </form>{% endfor %}
+</details>
+{% endif %}
+
+{% if unfixed_sources %}
+<section class="card" id="unfixed-targets">
+  <span id="redhat-vex"></span>
+  <h3>Affected Targets Without a Fix</h3>
+  <p class="muted">Explicit source statements for named targets. Other versions or products can have fixes.</p>
+  {% include "vulnintel/_unfixed_evidence.html" %}
 </section>
 {% endif %}
 
@@ -151,6 +166,8 @@
   {% if rep.github.error %}<p class="err">{{ rep.github.error }}</p>{% endif %}
 </section>
 
+{% include "vulnintel/_cvedb.html" %}
+
 {% if references %}
 <div class="card" id="references">
   <h3>References</h3>
@@ -167,7 +184,8 @@
 {% endif %}
 
 <details class="card">
-  <summary class="muted">Raw KEV, EPSS, NVD, and SSVC Data</summary>
-  <pre style="white-space: pre-wrap; font-size: 12px;">{{ {"kev": rep.kev, "epss": rep.epss, "nvd": cve, "ssvc": rep.ssvc} | tojson(indent=2) }}</pre>
+  <summary class="muted">Stored Source Data</summary>
+  <p class="muted">Normalized fields used on this page. These are not complete original provider responses. Source update dates and retrieval dates have different meanings.</p>
+  {% for label, value in source_data if value %}<details><summary>{{ label }}</summary><pre style="white-space: pre-wrap; font-size: 12px;">{{ value | tojson(indent=2) }}</pre></details>{% endfor %}
 </details>
 {% endblock %}

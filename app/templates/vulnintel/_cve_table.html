@@ -23,6 +23,7 @@
       {{ th(t.key, f.sort, f.desc, "date", date_label) }}
       <th>Patch Status</th>
       <th>Actions</th>
+      <th>Exploitation Evidence</th>
       {% if show_maturity %}<th>Exploit Evidence</th>
       {% elif show_sources %}<th>Source</th>
       {% else %}<th>Exploit and Detection Evidence</th>{% endif %}
@@ -94,15 +95,17 @@
           {% endif %}
         </td>
         <td>
-          {% if r.vendor_vex %}
-            <details><summary>Red Hat No-Fix Evidence</summary>
-              {% with vendor_vex = r.vendor_vex %}{% include "vulnintel/_vendor_vex.html" %}{% endwith %}
+          {% if r.unfixed_sources %}
+            <details><summary>Unfixed Target Evidence</summary>
+              {% with unfixed_sources = r.unfixed_sources %}{% include "vulnintel/_unfixed_evidence.html" %}{% endwith %}
             </details>
-          {% else %}
+          {% endif %}
+          {% if not r.unfixed_sources or r.fix %}
             {% if r.fix == "vendor_fix" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#microsoft-advisory">Microsoft Fix</a>{% elif r.fix == "patch" %}<span class="ok">Patch Reference</span>{% elif r.fix == "cna_patch" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#remediation">CNA Patch Reference</a>{% elif r.fix == "vendor_patch" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#vendor-advisories">Vendor Fix</a>{% elif r.fix == "ot_patch" %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#ot-advisories">OT Advisory Fix</a>{% elif r.fix == "advisory" %}<span class="muted">Unknown · Advisory</span>{% else %}<span class="muted">Unknown</span>{% endif %}
           {% endif %}
         </td>
         <td>{% with actions = r.actions %}{% include "vulnintel/_action_badges.html" %}{% endwith %}</td>
+        <td>{% if r.exploitation_labels %}<a href="{{ prefix }}/cve/{{ r.cve_id }}#exploitation-details">{{ r.exploitation_labels | join(', ') }}</a>{% else %}<span class="muted">No Cited Exploitation Report</span>{% endif %}</td>
         {% set where = [] %}
         {% if c.msf %}{% set _ = where.append("Metasploit Exploit") %}{% endif %}
         {% if c.msf_other %}{% set _ = where.append("Other Metasploit Module") %}{% endif %}

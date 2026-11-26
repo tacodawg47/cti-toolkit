@@ -11,7 +11,8 @@ import json
 from app.core.db import connect
 from app.modules.extract import attack
 from app.modules.extract.html import parse_document
-from app.modules.vulnerability_intelligence import detail, reports, review, routes, service, store, views
+from app.modules.vulnerability_intelligence import detail, review, routes, service, store, views
+from tests import legacy_reports as reports
 from app.modules.vulnerability_intelligence.feeds import euvd, ot
 from tests.test_vulnintel import TempDbMixin, ot_document
 

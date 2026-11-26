@@ -1,6 +1,6 @@
 # CTI Toolkit Roadmap
 
-Last updated: 2026-11-17
+Last updated: 2026-11-26
 
 A local-only cyber threat intelligence toolkit that puts multiple analyst
 tools under one web interface. Built as a daily-use workflow aid and as a
@@ -88,8 +88,23 @@ portfolio project.
 Phase numbers are stable labels used in cross-references. They are not the
 build sequence. Build in this order:
 
+At each relevant phase, revisit the reviewed SitDeck source catalog and
+installed CTI skill candidates. Select useful components against the module's
+needs, current terms, cost and maintenance before wiring them. Research
+does not make a provider an installed dependency or change this build order.
+
+Session workflow, decided 2026-11-26: use one coherent subphase per fresh
+chat. End each completed subphase with an explicit dated closeout, acceptance
+results and a ready-to-paste prompt for the next subphase. Keep the current
+summary in docs/handoff.md and the full narrative in docs/journal.md.
+Default to a reviewed, individually approved commit and separately approved
+push before switching sessions. Record any pending checkpoint or exception;
+never label unfinished work complete. See docs/runbooks/session-handoff.md.
+
 1. Phase 1 (complete).
-2. Phase 2: finish "Still to wire" and the Supply chain tab.
+2. Phase 2 (accepted first-delivery implementation complete 2026-11-25).
+   See the dated
+   closeout record below for built features, limits and later dependencies.
 3. Phase 5 foundation slice: scheduler, job runner, alert inbox, and the
    shared corpus with its source registry (app/core). Unblocks Phase 1 bulk
    paste, Phase 2 scheduled refresh, and every alert.
@@ -146,6 +161,12 @@ authorized integration in permitted channels under its developer policy.
 
 ### Phase 2: IOC extraction and vulnerability intelligence
 
+Accepted first-delivery implementation closed 2026-11-25. See
+[Phase 2 closeout](docs/review/2026-11-25-phase2-closeout.md). Scheduled
+freshness and recovery remain a v1 operational acceptance requirement in the
+next Phase 5 foundation slice. Historical completeness and parked features
+are not implied by this implementation milestone.
+
 Design settled 2026-11-02: one phase, two packages. They share only the
 CVE indicator type (added to app/core/indicators.py) and the "send to"
 buttons between them. Extraction is pure text processing with no keys and no
@@ -159,6 +180,9 @@ local store, built on the Phase 1 HTTP client, cache and rate limiter.
   de-duplicated with counts, each marked defanged or plain and flagged when it
   is a private IP or in the Tranco top list. One click sends an IOC to
   enrichment and a CVE to vulnerability intelligence.
+- Built (2026-11-18): expandable Report Context for each IOC, with a bounded
+  excerpt from the extracted text. Refang indicators, escape markup and keep
+  a mention distinct from evidence of malicious activity. No extra lookup.
 - Written in-house on top of app/core/indicators.py. iocextract (named here
   originally) is GPL-2.0, last released in 2023, and pulls in the `regex`
   package; shipping it would push the whole project toward GPL-2.0. ioc-finder
@@ -187,8 +211,17 @@ local store, built on the Phase 1 HTTP client, cache and rate limiter.
 - Built 2026-11-16: Capture procedures and reported tactics from HTML
   and Markdown advisory tables and explicit Markdown technique lists.
   Use captions or headings and preserve inline code and escaped pipes.
-  Indicate shared procedure text and catalog mismatches. Grids and PDF
-  procedures remain open. Plain text and PDFs yield IDs.
+  Indicate shared procedure text and catalog mismatches.
+- Built 2026-11-18: Add HTML lists, sibling grids, pre/br blocks,
+  ID-bearing HTML and Markdown headings, labelled prose fallback, and
+  aligned PDF paragraphs. Keep ambiguous PDF columns as IDs only and
+  preserve page boundaries. Structure is bounded and evidence carries
+  its extraction method. Synthetic regressions cover these rules; the
+  original twelve-layout publisher survey was checked on 2026-11-19 across
+  12 pages and one PDF. Fixed article wrappers treated as grids and combined
+  tactic/name labels treated as procedures. Review:
+  docs/review/2026-11-19-publisher-acceptance.md. This does not establish
+  complete PDF/OCR support or accept the separate MuddyWater hash example.
 - Include (2026-11-06): the "Use" column too. CISA joint advisories and the
   current AR/MAR template render ATT&CK as real HTML tables, one per
   tactic, header `Technique Title | ID | Use`, tactic in the `<caption>`
@@ -304,7 +337,10 @@ AttackerKB are marked with the source they come from.
    - Community assessment: dropped 2026-11-09. It relied on AttackerKB,
      whose public platform and API Rapid7 retired on 2026-08-18.
    - Exploit availability panel: the Exploits tab's result for this CVE.
-   - Raw JSON per source, as the enrichment cards have.
+   - Built 2026-11-24: Stored Source Data exposes retained normalized facts
+     per source. It does not claim to contain complete original responses.
+     Decided with the operator: archive full responses with the Phase 5
+     shared evidence store, with bounded retention and provenance.
    - Slow per-CVE sources (NVD, GitHub, OTX) are fetched when
      the page opens and cached with a TTL; the bulk-fed facts render
      instantly from the table.
@@ -397,19 +433,76 @@ only raises the rate limit. Previdian was considered as a third KEV source and d
   directly; fallback only), Senserva's tracker (an HTML page, not a feed),
   inthewild.io (API down; RSS and database frozen since January 2025).
 
-**Still to wire**
+**Closeout and Later Dependencies**
+
+Current disposition: the accepted first-delivery feature scope is complete.
+The authoritative closeout is
+[2026-11-25 Phase 2 closeout](docs/review/2026-11-25-phase2-closeout.md).
+The audit and dated implementation notes below preserve the coverage limits
+and explain the decisions. They are not a claim of full historical coverage.
 
 Phase 2 coverage audit, 2026-11-17:
 [coverage, evidence, and acceptance checks](docs/review/2026-11-17-phase2-coverage-audit.md).
-Phase 2 remains open. All 14 numbered view entry points and All
+At the original audit, Phase 2 remained open. All 14 numbered view entry points and All
 Vulnerabilities exist. Built 2026-11-17: shared positive-exploitation
 evidence, OT remediation/product integration, and typed exploitation dates
 resolve audit findings F1-F3 across views, details, actions and review.
-Phase closeout still requires the remaining deterministic ATT&CK procedure
-layouts and the scope decisions below. Existing vendor
+Original-report acceptance for the named procedure-layout survey is complete
+for 12 pages and one PDF, with limits documented in the 2026-11-19 review.
+The separate MuddyWater wrapped-hash check was performed on 2026-11-24:
+105 complete hashes recovered; one additional cross-page row remains
+unsupported because its text stream is out of visual order. See
+docs/review/2026-11-24-report-extensions-and-pdf.md. Existing vendor
 connectors have bounded feed windows, not complete historical coverage.
-Decide the scope of older NVD backfill, HTMX partial reloads, optional
-GreyNoise/CVEDB lookups, and extension identifiers before phase closeout.
+Decided 2026-11-19: start older NVD metadata filling with selected CVEs
+already present in local evidence, using bounded manual work before any
+full historical import. Built 2026-11-19: a per-CVE NVD metadata load with
+an explicit keyless option. Prefer valid CVSS 4.0, then 3.1, 3.0 and 2.0.
+This fills authoritative scores, CWE and CPE products without guessing
+product names from descriptions. The bounded Known Exploited queue below
+supplies broader selection; full-history and watchlist-specific backfills
+remain follow-ups rather than current feature gates.
+Built 2026-11-20: a read-only local coverage audit and a completed-window
+checkpoint for NVD changes. Retry incomplete windows without advancing
+coverage; split dense windows at the page cap. This prevents skipped recent
+updates, not historical metadata gaps.
+Built 2026-11-24: NVD-only recent-change recovery under Feeds, with public
+or configured-key mode, six requests, 192 MiB charged bodies and a
+180-second network budget per dedicated run. Preview dates without writes.
+Use actual page lengths and reject inconsistent membership/counts.
+Split dense or budget-limited windows while preserving the unprocessed range.
+Accepted 2026-11-24: recovered from the saved NVD start through the evening
+of 2026-11-24 in three bounded public runs. Current NVD windows are not a
+full historical import. Decided 2026-11-24: pause bulk data catch-up as a
+development gate during the build only. Once v1 is in daily use, freshness
+is an operational requirement. Scheduled refresh, durable catch-up, visible
+stale/error states and tested recovery belong in the Phase 5 foundation
+before v1 operational acceptance. See docs/runbooks/v1-data-freshness.md.
+Do not run network refreshes during commits. Built an independent Fetch New CVE Records
+button for CVE List changes, beside the existing NVD-only control. An expired
+delta checkpoint requires an explicitly selected full load, never an automatic
+large fallback. Historical product gaps remain visible. Do not infer product
+names from descriptions.
+Built 2026-11-20: a resumable Known Exploited metadata queue under Feeds.
+Prioritize product gaps, CVSS, CWE and missing NVD rows. Continue with 5 or
+10 requests, a 90-second network budget and the existing response-size cap.
+Default to the public API without a key. Preserve progress and source errors;
+retry failures explicitly. Retrieved does not imply all fields are populated.
+Keep full-history imports and watchlist-specific scope as separate follow-ups.
+Built 2026-11-24: explicit Chrome, Firefox and VS Code extension references
+in report extraction, with context, ecosystem labels, copy controls and
+manual store links. No automatic lookup, installation or malicious verdict.
+Resolved 2026-11-24: defer HTMX partial reloads to the existing post-v1
+performance work. Full-page filters, sorting and pagination stay supported.
+Defer GreyNoise's per-CVE adapter until the honeypot work or the final backlog,
+as directed on 2026-11-24. An available key alone does not reopen this work.
+Community IP lookup remains separate. Built CVEDB as an
+explicit, keyless comparison on CVE pages for non-commercial use. It has
+24-hour freshness, separate successful-fetch/attempt dates and retained old
+results on error. It never changes exploitation, priority, actions or products.
+These scope questions are resolved; optional sources and bulk freshness are
+not additional feature gates. Phase 2 still retains its documented acceptance
+limits. See docs/review/2026-11-24-phase2-source-scope.md.
 Scheduled work, the shared corpus and the later Supply Chain expansion
 retain their existing dependencies and deferrals.
 
@@ -439,16 +532,17 @@ retain their existing dependencies and deferrals.
   evidence are absent. Investigate Applicability appears in watchlist
   views when a product matches. The CVE page explains the evidence.
 - Built 2026-11-13: Since Last Review tracks new exploitation, patch,
-  mitigation, exploit evidence, and product matches. Use per-item
-  checkmarks or Mark All Reviewed. Retain 90 days of history. Connect
+  mitigation, exploit evidence, and product matches. Updated 2026-11-24:
+  the dashboard groups unreviewed changes from the last seven days into
+  at most five CVEs. Show change types, source/change counts and observation
+  date, without the global backlog counter. Review This CVE opens a scoped
+  queue; its review actions affect only that CVE. Keep per-item checkmarks
+  and the explicit full-queue Mark All Reviewed control on the review page.
+  Opening pages never marks items reviewed. Retain 90 days of history. Connect
   review items to cases and retain linked evidence when cases ship.
-- Built 2026-11-14: Exploitation Reports supports manual intake of source
-  reports before CVE assignment. Preserve the source and its timeline
-  when linking a CVE. Confirm a zero-day when the source establishes dated
-  active exploitation while a vendor patch, public vendor advisory, and
-  CVE are all documented absent. Unknown status leaves a Possible Zero-Day
-  lead when the source reports active exploitation. Feed intake and
-  source corrections are follow-ups.
+- Removed 2026-11-20: manual Exploitation Reports intake, listing and CVE
+  link editing. No current analyst need. Keep existing stored evidence
+  readable without enabling new intake. Reconsider only on operator request.
 - VulnCheck KEV (built 2026-11-10; the XDB index is paid, see above) and
   OTX pulses by CVE (built 2026-11-11) are done. AttackerKB is dropped:
   Rapid7 retired the public platform and API on 2026-08-18.
@@ -459,16 +553,17 @@ retain their existing dependencies and deferrals.
   day, and CISA's SSVC in bulk (219,097 CVEs assessed). Vendor coverage
   for CVEs published since October went from 24% (NVD alone) to 94%.
   SSVC "active" now counts for view 1.
-- Still open: vendor and product for old CVEs. Pre-2017 CVE records often
+- Historical coverage follow-up, not a first-delivery feature gate: vendor
+  and product for old CVEs. Pre-2017 CVE records often
   say "n/a" for vendor and product, and the local NVD data covers only
   CVEs changed since 2026-11-04, so about 24,000 of view 3's 27,000 rows
   (mostly old Exploit-DB entries) show a dash. A one-off full NVD load
   (about 125 API pages with the key, roughly 2 GB) would fill them. View
   6 (Likely next) has the same gap: its top rows by EPSS are mostly old
   CVEs.
-- Partial table reloads with HTMX (sort, filter, and page without a full
-  page load) when HTMX is vendored; the anchors cover the annoyance until
-  then.
+- Deferred 2026-11-24 to post-v1 performance work: partial table reloads
+  with HTMX. No HTMX release is vendored or loaded. Keep ordinary URLs,
+  anchors and server-rendered filters/sorts/pages as the current delivery.
 - Include (2026-11-09): views. The dashboard's stacked sections become
   named views over the one `vulnerabilities` table, each a saved filter
   with its own URL, a counter on the dashboard, and the shared table
@@ -523,9 +618,12 @@ retain their existing dependencies and deferrals.
      Show product-specific fixes and workarounds on CVE pages and use
      them for action badges and Since Last Review. RSS references alone
      do not establish a fix or exploitation. Each source starts from its
-     current feed window. Red Hat and SUSE process 50 changed documents
-     per refresh within 45 days, newer advisory IDs first. Show remaining
-     batches. Historical backfill and scheduled continuation remain open.
+     current feed window. Built 2026-11-19: Red Hat and SUSE save their
+     45-day changed-index work in a durable queue. Continue 50/250/500
+     advisories per selected run, within time/body budgets; retain failures,
+     retry explicitly and preserve work across restarts/window changes.
+     Show counts and index provenance. Full historical advisory discovery
+     and scheduled continuation remain separate follow-ups.
   5. New and severe: published in the last 7 days with CVSS 9.0 or
      higher, or SSVC Automatable = yes with Technical Impact = total.
      Built 2026-11-11; rejected CVEs left out.
@@ -539,8 +637,13 @@ retain their existing dependencies and deferrals.
      `none_available` or `no_fix_planned` statement for a named
      affected target. Show the specific targets, overlapping
      workarounds, source link and revision date. A CVE can also have
-     fixed targets. Extend coverage to other vendor advisories with
-     equivalent evidence. OSV version ranges and lifecycle data can
+     fixed targets. Extended 2026-11-24 to supported vendor and OT CSAF
+     advisories with explicit, resolvable product-ID or group-ID scope.
+     Reject ambiguous scope and conflicting fixed/unaffected targets.
+     Retain Patch and Mitigate independently for their respective targets.
+     Old normalized records require a normal feed update or explicit
+     per-document Fetch This Advisory before they can establish this scope.
+     Missing patch evidence remains unknown. OSV version ranges and lifecycle data can
      add context when their coverage and provenance are clear.
   8. Edge and Perimeter, built 2026-11-15. Match a curated vendor and
      product pair against the CVE record, NVD, exploited lists, or
@@ -572,10 +675,15 @@ retain their existing dependencies and deferrals.
       positive exploitation signal on or before CVE publication can form
       a Possible Zero-Day lead. Preserve the date's meaning; publication
       and patch dates must not stand in for an exploitation date. The
-      fallback-date defect is fixed. Built 2026-11-17: linked confirmed
-      manual reports qualify independently of CVE publication metadata.
-      Other dated positive signals use their preserved meaning. Explicit
-      Chrome statements remain open. Keep the source and timeline visible.
+      fallback-date defect is fixed. Legacy linked confirmed reports
+      qualify independently of CVE publication metadata. Manual intake
+      and linking were removed on 2026-11-20; saved evidence stays readable.
+      Other dated positive signals use their preserved meaning. Built
+      2026-11-24: explicit Chrome CVE-specific in-the-wild statements join
+      shared exploitation evidence. Preserve the positive advisory revision
+      date, statement and citation. A dated statement can support Possible
+      Zero-Day by the existing publication comparison, never Confirmed from
+      that wording alone. Other CVEs in the notice remain references.
   12. Exploitation Sightings. Extended 2026-11-16 to retain CIRCL's
       reported source, link when available, date and count for each
       exploitation report in the existing 48-hour refresh window.
@@ -595,8 +703,11 @@ retain their existing dependencies and deferrals.
       tracked exploitation evidence. Save just the latest snapshot.
       Show when it is over three hours old. Polling waits for the scheduler.
   Malicious packages stay a separate table on the Supply chain tab (no
-  CVE). Shodan's CVEDB (keyless, non-commercial; KEV, EPSS, ransomware
-  flag, CPEs in one call) is a cross-check source, fetched at runtime.
+  CVE). Built 2026-11-24: Shodan's CVEDB is an optional keyless,
+  non-commercial comparison, fetched only by its CVE-page POST. Display
+  CVSS, EPSS, its exploitation flag and supplied ransomware text separately.
+  Version/date/coverage differences do not automatically establish conflicts.
+  No priority promotion, product import or new exploited-list membership.
   None of the views needs a new key or dependency; CSAF, RSS, Atom, and
   CSV parse with the standard library. Known dead ends, checked
   2026-11-09: the SANS ISC Patch Tuesday API ("no longer supported"),
@@ -617,9 +728,9 @@ retain their existing dependencies and deferrals.
   priority reason; do not blend them into a number. A stale "none" never
   lowers a priority set by other evidence. Use CISA's CVSS and CWE as a
   labelled fallback when the CNA and NVD give none. The full SSVC outcome
-  (Track / Track* / Attend / Act) needs two organisation-specific inputs;
-  derive mission prevalence from the technology watchlist and make the
-  well-being impact a setting.
+  (Track / Track* / Attend / Act) needs organisation-specific inputs.
+  Decided 2026-11-24: keep the existing decision points and park the full
+  outcome calculator. A product watchlist match cannot supply those inputs.
 - Supply Chain first delivery is built. See the remaining work below.
 - Scheduled feed refresh (waits for the Phase 5 scheduler).
 - Include: an alert when new exploit code appears for a CVE matching the
@@ -797,10 +908,15 @@ Sources review (2026-11-11; docs/research/2026-11-11-sources-review.md):
     notes such as "(abused)"). Preserve complete adjacent hashes when
     joining would be ambiguous. Use explicit hash headings to resolve
     32+32 fragments. Both uploaded and fetched PDFs use the repair.
-    Verify against the original Trend Micro MuddyWater PDF when available;
-    synthetic text-layer PDF fixtures cover the current implementation.
-  - Browser and IDE extension IDs as an indicator type (the roadmap only
-    covers language package ecosystems through OSV).
+    Checked the original Trend Micro MuddyWater PDF on 2026-11-24. Plural
+    hash headings and standalone detection names are fixed. Recover 105
+    complete hashes; one out-of-order cross-page row remains a known limit.
+    Keep source rows separate and do not guess missing associations.
+  - Built 2026-11-24: browser and IDE extension references, separate from
+    ordinary IOC enrichment. Accept explicitly labelled Chrome IDs,
+    Firefox add-on IDs and VS Code publisher.extension IDs, and recognized
+    Chrome/VS Code store links. Do not classify bare hashes, dotted words,
+    AMO listing slugs or Firefox runtime UUIDs as stable extension IDs.
 
 ### Phase 3: Digital risk protection
 
@@ -1087,6 +1203,15 @@ addresses)
   a daily diff; self-hosted Canarytokens feeding the Phase 5 alert inbox.
 
 ### Phase 4: News and topic search
+- Reviewed prototype parked by operator on 2026-11-26. Revisit the local
+  `Downloads/cti_reader/cti_reader/` skeleton before implementing this phase;
+  reuse sound pieces through the shared foundation, preserving Build order.
+  Location, static findings and integration boundaries:
+  [Reader Prototype Review](docs/review/2026-11-26-reader-prototype.md).
+- KEV ownership (2026-11-26): the reader has no separate KEV catalog import,
+  cache or refresh job. Treat publisher RSS/Atom announcements as ordinary
+  news where feeds exist; CVE links and KEV badges read the vulnerability
+  intelligence module's stored evidence and freshness state.
 - Own RSS/report aggregator instead of Feedly (dropped 2026-11-03). Build on open-source libraries (feedparser for RSS/Atom,
   trafilatura or readability for article text), or wrap an existing
   open-source reader. No paid service, no vendor lock-in, runs local.
@@ -1180,6 +1305,13 @@ addresses)
 
 ### Phase 5: Collection infrastructure (collectors, scraping layer, scheduler, alerting)
 
+V1 operational requirement, clarified 2026-11-24: refresh is optional only
+during the build. Before daily use, deliver per-source schedules, last-success
+and last-attempt visibility, stale/failed/incomplete states, durable recovery
+after downtime and tested quota/error handling. See
+docs/runbooks/v1-data-freshness.md. Full historical depth remains a separate
+scope choice; it does not substitute for keeping operational sources current.
+
 Shared plumbing for the monitoring and investigation phases. Phase 3 consumes
 the collectors and selector matching, Phase 2 consumes the topical categories
 for zero-day and exploit chatter, Phase 7 consumes the on-demand search. The
@@ -1188,6 +1320,24 @@ scheduled alerts; Phases 1, 2, 3, and 6 all wait on it. Phase numbers stay as
 they are.
 
 **Foundation slice: scheduler and alerting**
+
+Session boundaries, decided 2026-11-26. All five subphases are not started.
+These divide the existing foundation scope; they do not bring forward the
+collectors or change the numbered Build order. A subphase can be split again
+at a tested milestone if its scope proves too large.
+
+| Subphase | Deliverable | Done When |
+|---|---|---|
+| 5F.1 | Shared evidence model and source registry | Local schema and access layer preserve source identity, citation links and distinct timestamps; reviewed source metadata and collection eligibility are explicit; migration and provenance tests pass. Define archive and job integration contracts. |
+| 5F.2 | Durable job runner | Progress, bounded retries, cancellation and interrupted-job recovery work against temporary databases. Source work is registered explicitly and duplicate execution is controlled. |
+| 5F.3 | Scheduled feed refresh and source health | Existing approved feeds use the runner with source-specific schedules, quotas and checkpoints. Last attempt/success and stale/failed/incomplete states are visible. Downtime and provider failures have recovery tests. |
+| 5F.4 | Saved reports and original-source archives | Extraction can save documents and indicator sightings with provenance. Original-response storage has size/retention limits and sensitive-data handling. Wire the agreed bulk enrichment workflow through jobs, preserving source lookup controls. |
+| 5F.5 | Alert inbox and foundation acceptance | Evidence-linked alerts, deduplication and review state work; selector matching has integration coverage; cross-feature freshness, recovery and restart checks meet the foundation requirements. Email/webhooks and collector playbooks remain later work. |
+
+At each boundary update the table's status, dated review, journal and
+docs/handoff.md. Commit and push remain separately approved operations.
+The next chat starts at 5F.1 using the prompt in docs/handoff.md.
+
 - APScheduler in-process with the jobs table and generic job runner. Unblocks
   Phase 1 bulk paste (background job with ETA), Phase 2 scheduled feed
   refresh, Phase 3 scheduled alerts, and the Phase 6 changes feed.
@@ -1214,6 +1364,15 @@ they are.
   a reviewed entry does not run. A document that arrives from a source not
   in the registry (a dork hit, a pasted URL) is stored under an automatic
   "F: unrated, review" entry; the analyst promotes it or leaves it.
+- Source/rule health (2026-11-18): record upstream revision/hash, license,
+  last attempt, last successful test, typed failures and local overrides.
+  Distinguish a broken rule from a challenge, rate limit or source outage.
+  Keep a maintenance queue and last-good snapshot; no silent code execution
+  or automatic upstream issue submission. Reuse this for feeds and OSINT rules.
+- Evidence provenance (2026-11-18): preserve explicit citation edges,
+  source excerpts, observed/published/collected times and unresolved hops.
+  Manual claim and credibility fields precede optional AI suggestions;
+  several articles citing one primary are not independent corroboration.
 - Later slice, alert-triggered playbooks: a high-priority event opens an HTMX
   remediation checklist and writes to an immutable local audit log.
 
@@ -1503,6 +1662,22 @@ code may be copied.)
   dead entries (it still lists the deprecated SSLBL IP list).
 
 ### Phase 6: Infrastructure pivoting
+
+- Historical web evidence (2026-11-18): start with bounded Common Crawl
+  CDXJ domain/path queries and selected WARC captures, preserving crawl ID,
+  capture time and locator. Add WAT link metadata and host history when
+  useful; large Parquet/graph processing remains optional and later.
+  Before downloading archives or datasets, show expected transfer bytes,
+  expanded storage needs, temporary space and available destination space.
+  Label unknown sizes and request a bounded plan instead of guessing. Use
+  selected records and HTTP ranges before whole archives. Dataset discovery
+  is not permission for an unbounded bulk download.
+- Network disruption context (2026-11-18): evaluate IODA alongside the
+  existing RIPEstat plan, plus OONI and Cloudflare Radar. Label observed
+  scope/time and provider coverage. Neither an outage nor a DDoS aggregate
+  proves a named site's cause or actor. Review API/data terms before wiring.
+  First fit for IODA is dated IP/ASN investigation context and case timelines;
+  retain it as a dashboard-widget candidate if that adds useful context.
 
 Built 2026-11-16 on operator request: a passive C2IntelFeeds browser under
 Infrastructure. Import the publisher's 7-day C2 IPs, filtered C2 domains,
@@ -1865,7 +2040,7 @@ checker built for it also serves Phase 3 brand-handle checks.
   - Username enumeration across sites: WhatsMyName data file (open source
     JSON used by whatsmyname.app; the repository was archived on
     2026-11-09, so check for a successor when this is built), Maigret
-    (3000+ sites, pulls profile details and avatars), Sherlock as a
+    (9,978 public entries inspected 2026-11-18, not all tested or enabled), Sherlock as a
     cross-check. Also found 2026-11-11: spiderfoot.net now redirects to
     Intel 471 (the MIT SpiderFoot code documents no REST API);
     key-server.io is parked, so PGP lookups use keys.openpgp.org.
@@ -1969,7 +2144,8 @@ checker built for it also serves Phase 3 brand-handle checks.
   scratch. A list of sites and existence-detection rules is largely factual,
   so we seed our list with the sites we actually care about and look at
   Maigret / WhatsMyName / Sherlock only for ideas, crediting them as
-  inspiration. This sidesteps the licensing of any one project's data file:
+  inspiration. Independently tested factual rules remain our own work;
+  copying or adapting a source dataset retains its license obligations:
   - Preferred: own checker (httpx, already pooled), own list, deterministic,
     matches the "few, pinned, wheels-only" policy.
   - Escape hatch if full breadth is ever wanted fast: wrap the installed CLI
@@ -1978,8 +2154,37 @@ checker built for it also serves Phase 3 brand-handle checks.
   License note: do NOT take Maigret as a `pip` dependency, and do not copy any
   specific project's data file verbatim without first checking that file's
   license (MIT/BSD/Apache = fine with attribution; GPL/AGPL = avoid). Building
-  our own list avoids the question.
-  OPSEC (refined 2026-11-03): username enumeration fires requests at many
+  our own list requires its own provenance and tests. Verified 2026-11-18:
+  Maigret and Sherlock currently use MIT; WMN data/schema are CC BY-SA 4.0
+  and stay attributed, runtime-only under project policy. Evaluate selected
+  MIT rules imports without adding either CLI as an app dependency.
+  - Shared rule model (2026-11-18): canonical service, check/profile URL,
+    input normalization, positive/negative predicates, reviewed methods,
+    protection metadata, known controls, provenance and health history.
+    Expand inherited engine rules, deduplicate services and preserve local
+    overrides. Found, not found, ambiguous, blocked/challenged, login required,
+    rate limited, unavailable and rule outdated are different outcomes.
+    Protection tags do not authorize bypass of legitimate platforms.
+  - Revisit WMN, Maigret and Sherlock when Phase 7 begins, checking current
+    maintenance, licenses, tested rules and cost. Automate source-permitted
+    browser rendering, caching, retries and backoff. A challenge result can
+    offer explicit Try Headless Browser and Try Alternate HTTP/TLS Client
+    buttons for reviewed, supported methods, plus manual review. Record
+    every attempted method and outcome, including failure. TCP reachability
+    alone cannot establish whether a username exists. Never report a block
+    as not found or promise a different TLS client will solve a CAPTCHA.
+- Organization and identity source candidates (2026-11-18): evaluate GLEIF
+  LEIs, Companies House and SEC EDGAR identifiers, permitted public profile
+  APIs and HIBP breach metadata. Reuse shared clients for existing sources.
+  SitDeck's catalog is discovery material, not a free license or entitlement
+  to every upstream service. Details and access limits are in
+  docs/research/2026-11-18-osint-source-expansion.md.
+- Source selection checkpoint (2026-11-18): revisit SitDeck's catalog at the
+  start of each relevant module. Assess every candidate selected for that
+  module for useful evidence, overlap, coverage, freshness, license, access,
+  request cost, quotas and maintenance before integration. Catalog claims
+  of free access are not verified upstream entitlements.
+- Username-checker OPSEC (refined 2026-11-03): enumeration fires requests at many
   third-party sites from the host IP, so:
   - Keep these OSINT/OPSEC tools behind auth (see the public-deployment
     parking-lot item).
@@ -1997,6 +2202,11 @@ checker built for it also serves Phase 3 brand-handle checks.
 
 
 ### Phase 8: Exports, detection templating, packaging
+
+- Reuse the reviewed CTI skills' deterministic export schemas, report forms
+  and candidate Sigma/YARA/KQL templates (2026-11-18). Keep citations,
+  telemetry requirements, validation state and unknown confidence. A fixed
+  numerical export mapping is not measured analytical certainty.
 - Exports: STIX 2.1, CSV, TXT, PDF.
 - Detection templates from IOC sets: YARA, Sigma, SQL, KQL. SPL skipped.
 - Living-off-the-land datasets as local enrichment and profile context
@@ -2354,6 +2564,20 @@ checker built for it also serves Phase 3 brand-handle checks.
   rotate keys), and a contributor guide.
 
 ### Phase 11: AI assist (last)
+
+- CTI skills integration (reviewed 2026-11-18): optional claim extraction,
+  source-fidelity review, alternative hypotheses, case/report drafts and
+  detection suggestions over cited evidence. Keep deterministic schema and
+  anchor validation, analyst acceptance and the none-provider default.
+  Do not inherit automatic external submissions, pack self-modification,
+  default vendor credibility or automatic semantic attribution.
+- Optional pivot assist (2026-11-18): an IOC entry or explicit button may run
+  a reviewed skill-derived workflow over selected evidence. Keep provider,
+  external destinations, hop/candidate limits, quota and task scope visible.
+  Validate typed tool arguments outside the model; treat retrieved material,
+  skill text and errors as untrusted task data. No arbitrary shell, new
+  scan/sample submissions or publishing from model output. Test injection
+  through IOC fields, reports, HTML, metadata, tool results and graph labels.
 - Provider abstraction: none (default), Ollama, Claude Haiku 5.5 via the official Anthropic SDK.
 - Design notes for the client, recorded 2026-11-11 (an outside
   suggestion to write an `llm_client.py` now was reviewed and deferred to
@@ -2428,6 +2652,92 @@ checker built for it also serves Phase 3 brand-handle checks.
   it.
 
 ## Parking lot (revisit after the final phase)
+
+- GreyNoise per-CVE adapter (operator decision 2026-11-24): revisit no
+  earlier than the honeypot work, or leave it for the very end. Do not bring
+  it back into Phase 2 because a key or suitable entitlement becomes available.
+  The existing Phase 1 community IP lookup stays separate. The current
+  documented CVE endpoint is /v1/cve/{cve_id}; returned
+  data depends on entitlements. Community IP lookup is not proof of access
+  to CVE trends, first-seen activity or IP/CVE linkage. Recheck access,
+  cost, field provenance and rate limits, then add as separate dated
+  evidence. Do not automatically spend a configured IP lookup allowance.
+  Source review: docs/review/2026-11-24-phase2-source-scope.md.
+
+- PDF reading order: the 2026-11-24 MuddyWater acceptance recovers 105 of
+  106 source hash rows. One row's continuation is at the top of the next
+  printed page but late in that page's PDF text stream. Revisit bounded
+  page/column-position recovery with ambiguous-order guards. Preserve row
+  detection names and do not join unrelated hash fragments. See the review
+  of that date. This limit is separate from ordinary data freshness.
+
+- UI decisions from operator testing, 2026-11-19: move feed administration
+  under Health and give the finished toolkit a distinct visual design.
+  Watchlist now follows Supply Chain. Review these moves together when the
+  remaining modules exist, without delaying current data-quality fixes.
+- Since Last Review redesign, first slice built 2026-11-24 after the
+  operator chose to change the table: a bounded recent summary grouped by
+  CVE replaces the dashboard backlog counter. Full history and explicit
+  scoped review stay available. Revisit material-change suppression and an
+  optional watchlist-only digest later. Source counts do not imply
+  independent corroboration. Do not reset review state as a UI migration.
+- Full SSVC outcome calculator, parked 2026-11-24 by operator decision:
+  retain source decision points now. Revisit optional manual mission and
+  well-being inputs when environment context warrants it.
+- Complete original provider-response archives, deferred 2026-11-24 by
+  operator decision to the Phase 5 shared evidence store. Define source,
+  retrieval time, response/document revision, size caps, retention,
+  redaction and correction handling. Current Stored Source Data shows only
+  retained normalized fields and must remain labelled accordingly.
+- Direct KEV source coverage, requested 2026-11-19: review each current
+  CIRCL-proxied catalogue for a free original feed, API terms, stable IDs,
+  withdrawal semantics and source citations. Prefer original feeds where
+  available; keep CIRCL as a labelled fallback. CISA, VulnCheck, ENISA EUVD
+  and Project Zero already have direct connectors. Avoid double counting
+  syndicated assertions in future source-overlap and timeline charts.
+- Report extraction follow-up, 2026-11-19: expand tested publisher layouts,
+  plain-text query boundaries, command-line recognition, image handling
+  and official ATLAS catalog validation/names. The current deterministic
+  slice preserves explicit ATLAS IDs and recognizable rules/queries/commands.
+  Removed candidate command-to-technique mappings on 2026-11-20. Defer any
+  technique not explicitly listed in a report until optional Phase 11 AI
+  assist, with analyst review. It does not infer complete TTP
+  coverage from narrative or guarantee every publisher's code layout.
+
+- Advanced artifact review (2026-11-19): the bounded wheel strings/domain
+  report, common decoding, archive guards and baseline comparison are built.
+  Revisit binary emulation tools such as FLOSS, custom deobfuscation and
+  stronger worker resource isolation separately. This remains release-review
+  tooling, not a malware-free verdict or a new analyst module.
+- Document preprocessing candidates (2026-11-19): evaluate local OCR for
+  scanned PDFs and image matrices, retaining page/region coordinates and
+  reviewable source association. Tool/model selection and placement need
+  review under the deterministic-core policy; do not silently add a cloud
+  service or recognition model. Reuse Phase 5's isolated browser for permitted
+  rendered report capture once available. Rendering and OCR recover content,
+  not its truth or an automatic technique mapping. For reports with no
+  ATT&CK IDs, preserve current IOC extraction and evaluate analyst-selected
+  mappings when Cases arrive; semantic suggestions remain Phase 11.
+
+- Installed CTI skills (2026-11-18): 78 capability mappings recorded in
+  docs/research/2026-11-18-cti-skills-integration-review.md. Apply templates,
+  validation and bounded workflows in their planned phases before optional
+  AI. Do not turn every skill into a separate module or paid dependency.
+  Re-inventory the installed pack in Phase 11 and revisit actual invocation
+  through UI buttons. Installation and local source overrides can change;
+  use the reviewed workflow version, never execute arbitrary SKILL.md text.
+- Customizable dashboard widgets (2026-11-18): saved layouts and source
+  selection inspired by SitDeck. Candidates include watchlist changes,
+  threat reporting and IODA network disruption. Show observation time,
+  stale/error state, scope and source links. Reuse shared adapters and
+  scheduling instead of adding a second feed pipeline. IODA is context,
+  not a per-website availability or DDoS-cause verdict.
+- Broader source discovery (2026-11-18): Common Crawl host/URL indexes,
+  graphs, annotations and experimental embeddings; SitDeck's live catalog
+  as a provider-discovery checklist. Start with focused archive and network
+  context adapters. Bulk corpora, Neo4j dumps, model-based similarity and
+  unrelated situational feeds wait for a demonstrated investigation need.
+  Review notes list three inaccessible Hugging Face cards explicitly.
 
 - Candidate for the relevant phases after the current build work
   (2026-11-15): use Feedly's workflow patterns for case claims and
@@ -2687,6 +2997,17 @@ this list and decide what to pull into active work. Keeps the project moving.
   mail (the Phase 4 newsletter-alias item provides exactly that): sign up
   with an address on that domain and drop the key into the existing
   GreyNoise vendor module. Until then the 10/day community endpoint stands.
+- Container-registry honeytokens (parked 2026-11-18): complement the
+  VPS sensor plan with a small isolated registry experiment. Use unique
+  decoys per artifact and distinguish pulls, lifecycle beacons, credential
+  attempts and provider API use. Ingest sanitized observations only.
+  Never expose production or billable AI keys. Check provider terms,
+  permissions, egress, revocation and spending controls before deployment.
+  The Gone in 8 Seconds appendix and author summary support this idea;
+  all 15 pages of the main paper were subsequently read from the supplied
+  PDF. Add separate provider/session/lifecycle logs, event outcomes, resource
+  limits and rotation. Missing callbacks do not prove no execution.
+  See docs/research/2026-11-18-honeypots-agent-repository-safety.md.
 - GreyNoise Project Swarm (parked 2026-11-03): deploy
   GreyNoise's sensor (a managed honeypot) on a cheap VPS with a public IP,
   never on the home network, and read what hits it through their API
@@ -2794,8 +3115,10 @@ this list and decide what to pull into active work. Keeps the project moving.
   tab; service.hottest and the "Ask your AI" text brief are kept unused.
 - Faster tables (parked 2026-11-11; after v1): every sort, filter and page
   reloads the whole page, and the larger tables take about a second each
-  (Exploit Code tab, view 3). Options: HTMX partial reloads (already
-  planned in Phase 2), caching a view's rows until a feed refreshes, and
+  (Exploit Code tab, view 3). Resolved 2026-11-24: HTMX partial reloads
+  explicitly stay here after v1, rather than blocking Phase 2. Review and
+  approve the exact library release before vendoring. Options include
+  caching a view's rows until a feed refreshes, and
   paging in SQL instead of Python.
 
 - Malware research corpus (parked 2026-11-11). A module for tracking
@@ -2976,6 +3299,14 @@ Adopted 2026-10-27.
 ## Dependency and supply-chain policy
 
 Adopted 2026-10-27. Details and commands in docs/runbooks/dependency-policy.md.
+
+Built 2026-11-19: the passive wheel auditor has archive/member/expansion
+guards, bounded ASCII/UTF-16 and common decoding, source locations and
+domain/IP candidates. Write a local report for human review; compare later
+artifacts with the last reviewed report. No candidate host is contacted.
+Coverage limits and unsupported content stay explicit. Defender and isolated
+observation remain independent checks. Commands and limits:
+docs/runbooks/vetting-a-dependency.md.
 
 1. Few dependencies, from well-known maintainers, copied by exact name from
    PyPI to avoid typosquats.

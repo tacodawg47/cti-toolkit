@@ -30,6 +30,15 @@ project's repository at the same tag, and scan it for code a library of
 that kind has no reason to contain. The step-by-step version, with the
 `scripts/audit_wheel.py` helper, is in `vetting-a-dependency.md`.
 
+Add a pre-install Windows Defender artifact scan using
+[defender-artifact-scan.md](defender-artifact-scan.md). Check completion,
+detections and cloud-submission settings. This supplements source and release
+review; it cannot certify a dependency or catch every prompt injection.
+This is part of the approved process for internet-downloaded project
+artifacts, including changed transitive dependencies. Microsoft cloud/sample
+analysis is authorized for those artifacts, not personal files or secrets.
+Do not infer a new installation approval from permission to scan.
+
 ## 2. Pin with hashes
 
 `requirements.in` lists what we want, loosely:
@@ -54,9 +63,12 @@ Install only from the locked file:
 .venv/Scripts/python.exe -m pip install --require-hashes --only-binary=:all: -r requirements.txt
 ```
 
-`--require-hashes` makes pip refuse any file whose hash differs from the
-lock, so a swapped or hijacked upload cannot install. `--only-binary=:all:`
-refuses source packages, so nothing runs build code on your machine.
+`--require-hashes` makes pip refuse a file whose hash differs from the
+reviewed lock. It does not reject malware if that malicious artifact's own
+hash was added to the lock. `--only-binary=:all:` refuses source packages
+and their build hooks. Wheels can still contain malware, native code or
+startup hooks that execute when Python next starts. Review the exact wheel
+and transitive updates before installation, not just the repository.
 
 ## 3. Audit
 
@@ -94,10 +106,11 @@ public one: turn them on when the repository goes public.
 
 ## 4. Upgrade deliberately
 
-Never `pip install --upgrade` on a whim. To move a package forward: read its
-changelog, regenerate `requirements.txt`, review the diff of the lock file,
-run the tests, then commit. Waiting a week after a release is a cheap way to
-let the community catch a hijacked version first.
+Never `pip install --upgrade` on a whim. For an update, inspect the changelog,
+source diff and exact wheel before installation, including every changed
+transitive dependency. Review lock changes, run the audit, then install and
+test only after approval. A one-week delay gives the community time to find
+a hijack; it does not establish that a release is safe.
 
 ## 5. Isolate the risky stuff
 

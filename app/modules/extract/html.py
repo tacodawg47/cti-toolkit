@@ -23,6 +23,7 @@ _BLOCK = {
 class Table:
     caption: str = ""
     rows: list[list[str]] = field(default_factory=list)
+    kind: str = "HTML Table"
 
 
 @dataclass
@@ -30,6 +31,15 @@ class Document:
     text: str
     tables: list[Table] = field(default_factory=list)
     hash_context: dict[str, list[str]] = field(default_factory=dict)
+    prose: list[str] | None = None
+    pages: list[str] = field(default_factory=list)
+    format: str = "Plain Text"
+    layout_limited: bool = False
+    recovered: bool = False
+    indicator_text: str | None = None
+    artifacts: list[dict] = field(default_factory=list)
+    images: list[dict] = field(default_factory=list)
+    references: list[dict] = field(default_factory=list)
 
 
 class _TextParser(HTMLParser):
@@ -142,12 +152,29 @@ def _span(value: str | None) -> int:
     return max(1, min(32, int(value))) if value and len(value) < 3 and value.isascii() and value.isdigit() else 1
 
 
-def parse_document(html: str) -> Document:
+def parse_document(html: str, *, procedures: bool = True, embedded: bool = True) -> Document:
     parser = _TextParser()
     parser.feed(html)
     parser.close()
-    return parser.document()
+    document = parser.document()
+    document.format = "HTML"
+    if procedures and embedded:
+        from .embedded import article, _HASH
+        recovered = article(html)
+        if recovered:
+            # Pick richer semantic article content, not raw script strings.
+            candidate = parse_document(recovered, embedded=False)
+            if len(set(_HASH.findall(candidate.text))) > len(set(_HASH.findall(document.text))):
+                candidate.recovered = True
+                return candidate
+    if procedures:
+        from .layouts import enrich_html
+        from .content import enrich_html as enrich_content
+
+        enrich_html(document, html)
+        enrich_content(document, html)
+    return document
 
 
 def html_to_text(html: str) -> str:
-    return parse_document(html).text
+    return parse_document(html, procedures=False).text

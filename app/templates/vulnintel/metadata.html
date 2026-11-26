@@ -1,0 +1,41 @@
+{% extends "vulnintel/layout.html" %}
+{% block tab %}
+<h2>NVD Metadata Backfill</h2>
+<p><a href="{{ prefix }}/feeds">Back to Feeds</a></p>
+<p>Repair metadata for Known Exploited CVEs. Product gaps come first, followed by missing CVSS,
+  CWE and NVD records. Rejected CVEs are excluded. Other stored sources count toward coverage.</p>
+<section class="card">
+  <p><strong>{{ repair.gaps | int }} CVEs with remaining gaps</strong> · {{ repair.pending }} pending lookups ·
+    {{ repair.counts.retrieved }} retrieved · {{ repair.counts.not_found }} not found · {{ repair.counts.failed }} failed</p>
+  <p class="muted">Retrieved means NVD was checked. It does not mean every field was available.
+    Retrieved and not-found records are not automatically fetched again. Regular NVD updates can supply later changes.
+    This is a targeted repair, not a full historical import.</p>
+  {% if repair.last_run %}<p role="status">Last Batch: {{ repair.last_run.status | title }} ·
+    {{ repair.last_run.attempted }} attempted · {{ repair.last_run.retrieved }} retrieved ·
+    {{ repair.last_run.failed }} failed{% if repair.last_run.message %} · {{ repair.last_run.message }}{% endif %}</p>{% endif %}
+  {% if repair.running %}<p role="status">A batch is running. Pending work remains saved.</p>{% endif %}
+  <form method="post" action="{{ prefix }}/metadata/backfill">
+    <label>Record Limit <select name="limit">{% for size in repair.batch_choices %}<option value="{{ size }}">{{ size }}</option>{% endfor %}</select></label>
+    <label>API Mode <select name="mode"><option value="public">Public API Without Key</option><option value="configured">Configured NVD Key</option></select></label>
+    <label><input type="checkbox" name="retry" value="1"> Retry Failed Records</label>
+    <p><button type="submit"{% if repair.running %} disabled{% endif %}>Continue Backfill</button></p>
+  </form>
+  <p class="muted">One NVD request per CVE, at most {{ repair.body_mib }} MiB per response.
+    Five records allow up to {{ repair.body_mib * 5 }} MiB; ten allow {{ repair.body_mib * 10 }} MiB.
+    Requests pause after a {{ repair.seconds }}-second time budget, including rate-limit waits.
+    Only public CVE IDs are sent to NVD. Public mode omits the configured key.
+    No reports, watchlist details or local files are uploaded. No background continuation runs.</p>
+</section>
+<section class="card">
+  <h3>Next Candidates</h3>
+  {% if repair.preview %}<table><tr><th>CVE</th><th>Missing Locally</th></tr>
+    {% for row in repair.preview %}<tr><td><a href="{{ prefix }}/cve/{{ row.cve_id }}">{{ row.cve_id }}</a></td><td>{{ row.gaps | join(', ') }}</td></tr>{% endfor %}
+  </table>{% else %}<p>No pending candidates. Failed records can be retried separately.</p>{% endif %}
+</section>
+{% if repair.recent %}<section class="card"><h3>Recent Results</h3>
+  <table><tr><th>CVE</th><th>Result</th><th>Attempts</th><th>Remaining Gaps</th><th>Error</th></tr>
+    {% for row in repair.recent %}<tr><td><a href="{{ prefix }}/cve/{{ row.cve_id }}">{{ row.cve_id }}</a></td>
+      <td>{{ row.state | replace('_',' ') | title }}</td><td>{{ row.attempts }}</td><td>{{ row.remaining | join(', ') or 'None in this coverage check' }}</td><td>{{ row.error }}</td></tr>{% endfor %}
+  </table>
+</section>{% endif %}
+{% endblock %}

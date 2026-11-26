@@ -2,6 +2,7 @@
 {% block tab %}
 <div class="card">
   <h3>Feeds</h3>
+  <p><a href="{{ prefix }}/metadata">NVD Metadata Backfill</a> · Inspect gaps and continue a bounded batch.</p>
   <p><a href="{{ prefix }}/vendor-updates">Refresh Fortinet, Palo Alto, Cisco, Red Hat, SUSE and Chrome Notices</a></p>
   <table>
     <tr><th>Feed</th><th>Last fetched</th><th>Entries</th><th>Version</th><th>Status</th></tr>
@@ -12,10 +13,30 @@
         <td>{% if f and f.fetched_at %}{{ f.fetched_at | ago }}{% else %}never{% endif %}</td>
         <td>{% if f and f.entries %}{{ "{:,}".format(f.entries) }}{% else %}—{% endif %}</td>
         <td>{{ f.version if f and f.version else "—" }}</td>
-        <td>{% if f and f.error %}<span class="err">⚠ {{ f.error }}</span>{% elif f and f.fetched_at %}<span class="ok">ok</span>{% else %}<span class="no">not loaded</span>{% endif %}</td>
+        <td>{% if f and f.error %}<span class="err">⚠ {{ f.error }}</span>{% elif key == 'nvd_recent' and f and f.version and ('partial:' in f.version or 'capped at' in f.version) %}<span class="err">Incomplete Download. Refresh to retry.</span>{% elif f and f.fetched_at %}<span class="ok">ok</span>{% else %}<span class="no">not loaded</span>{% endif %}</td>
       </tr>
     {% endfor %}
   </table>
+  <section class="card" id="nvd-recovery">
+    <h3>NVD Recent-Changes Recovery</h3>
+    <p>Retry an unfinished NVD window or fetch the next catch-up window independently.</p>
+    <p>Next Window (UTC): <code>{{ nvd_progress.start }}</code> to <code>{{ nvd_progress.end }}</code><br>
+      Completed Through (UTC): <code>{{ nvd_progress.completed or 'No completed checkpoint recorded' }}</code></p>
+    {% if nvd_progress.last_run %}{% set r = nvd_progress.last_run %}
+      <p role="status">Last Run: {{ r.status | title }} · {{ r.pages }} requests · {{ r.saved }} records processed
+        {% if r.available is not none %} · {{ r.available }} reported in that window{% endif %}
+        {% if r.error %}<span class="err"> · {{ r.error }}</span>{% endif %}</p>
+    {% endif %}
+    {% if nvd_progress.running %}<p role="status">NVD import running. Refresh this page to inspect saved progress.</p>{% endif %}
+    <form method="post" action="{{ prefix }}/refresh-nvd">
+      <label>API Mode <select name="mode"><option value="public">Public API Without Key</option><option value="configured">Configured NVD Key</option></select></label>
+      <button type="submit" class="small"{% if nvd_progress.running %} disabled{% endif %}>Continue NVD Recovery</button>
+    </form>
+    <p class="muted">NVD only. At most {{ nvd_progress.pages }} requests and {{ nvd_progress.budget_mib }} MiB of charged response bodies per run,
+      with {{ nvd_progress.page_mib }} MiB per response and a {{ nvd_progress.seconds }}-second network budget.
+      Failures retain pending work. Budget-limited windows are split. Previously saved records may be replayed;
+      processed counts do not mean that many new CVEs. No background continuation or unrelated feed refresh runs.</p>
+  </section>
   <form method="post" action="{{ prefix }}/refresh" style="margin-top: 10px;">
     <button type="submit" class="small">Refresh feeds</button>
     <small>Downloads CISA KEV (2 MB), VulnCheck KEV (with a token), ENISA's exploited list (about 20 pages),
@@ -24,6 +45,12 @@
       index (11 MB), the Nuclei CVE index (2 MB) and the last 48 hours of sightings, runs the GitHub search
       for the last 7 days of CVE-named repositories, and reloads the local tables. Two or three minutes
       without an NVD key, about one with it. Scheduled refresh arrives with the Phase 5 scheduler.</small>
+  </form>
+  <form id="cvelist-refresh" method="post" action="{{ prefix }}/refresh-cvelist" style="margin-top: 8px;">
+    <button type="submit" class="small">Fetch New CVE Records</button>
+    <small>Fetches CVE Program publisher changes only. Other feeds stay unchanged. Requires an existing CVE List
+      snapshot less than two weeks behind. If it needs a full reload, the feed status explains why;
+      this button never starts that large download.</small>
   </form>
   <form method="post" action="{{ prefix }}/load-cvelist" style="margin-top: 8px;">
     <button type="submit" class="small">Load the CVE List</button>

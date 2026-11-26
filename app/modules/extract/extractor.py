@@ -22,8 +22,8 @@ than as a reference link.
 Known limits, on purpose:
 - A version number like "1.2.3.4" is indistinguishable from an IPv4 address
   by shape; it is extracted and the analyst discards it.
-- Domains are validated by shape and a file-extension denylist, not against
-  the IANA TLD list, so an unusual filename can slip through as a domain.
+- Domains require a known IANA or special-use suffix, with a file-extension
+  denylist. A small fallback list applies before the IANA cache is loaded.
 - Registry keys, file paths, mutexes and wallet addresses are not extracted.
 """
 
@@ -35,6 +35,7 @@ from pydantic import BaseModel, Field
 
 from ...core.allowlist import allowlist
 from ...core.indicators import canonical, hash_kind
+from . import software, tlds
 
 # Longer inputs are cut here before extraction. Vendor reports are tens of
 # kilobytes; two million characters is a generous cap that keeps a stray
@@ -53,6 +54,7 @@ class Extracted(BaseModel):
     note: str | None = None         # "md5", "private", "host of a URL", ...
     popular_rank: int | None = None  # Tranco rank when the host is a top site
     context: list[str] = Field(default_factory=list)
+    excerpt: str | None = None       # bounded nearby text, with indicators refanged
 
 
 class Extraction(BaseModel):
@@ -60,6 +62,9 @@ class Extraction(BaseModel):
     counts: dict[str, int] = Field(default_factory=dict)   # per type
     chars: int = 0                  # characters examined
     truncated: bool = False         # input was cut at MAX_TEXT_CHARS
+    references: list[dict] = Field(default_factory=list)
+    extensions: list[dict] = Field(default_factory=list)
+    extensions_limited: bool = False
 
     def by_type(self, itype: str) -> list[Extracted]:
         return [i for i in self.items if i.type == itype]
@@ -198,10 +203,31 @@ def _ip_note(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> str | None:
 class _Collector:
     """Accumulates hits, de-duplicating on (type, canonical value)."""
 
-    def __init__(self, original_lower: str) -> None:
+    def __init__(self, original_lower: str, refanged: str) -> None:
         self._orig = original_lower
+        self._text = refanged
         self._seen: dict[tuple[str, str], Extracted] = {}
         self._pos: dict[tuple[str, str], int] = {}     # first position seen
+
+    def _excerpt(self, pos: int) -> str:
+        """Keep a small local window. Never interpret instructions or fetch links."""
+        start = max(0, pos - 100)
+        end = min(len(self._text), pos + 180)
+        # Prefer the current line when it fits, without scanning the whole
+        # report for every hit. Positions refer to the refanged text.
+        previous_newline = self._text.rfind("\n", start, pos)
+        if previous_newline != -1:
+            start = previous_newline + 1
+        newline = self._text.find("\n", pos, end)
+        if newline != -1:
+            end = newline
+        current = self._text[start:end].strip()
+        # A hash/IP alone needs its nearby label or table-description line.
+        if len(current.split()) == 1:
+            preceding = [line.strip() for line in self._text[max(0, start - 300):start].splitlines() if line.strip()]
+            following = [line.strip() for line in self._text[end:end + 180].splitlines() if line.strip()]
+            current = " | ".join([*preceding[-2:], current, *following[:1]])
+        return current[:600]
 
     def add(self, itype: str, value: str, raw: str, pos: int,
             note: str | None = None, popular_rank: int | None = None) -> None:
@@ -216,11 +242,14 @@ class _Collector:
             hit.count += 1
             if hit.defanged and raw.lower() in self._orig:
                 hit.defanged = False
-            self._pos[key] = min(self._pos[key], pos)
+            if pos < self._pos[key]:
+                self._pos[key] = pos
+                hit.excerpt = self._excerpt(pos)
             return
         self._seen[key] = Extracted(
-            type=itype, value=value, note=note, popular_rank=popular_rank,
+            type=itype, value=value.strip(), note=note, popular_rank=popular_rank,
             defanged=raw.lower() not in self._orig,
+            excerpt=self._excerpt(pos),
         )
         self._pos[key] = pos
 
@@ -235,7 +264,7 @@ def _add_host(col: _Collector, host: str, pos: int, note: str | None) -> None:
     try:
         ip = ipaddress.ip_address(host)
     except ValueError:
-        if _is_filename(host) or not _DOMAIN.fullmatch(host):
+        if _is_filename(host) or not _DOMAIN.fullmatch(host) or not tlds.known(host):
             return
         domain = canonical("domain", host)
         col.add("domain", domain, host, pos, note=note, popular_rank=allowlist.rank(domain))
@@ -243,13 +272,18 @@ def _add_host(col: _Collector, host: str, pos: int, note: str | None) -> None:
     col.add("ip", str(ip), host, pos, note=_ip_note(ip) or note)
 
 
-def extract(text: str) -> Extraction:
+def extract(text: str, *, report_mode: bool = False, report_references: list[dict] | None = None) -> Extraction:
     """Extract every indicator from `text`. Never raises on odd input."""
     truncated = len(text) > MAX_TEXT_CHARS
     if truncated:
         text = text[:MAX_TEXT_CHARS]
     refanged = refang_text(text)
-    col = _Collector(text.lower())
+    extensions, extensions_limited = [], False
+    if report_mode:
+        extensions, refanged, extensions_limited = software.references(refanged, report_references)
+    col = _Collector(text.lower(), refanged)
+    references = []
+    reference_hosts = {"github.com", "www.github.com", "golang.org", "go.dev", "urlscan.io", "attack.mitre.org", "atlas.mitre.org"}
 
     for m in _CVE.finditer(refanged):
         col.add("cve", canonical("cve", m.group(0)), m.group(0), m.start())
@@ -266,6 +300,17 @@ def extract(text: str) -> Extraction:
             continue
         if not host:
             continue
+        if report_mode:
+            from .content import image_url
+            from urllib.parse import parse_qsl, urlunsplit
+            sensitive = any(any(word in key.lower() for word in ("token", "secret", "api_key", "apikey", "password"))
+                            for key, _ in parse_qsl(urlsplit(url).query))
+            plain = url.lower() in text.lower()
+            if image_url(url) or sensitive or host.lower() in reference_hosts and plain:
+                parts = urlsplit(url)
+                safe = urlunsplit((parts.scheme, parts.hostname or "", parts.path, "[redacted]" if sensitive else parts.query, ""))
+                references.append({"value": safe, "reason": "Image" if image_url(url) else "Sensitive URL" if sensitive else "Report Reference"})
+                continue
         col.add("url", url, url, m.start(), popular_rank=allowlist.rank(host))
         _add_host(col, host, m.start(), note="host of a URL")
 
@@ -296,7 +341,13 @@ def extract(text: str) -> Extraction:
 
     for m in _DOMAIN.finditer(refanged):
         host = m.group(0)
-        if _is_filename(host):
+        if _is_filename(host) or not tlds.known(host):
+            continue
+        # Some real TLDs are also method names, for example a.read(buffer).
+        # Keep explicitly defanged hosts, but do not enrich plain calls.
+        if report_mode and refanged[m.end():m.end() + 8].lstrip().startswith("(") and host.lower() in text.lower():
+            continue
+        if report_mode and host.lower() in reference_hosts and host.lower() in text.lower():
             continue
         domain = canonical("domain", host)
         col.add("domain", domain, host, m.start(), popular_rank=allowlist.rank(domain))
@@ -305,7 +356,8 @@ def extract(text: str) -> Extraction:
     counts: dict[str, int] = {}
     for item in items:
         counts[item.type] = counts.get(item.type, 0) + 1
-    return Extraction(items=items, counts=counts, chars=len(text), truncated=truncated)
+    return Extraction(items=items, counts=counts, chars=len(text), truncated=truncated, references=references,
+                      extensions=extensions, extensions_limited=extensions_limited)
 
 
 def plain_list(items: list[Extracted]) -> str:

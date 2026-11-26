@@ -20,6 +20,14 @@ changes, change it in both files.
   checks) need no prompt.
 - **Human in the loop for commits.** Every commit and push is approved
   individually. Show the files and the proposed message first.
+- **Subphase session boundaries.** Use one coherent subphase per chat. At
+  its end write an explicit dated Complete, Incomplete or operator-deferred
+  closeout, update the journal/roadmap and docs/handoff.md, and provide a
+  ready-to-paste prompt for the next subphase or resumption. Default to an
+  individually approved commit and separately approved push before a new
+  session; record pending checkpoints honestly. Never infer Git permission
+  from a handoff file. See docs/runbooks/session-handoff.md. Keep loaded
+  status summaries short; retain detailed history in the journal/reviews.
 - **Teach as you go.** After each approved action, add a short runbook under
   docs/runbooks/ with the exact commands so the user can repeat it by hand.
   The user wants to learn to do this without AI.
@@ -51,6 +59,23 @@ changes, change it in both files.
 - Dependencies: few, well known, pinned with hashes, installed wheels-only
   with `--require-hashes --only-binary=:all:`. See the policy in ROADMAP.md.
   Propose any new dependency by name, maintainer, and reason before adding.
+- Review exact release artifacts and every changed transitive dependency
+  before installation, including updates. Hashes, wheels and attestations
+  do not establish benign behavior. Use the passive wheel auditor with a
+  trusted interpreter and `-I -S`; never start a suspect Python environment
+  just to check its version. See docs/runbooks/research-isolation.md.
+  Use the auditor's local --report output and, when available, --baseline
+  from a previously reviewed artifact. Review new destinations and coverage
+  gaps manually; do not contact discovered hosts automatically.
+- On Windows, scan downloaded project artifacts with Defender before
+  installation or execution, including changed transitive dependencies.
+  The operator authorizes Microsoft cloud analysis/sample submission for
+  internet-downloaded project artifacts. Limit agent-selected scans and
+  submissions to those artifacts; never select personal files, .env,
+  credential stores, conversation exports or private runtime data. This
+  does not authorize changing system-wide Defender settings. Record scan
+  completion and detections; an error, quarantine or clean scan never
+  substitutes for release review. See docs/runbooks/defender-artifact-scan.md.
 - No automated joining of Telegram channels, no engagement with threat
   actors, no purchases.
 
@@ -59,23 +84,24 @@ changes, change it in both files.
 Python 3.12, FastAPI, Jinja2, HTMX, SQLite (FTS5), httpx, pydantic,
 APScheduler, Cytoscape.js (vendored). pip + venv. Docker in phase 8.
 
-## Current status
+## Current status (2026-11-26)
 
-Phase 1 complete (closed 2026-11-02): IOC enrichment across VirusTotal,
-AbuseIPDB, GreyNoise, OTX, abuse.ch (ThreatFox, MalwareBazaar, URLhaus,
-YARAify), Shodan, urlscan, plus keyless InternetDB, RDAP, CIRCL hashlookup
-and crt.sh; Tranco and known-good-file gates; 128 offline tests. Bulk paste
-and the job runner wait for the Phase 5 scheduler (see ROADMAP parking lot).
-Phase 2 is in progress (see "Built so far" and "Still to wire" in ROADMAP.md).
-Status 2026-11-17: all 14 numbered views, All Vulnerabilities, pinning,
-the first Supply Chain slice, local decoding, wrapped PDF hashes and six
-additional vendor connectors are built. Phase 2 remains open. Cross-feature
-exploitation/remediation consistency and date provenance findings F1-F3 are
-fixed. Next are remaining ATT&CK procedure layouts and closeout scope decisions. See
-docs/review/2026-11-17-phase2-coverage-audit.md for findings and scope decisions.
-Developing on Windows 11 for now (Python 3.12 installed at the user level;
-Git with Credential Manager). The Phase 5 collectors need a container host
-(WSL2 or Linux). Repository: github.com/tacodawg47/cti-toolkit (private).
+Phase 1 is complete. Phase 2 accepted first-delivery implementation closed
+2026-11-25. See docs/review/2026-11-25-phase2-closeout.md for delivered scope,
+validation and remaining limits. Its final suite ran 511 tests: 510 passed,
+one skipped; all 26 local acceptance pages returned 200. These are prior
+verified results, not an automatic rerun in a new session.
+
+Read docs/handoff.md for the active task, checkpoint state and next-chat
+prompt after the roadmap and current journal entry. The next planned work
+is 5F.1, Shared Evidence Model and Source Registry; foundation subphases
+are in ROADMAP.md. Follow docs/runbooks/session-handoff.md at every boundary.
+
+Data catch-up is optional during the build only. Scheduled freshness,
+visible stale/failure states and tested recovery are required before v1
+daily use; see docs/runbooks/v1-data-freshness.md. Existing Phase 2 deferrals
+remain parked. Development is on Windows; collectors later require WSL2
+or Linux. The app remains local-only.
 
 The roadmap holds scope, order, and decisions only. Troubleshooting, policy
 exceptions, build narrative, and parked design notes go in docs/journal.md.

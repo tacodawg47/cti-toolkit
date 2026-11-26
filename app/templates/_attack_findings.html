@@ -1,6 +1,8 @@
 <section class="card">
   <h3>ATT&amp;CK References <small>({{ attack_findings | length }})</small></h3>
-  <p class="muted"><small>IDs and table excerpts come from the submitted report. Catalog names come from <a href="https://attack.mitre.org/resources/attack-data-and-tools/" rel="noopener noreferrer">MITRE ATT&amp;CK</a>.</small></p>
+  <p class="muted"><small>IDs and procedure excerpts come from the submitted report. Evidence labels describe how text was associated with an ID. Catalog names come from <a href="https://attack.mitre.org/resources/attack-data-and-tools/" rel="noopener noreferrer">MITRE ATT&amp;CK</a>.</small></p>
+  <p class="muted"><small>Source excerpts can include general technique descriptions. They do not independently confirm observed behavior.</small></p>
+  {% if attack_layout_limited %}<p class="muted">The structured-layout limit was reached. Some references may have IDs only. Try a smaller report section to recover more context.</p>{% endif %}
   <div class="tablescroll">
     <table>
       <thead><tr><th>ID</th><th>Catalog Name</th><th>Catalog Status</th><th>Report Evidence</th></tr></thead>
@@ -15,6 +17,7 @@
             {% for evidence in item.evidence %}
               <details>
                 <summary>{{ evidence.caption or evidence.tactic or "Advisory Table" }}</summary>
+                <p><small>{{ evidence.kind or 'Table Evidence' }}{% if evidence.confidence %} · {{ evidence.confidence }}{% endif %}</small></p>
                 {% if evidence.tactic and evidence.tactic != evidence.caption %}<p><small>Reported tactic {{ evidence.tactic }}</small></p>{% endif %}
                 {% if evidence.tactic_mismatch %}<p><small>Reported tactic differs from the current catalog.</small></p>{% endif %}
                 {% if evidence.name_mismatch %}<p><small>Report calls this {{ evidence.name_mismatch }}.</small></p>{% endif %}
@@ -22,7 +25,7 @@
                 {% if evidence.procedure %}<p>{{ evidence.procedure }}</p>{% else %}<small>No procedure text in this row.</small>{% endif %}
               </details>
             {% else %}
-              <small>{{ item.count }} reference{{ "" if item.count == 1 else "s" }} · No Table Procedure</small>
+              <small>{{ item.count }} reference{{ "" if item.count == 1 else "s" }} · IDs and Names Only; No Aligned Procedure</small>
             {% endfor %}
           </td>
         </tr>

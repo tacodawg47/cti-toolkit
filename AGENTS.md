@@ -36,6 +36,14 @@ web interface. Portfolio project and daily workflow aid.
   checks, running the test suite) need no prompt.
 - **Human in the loop for commits.** Every commit and push is approved
   individually. Show the files and the proposed message first.
+- **Subphase session boundaries.** Use one coherent subphase per chat. At
+  its end write an explicit dated Complete, Incomplete or operator-deferred
+  closeout, update the journal/roadmap and docs/handoff.md, and provide a
+  ready-to-paste prompt for the next subphase or resumption. Default to an
+  individually approved commit and separately approved push before a new
+  session; record pending checkpoints honestly. Never infer Git permission
+  from a handoff file. See docs/runbooks/session-handoff.md. Keep loaded
+  status summaries short; retain detailed history in the journal/reviews.
 - **Teach as you go.** The operator is learning to do this work without AI.
   After each approved action, add or update a short runbook under
   docs/runbooks/ with the exact commands so it can be repeated by hand.
@@ -67,6 +75,23 @@ web interface. Portfolio project and daily workflow aid.
   installed wheels-only with `--require-hashes --only-binary=:all:`.
   Propose any new dependency by name, maintainer and reason before adding.
   See the policy in ROADMAP.md and docs/runbooks/dependency-policy.md.
+- Review exact release artifacts and every changed transitive dependency
+  before installation, including updates. Hashes, wheels and attestations
+  do not establish benign behavior. Use the passive wheel auditor with a
+  trusted interpreter and `-I -S`; never start a suspect Python environment
+  just to check its version. See docs/runbooks/research-isolation.md.
+  Use the auditor's local --report output and, when available, --baseline
+  from a previously reviewed artifact. Review new destinations and coverage
+  gaps manually; do not contact discovered hosts automatically.
+- On Windows, scan downloaded project artifacts with Defender before
+  installation or execution, including changed transitive dependencies.
+  The operator authorizes Microsoft cloud analysis/sample submission for
+  internet-downloaded project artifacts. Limit agent-selected scans and
+  submissions to those artifacts; never select personal files, .env,
+  credential stores, conversation exports or private runtime data. This
+  does not authorize changing system-wide Defender settings. Record scan
+  completion and detections; an error, quarantine or clean scan never
+  substitutes for release review. See docs/runbooks/defender-artifact-scan.md.
 - No automated joining of Telegram channels, no engagement with threat
   actors, no purchases.
 - Licences of sources: a repository or dataset with no licence is all
@@ -121,20 +146,24 @@ Plain, short sentences. No em dashes. Dates as YYYY-MM-DD. UI table and
 section titles in Title Case. Roadmap entries say what was decided and why;
 narrative and troubleshooting go to the journal.
 
-## Current status (2026-11-17)
+## Current status (2026-11-26)
 
-Phase 1 complete (IOC enrichment across VirusTotal, AbuseIPDB, GreyNoise,
-OTX, abuse.ch, Shodan, urlscan, plus keyless InternetDB, RDAP, CIRCL
-hashlookup and crt.sh). Phase 2 (vulnerability intelligence) in progress:
-see "Built so far" and "Still to wire" in ROADMAP.md. All 14 numbered views,
-All Vulnerabilities, pinning, the first Supply Chain slice, local decoding,
-wrapped PDF hashes, and six additional vendor connectors are built. Phase 2
-remains open. Cross-feature exploitation/remediation consistency and date
-provenance findings F1-F3 are fixed. Next are the remaining ATT&CK procedure
-layouts and closeout scope decisions. See
-docs/review/2026-11-17-phase2-coverage-audit.md for findings and scope decisions.
-Development is on Windows 11; the Phase 5 collectors need WSL2 or Linux. Repository:
-github.com/tacodawg47/cti-toolkit (private).
+Phase 1 is complete. Phase 2 accepted first-delivery implementation closed
+2026-11-25. See docs/review/2026-11-25-phase2-closeout.md for delivered scope,
+validation and remaining limits. Its final suite ran 511 tests: 510 passed,
+one skipped; all 26 local acceptance pages returned 200. These are prior
+verified results, not an automatic rerun in a new session.
+
+Read docs/handoff.md for the active task, checkpoint state and next-chat
+prompt after the roadmap and current journal entry. The next planned work
+is 5F.1, Shared Evidence Model and Source Registry; foundation subphases
+are in ROADMAP.md. Follow docs/runbooks/session-handoff.md at every boundary.
+
+Data catch-up is optional during the build only. Scheduled freshness,
+visible stale/failure states and tested recovery are required before v1
+daily use; see docs/runbooks/v1-data-freshness.md. Existing Phase 2 deferrals
+remain parked. Development is on Windows; collectors later require WSL2
+or Linux. The app remains local-only.
 
 ## Reference material
 

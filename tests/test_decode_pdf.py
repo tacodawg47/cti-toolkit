@@ -90,12 +90,28 @@ class WrappedPdfTests(unittest.TestCase):
         self.assertEqual(values(extractor.extract(document.text), "hash"), [SHA256])
         self.assertIn("Rejoined PDF lines", document.hash_context[SHA256][0])
 
+    def test_plural_hash_heading_resolves_two_md5_length_fragments(self):
+        document = pdf.hash_document(f"SHA-256s of Android samples\n{SHA256[:32]}\n{SHA256[32:]}\nAndroidOS.Example.A")
+        self.assertEqual(values(extractor.extract(document.text), "hash"), [SHA256])
+        self.assertIn("AndroidOS.Example.A", document.hash_context[SHA256][0])
+
     def test_adjacent_complete_hashes_and_separators_are_preserved(self):
         second = "a" * 32
         document = pdf.hash_document(f"{MD5}\n{second}\n{SHA1}")
         self.assertEqual(values(extractor.extract(document.text), "hash"), [MD5, second, SHA1])
         document = pdf.hash_document(f"SHA256\n{SHA256[:32]}\nUnrelated Text\n{SHA256[32:]}")
         self.assertNotIn(SHA256, values(extractor.extract(document.text), "hash"))
+
+    def test_detection_name_on_next_line_belongs_only_to_its_row(self):
+        other = "1" * 64
+        document = pdf.hash_document(f"SHA-256 Detection Names\n{SHA256[:35]}\n{SHA256[35:]}\nMalware.First.A\n\n{other[:35]}\n{other[35:]}\nMalware.Second.B")
+        self.assertIn("Malware.First.A", document.hash_context[SHA256][0])
+        self.assertIn("Malware.Second.B", document.hash_context[other][0])
+        self.assertNotIn("Malware.First.A", document.hash_context[other][0])
+        self.assertNotIn("Malware.Second.B", document.hash_context[SHA256][0])
+        document = pdf.hash_document(f"SHA-256 Old Section\n{SHA256}\nMalware.First.A\nSHA-256 New Section\n{other}\nHKTL_Synthetic")
+        self.assertIn("HKTL_Synthetic", document.hash_context[other][0])
+        self.assertNotIn("Old Section", document.hash_context[other][0])
 
     def test_pdf_upload_runs_repair_and_shows_context(self):
         # PDF text operators create two physical lines in a real text-layer PDF.

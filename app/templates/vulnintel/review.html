@@ -2,9 +2,10 @@
 {% block tab %}
 <section class="card" id="t-review">
   <h2>Since Last Review</h2>
+  {% if review_cve %}<p>Filtered to {{ review_cve }} · <a href="{{ prefix }}/review">Clear CVE Filter</a></p>{% endif %}
   <p class="muted">Dates show when the toolkit first observed each change. History covers the last 90 days.</p>
-  <p><a href="{{ prefix }}/review">{{ "Unreviewed Changes" if history else "Unreviewed Changes (" ~ t.total ~ ")" }}</a> ·
-    <a href="{{ prefix }}/review?history=true">90-Day History</a></p>
+  <p><a href="{{ prefix }}/review{% if review_cve %}?cve={{ review_cve }}{% endif %}">{{ "Unreviewed Changes" if history else "Unreviewed Changes (" ~ t.total ~ ")" }}</a> ·
+    <a href="{{ prefix }}/review?history=true{% if review_cve %}&amp;cve={{ review_cve }}{% endif %}">90-Day History</a></p>
   {% include "vulnintel/_review_items.html" %}
   {% include "vulnintel/_pager.html" %}
 </section>

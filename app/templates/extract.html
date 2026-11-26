@@ -2,12 +2,15 @@
 {% block title %}Extract IOCs — CTI Toolkit{% endblock %}
 {% block content %}
 <h1>Extract IOCs</h1>
+<nav class="tabs"><a href="/extract"{% if extract_tab != 'decoder' %} class="active"{% endif %}>Report Extraction</a><a href="/extract/decoder"{% if extract_tab == 'decoder' %} class="active"{% endif %}>Decoder Tool</a></nav>
+{% if extract_tab != 'decoder' %}
 <p class="muted">Paste a report, give the URL of an advisory, or upload a PDF.
   Defanged indicators (hxxp, [.], (dot), [at]) are recognised. Each result can
   be sent to enrichment with one click.</p>
 <form method="post" action="/extract/refresh-attack">
   <button class="small" type="submit">{{ "Refresh" if catalog_version else "Load" }} ATT&amp;CK Catalog</button>
   <small class="muted">{% if catalog_version %}MITRE ATT&amp;CK v{{ catalog_version }} loaded{% else %}Load once to validate IDs and read advisory table evidence{% endif %}</small>
+  <small class="muted">Also refreshes IANA's TLD list for domain filtering.</small>
 </form>
 
 <form method="post" action="/extract" enctype="multipart/form-data">
@@ -23,8 +26,8 @@
   </p>
   <button type="submit">Extract</button>
 </form>
-
-<details class="card"{% if encoded is defined %} open{% endif %}>
+{% else %}
+<details class="card" open>
   <summary>Decode Text</summary>
   <p class="muted">Decode one layer locally, then extract indicators. Decoded commands are displayed as text.</p>
   <form method="post" action="/extract/decode">
@@ -42,12 +45,14 @@
     <textarea id="decoded-text" readonly rows="6">{{ decoded }}</textarea>
   {% endif %}
 </details>
+{% endif %}
 
 {% if error %}
   <div class="card"><p class="err">⚠ {{ error }}</p></div>
 {% endif %}
 
 {% if result %}
+  {% if recovered %}<p class="muted">Recovered additional report text from embedded page data. No JavaScript was executed. Unsupported components may still require pasted text.</p>{% endif %}
   <div class="card">
     {%- set names = {"ip": ("IP", "IPs"), "domain": ("domain", "domains"), "url": ("URL", "URLs"),
                      "hash": ("hash", "hashes"), "email": ("email", "emails"), "cve": ("CVE", "CVEs")} -%}
@@ -58,16 +63,38 @@
       {% for t in type_order if result.counts.get(t) -%}
         {{ result.counts[t] }} {{ names[t][0] if result.counts[t] == 1 else names[t][1] }}{% if not loop.last %}, {% endif %}
       {%- endfor %}.
-    {%- elif attack_findings %}
-      ATT&amp;CK references.
+    {%- elif result.extensions %}
+      software extension references.
+    {%- elif attack_findings or atlas_findings %}
+      technique references.
     {%- else %}
       nothing that looks like an indicator.
     {%- endif %}
   </div>
 
+  {% if result.extensions %}
+  <section class="card">
+    <h3>Software Extension References ({{ result.extensions | length }})</h3>
+    <p class="muted">Explicit report references. A mention does not establish malicious activity or confirm that a store listing still exists. Store links open only when clicked.</p>
+    {% if result.extensions_limited %}<p class="err">Only the first 200 unique extension references are shown.</p>{% endif %}
+    <table>
+      <tr><th>Ecosystem</th><th>Extension ID</th><th>Report Evidence</th><th>Store Reference</th></tr>
+      {% for item in result.extensions %}
+      <tr><td>{{ item.ecosystem }}</td>
+        <td><code>{{ item.identifier }}</code> <button type="button" class="small" data-copy-value="{{ item.identifier }}">Copy</button>{% if item.count > 1 %} ×{{ item.count }}{% endif %}</td>
+        <td>{{ item.evidence }}<details><summary>Report Context</summary><p>{{ item.context }}</p></details></td>
+        <td>{% if item.listing %}<a href="{{ item.listing }}" rel="noopener noreferrer" referrerpolicy="no-referrer">Store Listing</a>{% else %}No listing inferred from this ID{% endif %}</td></tr>
+      {% endfor %}
+    </table>
+    <details><summary>Plain List With Ecosystems</summary><textarea id="plain-extensions" readonly rows="{{ [result.extensions | length, 8] | min }}">{% for item in result.extensions %}{{ item.ecosystem }}: {{ item.identifier }}{{ '\n' if not loop.last else '' }}{% endfor %}</textarea><button type="button" class="small" data-copy-target="plain-extensions">Copy List</button></details>
+  </section>
+  {% endif %}
+
   {% if attack_findings %}
     {% include "_attack_findings.html" %}
   {% endif %}
+  {% if atlas_findings %}<section class="card"><h3>ATLAS References</h3><p class="muted">Explicit IDs and source text from the report, separate from ATT&amp;CK. This is source association, not an independently confirmed mapping or catalog validation.</p><table><tr><th>ID</th><th>Report Evidence</th></tr>{% for item in atlas_findings %}<tr><td><a href="{{ item.url }}" rel="noopener noreferrer">{{ item.id }}</a></td><td>{{ item.context }}</td></tr>{% endfor %}</table></section>{% endif %}
+  {% if not attack_findings %}<p class="muted">No explicit ATT&amp;CK IDs found. Exploitation or a command alone does not establish a technique mapping.</p>{% endif %}
 
   {% for t in type_order %}
     {% set items = result.by_type(t) %}
@@ -79,11 +106,15 @@
         <table>
           {% for i in items %}
             <tr{% if i.popular_rank or i.note in ("private", "loopback", "link-local", "multicast", "reserved", "documentation") %} class="dim"{% endif %}>
-              <td style="width: 65%; word-break: break-all;"><code>{{ i.value }}</code>
+              <td style="width: 65%; word-break: break-all;"><code>{{- i.value -}}</code> <button type="button" class="small" data-copy-value="{{ i.value }}">Copy</button>
                 {% if i.defanged %}<span class="badge badge-defanged" title="only seen in defanged form">defanged</span>{% endif %}
                 {% if i.popular_rank %}<span class="badge badge-popular" title="in the Tranco top list; enrichment would skip it">Tranco #{{ "{:,}".format(i.popular_rank) }}</span>{% endif %}
                 {% if i.note %}<span class="badge{% if i.note in ("private", "loopback", "link-local", "multicast", "reserved", "documentation") %} badge-private{% endif %}">{{ i.note }}</span>{% endif %}
-                {% if i.context %}<details><summary>PDF Row Context</summary>
+                {% if i.context or i.excerpt %}<details><summary>Report Context</summary>
+                  {% if i.context %}<ul>{% for detail in i.context %}<li>{{ detail }}</li>{% endfor %}</ul>{% else %}<p>{{ i.excerpt }}</p>{% endif %}
+                  <small class="muted">{{ 'Source row and group labels.' if i.context else 'Nearby extracted text, with indicators refanged.' }} A mention does not establish malicious activity.</small>
+                </details>{% endif %}
+                {% if i.context and document_format == 'PDF' %}<details><summary>PDF Row Context</summary>
                   <ul>{% for detail in i.context %}<li><small>{{ detail }}</small></li>{% endfor %}</ul>
                 </details>{% endif %}
               </td>
@@ -103,10 +134,15 @@
         </table>
         <details style="margin-top: 8px;">
           <summary class="muted">plain list (copy and paste)</summary>
-          <textarea rows="{{ [items | length, 8] | min }}" readonly>{{ plain_list(items) }}</textarea>
+          <textarea id="plain-{{ t }}" rows="{{ [items | length, 8] | min }}" readonly>{{ plain_list(items) }}</textarea>
+          <button type="button" class="small" data-copy-target="plain-{{ t }}">Copy List</button>
         </details>
       </div>
     {% endif %}
   {% endfor %}
+  {% if result.references %}<details class="card"><summary>Report References (Excluded From IOC Enrichment)</summary><ul>{% for item in result.references %}<li><code>{{ item.value }}</code> · {{ item.reason }}</li>{% endfor %}</ul></details>{% endif %}
+  {% if artifacts %}<section class="card"><h3>Rules, Queries and Command Lines</h3><p class="muted">Verbatim source material. No rule or command is executed, validated or deployed. Values inside these blocks are excluded from ordinary IOC enrichment.</p>{% for item in artifacts %}<details><summary>{{ item.kind }} · {{ item.label or 'Report Code' }}</summary><textarea id="artifact-{{ loop.index }}" readonly rows="8">{{ item.text }}</textarea><button type="button" class="small" data-copy-target="artifact-{{ loop.index }}">Copy</button>{% if item.truncated %}<p>Source block truncated at the display limit.</p>{% endif %}</details>{% endfor %}</section>{% endif %}
+  {% if images %}<section class="card"><h3>Images</h3><p class="muted">Images are references, not URL indicators. Loading a preview contacts its source from your browser.</p>{% for item in images %}<details><summary>{{ item.caption or 'Report Image' }}</summary><p><code>{{ item.url }}</code></p><button type="button" class="small" data-load-image="{{ item.url }}">Load Image</button><div class="image-preview"></div></details>{% endfor %}</section>{% endif %}
 {% endif %}
+<script src="/static/extract.js" defer></script>
 {% endblock %}

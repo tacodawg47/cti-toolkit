@@ -103,6 +103,81 @@ class VendorParserTests(unittest.TestCase):
 
 
 class VendorStoreTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
+    async def test_saved_queue_resumes_without_index_and_keeps_old_pending_work(self):
+        indexed = datetime.now(timezone.utc).isoformat()
+        entries = [(f"2026/rhsa-2026_{number}.json", indexed) for number in (12345, 12346)]
+        vendor_notices.queue_index("redhat", entries, "2026-10-01")
+        # A newer index window no longer contains these paths. They remain
+        # pending across fresh connections and snapshot updates.
+        vendor_notices.queue_index("redhat", [], "2026-11-19")
+        page = TestClient(app, base_url="http://127.0.0.1").get("/vulnerability-intelligence/vendor-updates?vendor_source=redhat")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("Continue Saved Import", page.text)
+        self.assertIn("Pending: 2", page.text)
+        calls = []
+
+        async def fetch(url, **kwargs):
+            self.assertNotIn("changes.csv", url)
+            calls.append(url)
+            ident = "RHSA-2026:" + url.rsplit("_", 1)[-1].removesuffix(".json")
+            return 200, json.dumps(document(ident)).encode(), None
+
+        with patch.object(vendors, "fetch_bytes", side_effect=fetch), patch.object(vendors, "BATCH_LIMIT", 1):
+            result = await vendors.continue_import("redhat", 5)
+        self.assertTrue(result["ok"])
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(vendor_notices.import_progress("redhat")["done"], 2)
+        self.assertEqual(vendor_notices.import_progress("redhat")["pending"], 0)
+
+    async def test_failed_advisory_does_not_starve_other_pending_work(self):
+        indexed = datetime.now(timezone.utc).isoformat()
+        vendor_notices.queue_index("redhat", [(f"2026/rhsa-2026_{number}.json", indexed) for number in (12345, 12346)], "2026-10-01")
+
+        async def fetch(url, **kwargs):
+            if "12345" in url:
+                return 503, b"", None
+            return 200, json.dumps(document("RHSA-2026:12346")).encode(), None
+
+        with patch.object(vendors, "fetch_bytes", side_effect=fetch), patch.object(vendors, "BATCH_LIMIT", 1):
+            self.assertFalse((await vendors.continue_import("redhat"))["ok"])
+            self.assertTrue((await vendors.continue_import("redhat"))["ok"])
+        progress = vendor_notices.import_progress("redhat")
+        self.assertEqual((progress["failed"], progress["done"], progress["pending"]), (1, 1, 0))
+        vendor_notices.retry_failed("redhat")
+        self.assertEqual(vendor_notices.import_progress("redhat")["pending"], 1)
+
+    async def test_rate_limit_and_run_budget_preserve_pending_queue(self):
+        indexed = datetime.now(timezone.utc).isoformat()
+        vendor_notices.queue_index("suse", [("2026/suse-su-2026_123-1.json", indexed)], "2026-10-01")
+        with patch.object(vendors, "fetch_bytes", return_value=(429, b"", None)):
+            result = await vendors.continue_import("suse")
+        self.assertIn("rate limit", result["paused"])
+        self.assertEqual(result["progress"]["pending"], 1)
+        self.assertEqual(result["progress"]["failed"], 0)
+        with patch.object(vendors, "RUN_BYTES", 1), patch.object(vendors, "fetch_bytes", side_effect=AssertionError("budget should stop request")):
+            result = await vendors.continue_import("suse")
+        self.assertIn("budget", result["paused"])
+        self.assertEqual(result["progress"]["pending"], 1)
+
+    async def test_new_revision_requeues_completed_advisory(self):
+        ident = "2026/rhsa-2026_12345.json"
+        vendor_notices.queue_index("redhat", [(ident, STAMP)], "2026-10-01")
+        vendor_notices.finish_import("redhat", ident, STAMP)
+        vendor_notices.queue_index("redhat", [(ident, "2026-11-19T08:00:00Z")], "2026-10-01")
+        self.assertEqual(vendor_notices.import_progress("redhat")["pending"], 1)
+
+    async def test_import_routes_validate_scope_and_do_not_refresh_index(self):
+        client = TestClient(app, base_url="http://127.0.0.1")
+        with patch.object(vendors, "continue_import", return_value={"ok": True}) as resume:
+            response = client.post("/vulnerability-intelligence/vendor-imports/redhat", data={"batches": "5"}, follow_redirects=False)
+            self.assertEqual(response.status_code, 303)
+            resume.assert_awaited_once_with("redhat", 5, retry=False)
+            self.assertEqual(client.post("/vulnerability-intelligence/vendor-imports/redhat", data={"batches": "999"}).status_code, 400)
+            self.assertEqual(client.post("/vulnerability-intelligence/vendor-imports/cisco", data={"batches": "1"}).status_code, 404)
+            self.assertEqual(client.post("/vulnerability-intelligence/vendor-imports/suse", headers={"Sec-Fetch-Site": "cross-site"}).status_code, 403)
+        with patch.object(vendors, "fetch_bytes", side_effect=AssertionError("no snapshot, no request")):
+            self.assertFalse((await vendors.continue_import("suse"))["ok"])
+
     async def test_catalog_detail_watchlist_and_review_share_evidence(self):
         review.capture()
         vendor_notices.save(parsed())

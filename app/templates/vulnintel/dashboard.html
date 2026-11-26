@@ -17,10 +17,14 @@
 
 <section class="card" id="since-last-review" aria-labelledby="review-heading">
   <h2 id="review-heading">Since Last Review</h2>
-  {% with t = review_page, dashboard_return = true %}
-    {% include "vulnintel/_review_items.html" %}
-  {% endwith %}
-  <p><a href="{{ prefix }}/review">All Unreviewed Changes ({{ review_page.total }})</a> ·
+  <p class="muted">Up to five CVEs with unreviewed changes observed here in the last seven days, grouped by CVE. Observation time is not the source's publication date. Older and unshown items remain on the review page.</p>
+  {% if review_summary %}<ul class="plain">{% for item in review_summary %}
+    <li>{% with id = item.cve_id %}{% include "vulnintel/_cve_link.html" %}{% endwith %}
+      {% for kind in item.kinds %}<span class="badge">{{ review_labels[kind] }}</span>{% endfor %}
+      <small>{{ item.changes }} evidence changes · {{ item.source_count }} sources · Observed {{ item.observed_at | day }}</small>
+      <a href="{{ prefix }}/review?cve={{ item.cve_id }}">Review This CVE</a>
+    </li>{% endfor %}</ul>{% else %}<p class="muted">No unreviewed changes observed in the last seven days.</p>{% endif %}
+  <p><a href="{{ prefix }}/review">Review All Changes</a> ·
     <a href="{{ prefix }}/review?history=true">90-Day History</a></p>
 </section>
 

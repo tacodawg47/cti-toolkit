@@ -19,7 +19,30 @@ F1-F3. The probe now prints the corrected results. ATT&CK procedure gaps,
 backfill scope, optional sources and other deferrals remain open. See the
 newest journal checkpoint and runbook for verification and migration limits.
 
+## Procedure Update, 2026-11-18
+
+The deterministic layouts now include HTML lists, sibling grids, pre/br
+blocks, ID-bearing HTML/Markdown headings, labelled prose and aligned PDF
+paragraphs. Seventeen new synthetic regressions cover association,
+ambiguity, tactic context, catalog labels, structure limits and passive
+resource handling. The full suite ran 410 tests, with 409 passing and one
+skipped. The probe now recovers all three of its procedure examples.
+Original publisher-page acceptance remains open. The implementation does
+not establish complete PDF reconstruction or OCR/JavaScript support.
+
 ## Result
+
+Update later on 2026-11-19: Red Hat/SUSE changed-index imports now save a
+durable queue with bounded continuation, retry and progress controls.
+Offline coverage verifies window rollover, failures and limits. Live backlog
+draining and full historical discovery are not claimed. The historical
+decision item below about choosing a resumable workflow is superseded.
+
+Update 2026-11-19: all 12 named publisher pages and the accompanying PDF
+were captured and checked. Two real-source procedure-association mistakes
+were corrected. See [publisher acceptance](2026-11-19-publisher-acceptance.md)
+for counts, Defender scan results, limits and the remaining closeout work.
+The original findings below remain the historical audit snapshot.
 
 The module has substantial usable coverage. All 14 numbered views and All
 Vulnerabilities have entry points. The latest decoder, wrapped PDF hashes,
@@ -142,7 +165,7 @@ means an explicit later phase or operator decision applies.
 | Local decode helper | Covered | `decode.py`, `test_decode_pdf.py`; expansion explicitly parked in this pass |
 | Wrapped PDF hashes and context | Covered slice; validation gap | Shared upload/fetch repair, synthetic text and real in-memory PDF tests; original report and wider table corpus still needed |
 | ATT&CK ID and catalog lookup | Covered | `attack_catalog.py`, `attack.py`; Enterprise/Mobile/ICS IDs, catalog state, official names and replacement information |
-| ATT&CK procedure extraction | Partial | HTML tables and explicit Markdown tables/lists work; HTML lists, div grids, pre/br blocks, ID-bearing headings, prose fallback and aligned PDF procedures remain |
+| ATT&CK procedure extraction | Implemented layouts; acceptance partial | HTML/Markdown tables, lists and headings, sibling grids, pre/br blocks, labelled prose and aligned PDF paragraphs have synthetic regressions as of 2026-11-18. Original publisher-page acceptance remains open. |
 | Procedure tactic/context inference | Partial | Captions, table tactic cells and Markdown headings work; offline probe loses an HTML heading above a table. Content-first column role selection is incomplete |
 | Source-backed saved extraction and Enrich All | Deferred | Shared corpus, sighting links and job runner need the Phase 5 foundation; source metadata must be required when saved |
 | CVE search, aliases, description, scores, CWE, products and references | Covered slice | `routes.py`, `service.py`, `cve.html`; source fallbacks exist; historical product coverage is incomplete |
@@ -185,6 +208,23 @@ all publisher layouts. OCR, JavaScript-only tables and AI extraction stay
 outside the deterministic slice.
 
 ## Decisions Needed, Without Expanding Scope Silently
+
+Update 2026-11-24: the operator prioritized features over freshness work.
+Manual NVD and independent CVE List controls now cover on-request updates;
+bulk catch-up is not a development gate. Explicit Chrome/Firefox/VS Code
+extension references are built. The original MuddyWater check recovers 105
+of 106 source hash rows, with one out-of-order cross-page limitation parked.
+See `2026-11-24-report-extensions-and-pdf.md`. The follow-up in
+`2026-11-24-phase2-source-scope.md` resolves HTMX to post-v1 performance work,
+GreyNoise per-CVE to honeypot/final-backlog work by the operator's later
+instruction, and CVEDB to an
+implemented on-demand comparison. The operator clarified that the freshness
+exception ends when v1 enters actual use; scheduling and recovery remain
+operational acceptance requirements. Counts and open-item wording below are
+the historical audit snapshot, not current totals or unresolved scope.
+The follow-up `2026-11-24-chrome-exploitation.md` implements explicit,
+CVE-specific Chrome exploitation statements through the shared evidence
+contract, with conservative report dates and correction handling.
 
 Local snapshot: NVD has 22,742 records and CVE List has 425,847. Of
 24,593 IDs selected by the current Exploit Leads query, 22,900 lack a

@@ -45,6 +45,7 @@ LIMITS: dict[str, dict[str, int]] = {
     # without a key and 50 with one; GitHub search is 10 a minute without a
     # token and 30 with one. Both expressed per minute, on the safe side.
     "nvd": {"rpm": 50 if settings.nvd_api_key else 5},
+    "nvd_keyless": {"rpm": 5},
     "github": {"rpm": 30 if settings.github_token else 10},
     "github_readme": {"rpm": 15 if settings.github_token else 5},  # on-demand README checks
     # ransomware.live PRO publishes no cap ("fair use", data cached 30 min on
@@ -52,6 +53,7 @@ LIMITS: dict[str, dict[str, int]] = {
     # One a second is tolerated; the sweep also backs off on a 429.
     "ransomwarelive": {"rpm": 60},
     "vulnlookup": {"rpm": 30},            # CIRCL's public instance, keyless; courtesy limit
+    "cvedb": {"rpm": 10},                # keyless, on-demand only; local courtesy limit
     "euvd": {"rpm": 60},                  # ENISA's public API, keyless; courtesy limit
     # VulnCheck community tier allows 1,000 a minute; a full KEV pull is about
     # a dozen pages, so a modest cap costs nothing.

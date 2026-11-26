@@ -46,6 +46,321 @@ The vetting record is in docs/runbooks/vetting-a-dependency.md.
 
 ## Build narrative
 
+### 2026-11-19: Built Static Artifact Reports and Resumable Vendor Imports
+
+The operator approved the proposed static checks and continuing Phase 2.
+Implemented the bounded wheel review using only the standard library.
+scripts/artifact_strings.py reads ASCII/UTF-16 strings and Python constant
+expressions, never evaluating or importing the artifact. Common Base64,
+hex, escaped literals, constant concatenation and bounded gzip/zlib decoding
+retain origin/transform details. Decoded Python values retain source line
+numbers. Python attributes such as os.environ are not bare-domain evidence.
+No extracted host is visited or submitted to a service.
+
+The auditor now writes a new local JSON report with artifact/member digests,
+destination candidates, locations, heuristic usage context, pattern findings,
+bounded string previews and explicit limits. --baseline highlights new and
+removed hosts and changed/removed files compared with a previous reviewed
+report. It does not declare previously listed hosts trustworthy. Refuse
+overwriting artifacts or earlier reports. URL credentials/query values and
+common secret assignments are redacted where recognized; this is best
+effort and reports remain private local material, not automatic exports.
+
+Added archive input/member/count/expansion/ratio guards, bounded reads,
+path/duplicate/symlink/encryption/compression checks, a cooperative deadline,
+strong RECORD algorithms and CSV parsing, and rejection of unhashed payload
+members. Source comparison now checks every top-level package/module and
+avoids symlink/escaped-file reads. Syntax/string/decoding limits become
+explicit hard findings instead of a false clean result. The helper is not
+an OS sandbox, universal deobfuscator or binary emulator. FLOSS, an actual
+monitored guest, custom unpacking and stronger worker isolation remain
+separate setup/review work. No new dependency or monitoring driver was
+installed. No downloaded code was executed.
+
+For Red Hat/SUSE, added vendor_import_state and vendor_import_queue through
+the normal additive schema initialization. Index refresh merges recognized
+advisories changed within 45 days. Pending records do not age out or vanish
+when a newer index window no longer lists them. Continue reads the saved
+queue without fetching the index. Complete the exact saved revision only
+after its advisory is parsed and stored. Newer revisions requeue the work.
+
+Vendor Updates shows tracked/completed/pending/failed counts, last index
+check and window cutoff, and failure examples. Runs can select upper limits
+of 50/250/500 documents but also stop under a soft 60-second deadline and
+128 MiB body budget. The next request must fit its full allowance; failed
+requests charge their full allowance because the transport discards some
+error/oversized bodies. An in-flight fetch can use the existing 120-second
+timeout. Failed items do not block unattempted work. Explicit retry requeues
+them; 429 leaves work pending and pauses. A publisher refresh also retries
+failures. Source paths are revalidated against the fixed publisher pattern,
+and the new POST uses the existing cross-site guard and validated batch
+choices. No scheduler or automatic background continuation was added.
+
+Targeted tests exposed one test-assumption mistake: the existing cross-site
+helper uses Sec-Fetch-Site, not Origin alone. Corrected the test to exercise
+the actual established contract. This pass did not broaden that shared
+security helper. Offline tests cover queue/window persistence, no-index
+resume, failure isolation, rate/body budgets, revision changes and request
+scope; artifact tests use inert synthetic wheels, encoded/binary strings,
+resource guards, baseline comparison, redaction and multi-package source
+comparison. The full suite ran 437 tests: 436 passed and one expected skip.
+Final focused suite ran 30 tests successfully after report/UI refinements.
+Existing Starlette/httpx warning and synthetic invalid-PDF diagnostics remain.
+
+Used standing app-restart authorization and verified the prior launcher
+before restarting hidden. Logs are data/vendor-imports.*.log. Startup added
+the new tables; GET Vendor Updates returned 200, showed queue/initialization
+wording and preserved existing notices. Listener stayed 127.0.0.1:8000.
+Pending-state controls were also checked through the test client with a
+synthetic queue. No live index refresh, vendor document import, package
+download, installation, external submission, git operation, commit or push
+was performed. Preserve the unrelated local Claude settings file.
+
+Updated the roadmap, paired instructions and repeatable runbooks. The
+operator accepted targeted older-CVE metadata filling before a full NVD
+history; implementation remains next. Phase 2 stays open for that work,
+the separate original wrapped-hash report check, HTMX and optional-source
+scope decisions. The saved vendor changed-window queue is not full vendor
+historical coverage and has not yet been used to drain the live backlog.
+
+### 2026-11-19: Clarified Acceptance Limits and Static Supply-Chain Review
+
+The operator asked whether strings, deobfuscation and reporting embedded
+domains would improve dependency safety, including when malware evades a
+sandbox. Read the current wheel auditor and its tests, dependency and
+isolation runbooks, current roadmap and publisher acceptance record. The
+auditor already flags Python network/credential/dynamic-code/encoding
+patterns and startup hooks. It does not yet inventory all domains, extract
+binary strings or universally deobfuscate packages. No such new capability
+was presented as implemented.
+
+Reviewed MITRE sandbox-evasion/obfuscation descriptions and Mandiant FLOSS's
+full README, theory and usage guides as passive reference. Recorded a small
+review enhancement candidate: archive resource guards, string inventory,
+bounded common decoding, domain/IP locations and call context, comparison
+with the last reviewed release, and explicit unresolved coverage. Manual
+domain review remains useful, but reputable hosts can receive stolen data
+and domains can be constructed or obtained later. Plain-source reading is
+more useful than strings alone for Python; binaries need other techniques.
+Custom packing/runtime keys can require specialist reverse engineering.
+No claim that arbitrary obfuscation can always be solved. Existing Defender
+and monitored isolation remain complementary. No FLOSS tool was installed,
+no sample submitted and no discovered domain contacted.
+
+Clarified that the 5 MiB limit was a conservative acceptance-helper download
+budget, not a parser/PDF/security requirement. The measured PDF was safely
+retried with the already recorded 6 MiB cap. The 13 reports were a fixed
+set of original-layout checks for the Phase 2 extractor, not dependency
+adoption or a collection expansion. No repeat download occurred this pass.
+
+Corrected the acceptance wording: no-ID reports already support IOC
+extraction. Automatic behavior-to-ATT&CK mapping without explicit IDs is
+what remains outside this acceptance slice. Phase 5 already plans permitted
+browser rendering. Added explicit later candidates for local OCR with
+page/region provenance and analyst-selected mappings with Cases; tool/model
+selection and placement still need review under the no-AI-before-Phase-11
+policy. Do not quietly treat an OCR recognition model as an approved
+dependency. OCR/rendering do not establish truth or semantic mapping.
+
+This was research and documentation only. No application code or dependency
+changed, so the already-passing suite was not rerun. No installation,
+runtime/security setting change, git operation, commit or push occurred.
+
+### 2026-11-19: Original Publisher Acceptance and Approved Defender Process
+
+The operator approved making Defender scanning part of the process and
+allowing Microsoft cloud analysis of project artifacts downloaded from the
+internet, while excluding personal local files. Added the same rule to
+AGENTS.md and CLAUDE.md, and updated both dependency/isolation runbooks.
+This is standing authorization for selected artifact scans, not permission
+to install packages, change global Defender settings, scan personal folders
+or upload private runtime data. Existing real-time sample submission is
+system-wide; our selected scan path cannot impose a global folder boundary.
+
+Clarified containment versus detection. A disposable guest with no host
+credentials or networking limits harm even when no alert fires. Process
+Monitor or a configured Sysmon inside a guest can add observation. Neither
+was installed, and no sandbox/VM, driver, Windows feature or security setting
+was enabled. No monitoring tool automatically establishes that a program is
+safe. VM evasion, absent secrets and unexercised paths limit what is seen.
+
+Continued Phase 2 rather than jumping ahead. Added our own passive
+scripts/check_report_layouts.py to retrieve the fixed 12-page survey and
+accompanying Recorded Future PDF, then analyze captures offline. Raw source,
+extracted text, digests and local findings stay in git-ignored
+data/phase2-acceptance-2026-11-19/. No original source fixture or code was
+copied into the repository. All 13 sources returned 200. The first PDF
+attempt stopped at 5 MiB. HEAD advertised 5,895,616 bytes; raised the per-file
+guard to 6 MiB and retried only it, retaining the 30 MiB per-run cap. Retained
+captures total 8,707,026 bytes. No external dependencies were installed.
+
+Used the signed installed Defender binary via Platform/CurrentVersion to
+scan only the incoming HTML reports, then the separately downloaded PDF.
+Both completed with exit 0 and explicit no-threat output. The signature date
+read before scanning was 2026-11-18. No signature update or global preference
+change was made. Microsoft analysis was permitted for these public inputs,
+but the output does not prove a sample was uploaded. No personal files or
+private project data were selected. The scan is an additional check, not a
+malware-free certificate. Never restore a future quarantined artifact just
+to make the acceptance script finish without reviewing the detection.
+
+The real captures exposed two false procedure associations that synthetic
+tests had missed. Fortinet/Group-IB article wrappers were interpreted as
+div grids, allowing a different table's contents to be attached to a
+technique. Reject grid cells containing nested headings/tables/lists/report
+sections, then recurse to real inner structures. Recorded Future's combined
+tactic/name labels supplied false procedures for six IDs; match the known
+tactic and catalog name instead. All 14 HTML grid IDs now have no procedure,
+consistent with its PDF. Added two independent synthetic regressions. Kept
+source/catalog name or tactic differences visible. Clarified in the UI that
+aligned source text can be a general description, not observed behavior.
+
+All 13 captures were processed with the local ATT&CK v20.1 catalog. Reviewed
+candidate structures and representative aligned cells, not the truth of
+every report claim or every row's semantic meaning. Full matrix and limits
+are in docs/review/2026-11-19-publisher-acceptance.md. This does not cover
+all 69 older survey renditions, OCR/JavaScript-only sources, or the separate
+MuddyWater wrapped-hash original. Phase 2 remains open for that check and
+historical-data/closeout decisions. Updated paired status notes accordingly.
+
+The full offline suite ran 424 tests: 423 passed, one expected missing-pypdf
+branch skipped because pypdf is installed. Existing Starlette/httpx warning
+and synthetic invalid-PDF diagnostics remain. Used standing restart
+authorization, verified the existing launcher, and restarted hidden with
+logs in data/publisher-acceptance.*.log. Live local uploads of Recorded
+Future and Fortinet both returned 200. Recorded Future rendered 14 rows
+without procedure text, Fortinet rendered no false HTML Grid, and the new
+general-description clarification appeared. Listener remained 127.0.0.1:8000.
+No feed refresh or enrichment was requested. No git operation, commit or
+push was performed. Preserve the unrelated local Claude settings file.
+
+### 2026-11-18: Added IOC report context and clarified pre-install scanning
+
+The operator approved adopting useful deterministic skill components while
+keeping actual AI assistance in Phase 11. Added Report Context to each
+extracted IOC: a bounded nearby excerpt from the refanged extracted text,
+shown in an expandable section. Keep the first mention, retain existing
+PDF hash-row context and do not infer maliciousness from a mention. No new
+network action, storage, provider or dependency. This is a small Phase 2
+evidence aid, not the later saved-document/case implementation.
+
+Four regressions cover refanged context with a negative claim preserved,
+bounded excerpts and duplicate ordering, earliest URL-host context, and
+escaped markup/instruction-like text through the route. The last case
+verifies passive rendering, not model prompt-injection resistance. The
+complete offline suite ran 422 tests: 421 passed and one expected skip.
+Existing Starlette/httpx deprecation and synthetic invalid-PDF diagnostics
+remain. Original-report ATT&CK acceptance still needs its separate pass.
+
+Read Microsoft Defender's current custom-scan and cloud-submission docs.
+Read-only host queries initially failed in the command sandbox and succeeded
+under the authorized read-only escalation. Antivirus and real-time
+protection were enabled. MAPSReporting was 2; SubmitSamplesConsent was 1.
+The latter permits automatic samples considered unlikely to contain personal
+information. A custom host scan can therefore involve cloud disclosure.
+No scan, signature update, remediation or setting change was run. Added
+the exact manual workflow in docs/runbooks/defender-artifact-scan.md, with
+completion/exit-code caveats and a disconnected-research option. Defender
+adds a useful check; neither a miss nor matching artifact hashes certifies
+software as harmless or detects every instruction attack.
+
+The sandbox is for unfamiliar artifact research, disposable execution and
+isolation from credentials. Normal development and the localhost app need
+not move wholesale. Prepared sandbox configuration remains unlaunched.
+No dependency install, account change or external sample submission occurred.
+
+No commit or push was made for this pass. The operator's individual approval
+workflow still applies. Preserve the unrelated local Claude settings file.
+
+No listener remained on port 8000. Used the operator's standing app-start
+authorization to start run.py in a hidden Windows process, with stdout and
+stderr under git-ignored data/report-context.*.log. Local GET and synthetic
+text POST to /extract both returned 200; the result included Report Context
+and preserved the negative claim. The listener was 127.0.0.1:8000 only. No
+feed refresh or enrichment was requested. Rechecked the 48 extraction tests
+after a readability-only change: 47 passed, one skipped.
+
+### 2026-11-18: Tightened passive dependency review after Agent Framework report
+
+The operator asked whether the reported PyPI agent-framework compromise
+affects this toolkit and how to isolate research cheaply. Read SecurityWeek
+and its Wiz/SafeDep primary analyses. The linked Microsoft issue returned
+404. Checked requirements and package/startup-file names without launching
+the environments' normal Python: app venv 55 distribution directories,
+audit venv 29, base Python 3.12 five, standard user site absent. No relevant
+package declaration, distribution, module or malicious startup filename
+matched. Only the expected setuptools .pth appeared in the app environment.
+This is a scoped negative result, not a machine-clean or historical verdict.
+
+The existing wheel auditor already flags .pth. Added sitecustomize.py and
+usercustomize.py hard findings, including relocated members, and eight
+inert synthetic-wheel regressions. None of the wheel contents was installed
+or imported. The targeted tests passed under Python -I -S. Corrected the
+auditor and runbooks: -I alone still loads site initialization; hashes and
+wheels do not certify harmlessness; review release artifacts and transitive
+updates before installation, not just the upstream repository.
+
+Prepared docs/examples/research-offline.wsb and a manual isolation runbook.
+The example disables network, clipboard, audio/video, printer sharing and
+vGPU, maps no folders and runs no startup command. It was not launched and
+does not enable the Windows feature. Host inspection reports Windows 11
+Pro and a hypervisor, making Sandbox the first candidate; persistent Linux
+VMs fit later repeated research. No OS feature, account, firewall, global
+agent setting, allowlist, dependency or credential was changed. The paired
+agent instruction files now point to the stronger release-review procedure.
+Final full suite ran under -I -S with only the trusted project and existing
+site-packages explicitly added: 418 tests, 417 passed and one skipped.
+The 78-row skill matrix was checked against the installed directory names;
+none is missing. The Sandbox XML passed configuration checks; it was not
+launched. Research findings do not change the Phase 2 build sequence.
+No new commit or push was authorized or performed.
+
+### 2026-11-18: Retried extraction tests and completed deterministic layouts
+
+The usage-limit rejection did not execute the declined test command. The
+operator requested a retry after usage refilled. The existing 53 extraction
+tests completed successfully, with the installed-pypdf skip. Continued the
+already authorized Phase 2 procedure pass after the saved checkpoint.
+
+Checkpoint `a07898b` (`Advance Phase 2 coverage and unify vulnerability
+evidence`) was committed and pushed to main. The exact remote SHA was
+verified. That approval covered that checkpoint only. The extraction and
+research work below remains local until a new commit and push are approved.
+
+Added bounded passive HTML structure extraction for lists, sibling div
+grids, pre/br blocks and ID-bearing headings. Markdown headings can carry
+following paragraphs. Column roles use catalog content before header hints.
+Catalog label splitting accepts full/sub-technique names and parent::child
+prefixes. Names and IDs alone do not become procedures. Evidence records
+carry source structure, paragraph alignment or prose fallback labels;
+sentences with three or more IDs show Low confidence. These labels describe
+association, not source credibility or independently verified behavior.
+
+PDF text retains page boundaries. A clear paragraph may attach to its ID;
+flattened label columns, multiple IDs in one PDF paragraph and page-crossing
+associations remain IDs only. Hash repair keeps its separate behavior.
+No OCR, JavaScript rendering, AI or additional dependency was introduced.
+
+Seventeen new synthetic regressions exposed and fixed a grid boundary bug:
+adjacent inline spans could concatenate an ID with its name so the text
+matcher missed it. Explicit bounded grid cells now preserve that ID without
+inflating ordinary reference counts. The original publisher fixture set is
+not available in this pass and has not been certified. Phase 2 stays open.
+
+Final offline suite: 410 tests, 409 passed and one skipped. The audit probe
+ran against a temporary database; table, list and prose examples now retain
+their procedures. Restarted only the verified toolkit process, hidden and
+bound to localhost. Extract, vulnerability dashboard and Supply Chain GETs
+returned 200. A harmless uploaded list showed each procedure and its
+Execution summary with HTML List / Source Structure labels. The initial
+smoke assertion expected redundant "Reported tactic Execution" text; the
+template intentionally uses the existing Execution summary instead, so the
+check was corrected to the actual UI contract. No upstream refresh ran.
+
+Updated both agent instruction files, roadmap, coverage audit and runbooks.
+The project-local Claude settings file is operator configuration and is not
+part of the proposed source changes. It must not be staged incidentally.
+
 ### 2026-11-17: Phase 2 checkpoint prepared for commit and push
 
 The operator authorized one checkpoint commit and its push before the next
@@ -1293,6 +1608,1028 @@ Built 2026-11-04 after the live dashboard review:
 ~~~
 
 ## Research notes
+
+### 2026-11-26: Approved the Exact Phase 2 Checkpoint Commit
+
+The operator explicitly approved staging and committing the 119-path proposal
+as Complete Phase 2 and document subphase handoffs. Push was not authorized.
+Rechecked the branch, empty index and named pending files before staging.
+Updated the existing checkpoint record, handoff and session runbook to reflect
+the approval and repeatable manifest-based commands. No path was added to the
+approved scope. The two excluded local files remain outside it.
+
+This note is prepared for the approved commit. The actual commit ID/result
+and subsequent push decision are recorded in the closing chat message and
+verified Git state, avoiding a self-referential hash in this same commit.
+The next session must verify that checkpoint rather than blindly repeat it.
+
+### 2026-11-26: Inspected the Pending Phase 2 Git Checkpoint
+
+The operator approved read-only Git status/diff inspection to prepare the
+commit proposal. No staging, commit or push was authorized or performed.
+Branch main is at a07898b, Advance Phase 2 coverage and unify vulnerability
+evidence. The staging area is empty. HEAD matches the locally stored
+origin/main reference; no fetch or live GitHub check was run. The accumulated
+working changes span multiple earlier Phase 2 passes and their documentation,
+not just the most recent handoff edits.
+
+Prepared docs/review/2026-11-26-phase2-checkpoint-files.md with the exact
+119-path proposal and message, Complete Phase 2 and document subphase
+handoffs. The removed manual report intake template is an intentional
+deletion. Related passive artifact-review tooling, research notes, runbooks
+and tests are included. The reader prototype file is only a static Phase 4
+research note linked by project planning. Excluded .claude/settings.local.json
+and the separate feedly-review-rules.md workflow. Neither excluded file was
+changed or staged. Do not use git add . for this checkpoint.
+
+A local bounded filename/text scan checked about 1.67 MB of proposed content
+before the proposal file was added. No matching private-key/token patterns
+or operator home paths. Two credentialed URLs were intentional synthetic
+fixtures: the extractor redirect-refusal test and the wheel auditor redaction
+test. This limited check does not certify arbitrary code as benign. The
+working report is data/checkpoint-inspection.json and stays local/ignored.
+Reviewed the scoped diffs and normalized line-ending noise while reading;
+no repository/global line-ending configuration was changed. Tracked diff
+whitespace checks passed. The sandbox could not access a global Git ignore
+file; did not alter it. hooksPath is .githooks and the existing transcript
+guard remains configured. No hook bypass is proposed.
+
+The prior final 511-test result and 26-page walkthrough remain the acceptance
+evidence. No implementation changed during checkpoint preparation, so no
+test rerun, provider refresh, install or application restart was needed.
+Updated docs/handoff.md from unverified Git state to the actual inspected
+checkpoint, with commit approval and subsequent push approval still pending.
+
+### 2026-11-26: Parked the Reviewed Reader Prototype
+
+The operator requested a static opinion on a standalone RSS/newsletter draft
+and then deferred integration. Read the context and all prototype source,
+templates, tests and configuration examples in the nested Downloads folder.
+The review is complete; Phase 4 integration is operator-deferred. Reusable
+pieces, local location, failure cases and future acceptance requirements are
+in docs/review/2026-11-26-reader-prototype.md. No downloaded code was executed
+and the claimed four passing tests were not independently verified.
+
+The operator challenged the prototype's separate KEV import. Agreed: news
+feeds can be ordinary reader sources where publishers provide them, while
+structured CVE/KEV badges reuse the vulnerability module's stored evidence
+and freshness. Recorded this ownership in Phase 4. News mentions alone do
+not promote exploitation status. Preserve the Phase 5 foundation dependency
+and existing Build order. No integration, installation, network request,
+Git operation or copy of the prototype/context into the project occurred.
+
+### 2026-11-26: Adopted Subphase Sessions and Explicit Handoffs
+
+The operator agreed with dividing future work into coherent subphases and
+asked for explicit notes when each ends, plus a handoff prompt for the next.
+They also proposed committing and pushing before new sessions. Documented
+that as the normal checkpoint, preserving individual commit and push
+approvals. The message did not authorize a particular commit or push; no
+Git command was run, including status/diff inspection. Current HEAD,
+staging and remote synchronization remain unverified. This is not a claim
+that all earlier local Phase 2 changes are cleanly staged or saved remotely.
+
+Added the same session-boundary rule to AGENTS.md and CLAUDE.md. Each subphase
+ends with a dated Complete, Incomplete or operator-deferred record, acceptance
+evidence, remaining limits, a journal/roadmap update and a focused next-chat
+prompt. A session/credit limit alone does not complete work. Pending Git
+approval or an unavailable push must be stated instead of silently discarded
+or stashed. The next agent must not treat saved prompts or old approvals as
+permission for new Git operations. A fresh operator message starts the work.
+
+Created docs/runbooks/session-handoff.md with the closeout checklist, compact
+handoff template and exact example Git commands under separate approvals.
+Explain why a commit is a local checkpoint and a push is a remote code copy;
+neither backs up ignored data. Stage only reviewed named files and exclude
+secrets, transcripts, runtime state and unrelated local settings. Record the
+actual commit/push result in the closing message after it occurs. Avoid an
+endless amend loop trying to put a commit's own hash into its tracked handoff.
+
+Created docs/handoff.md with current Phase 2 completion, prior verified test
+and page results, unresolved Git checkpoint and a ready-to-paste 5F.1 prompt.
+It explicitly warns that earlier Phase 2 batches may be uncommitted and must
+be inventoried under approved Git inspection. Do not blindly stage everything.
+The prompt first resolves that checkpoint, then scopes work to the shared
+evidence model/source registry and defines acceptance and the next closeout.
+No new chat was created and no foundation implementation began.
+
+Split the existing foundation scope in ROADMAP.md into 5F.1 evidence/source
+registry, 5F.2 durable jobs, 5F.3 scheduled freshness/health, 5F.4 saved reports
+and archives, and 5F.5 alert inbox/integration acceptance. Each has a concrete
+done-when condition. All remain not started. This does not bring forward
+collectors, AI or parked Phase 2 features. A large subphase may be divided
+again at a tested milestone. The shared job/corpus contracts start in 5F.1
+to reduce rediscovery and incompatible schemas in later sessions.
+
+Shortened the lengthy current-status sections in both agent files to the
+same compact summary and pointers. Retained the existing approval, research,
+dependency and secret-handling rules. Detailed Phase 2 facts remain in the
+journal and dated reviews. Routine next-session context should come from
+the current handoff and linked relevant sections, not a copied transcript
+or a reread of every historical entry. This preserves extensive Claude
+handoff notes while reducing repeated onboarding context.
+
+Added an explicit session boundary and handoff link to the Phase 2 closeout.
+This pass changes documentation only, so no application test rerun, provider
+refresh, install or restart was needed. The recorded 511-test/26-page results
+are the prior closeout evidence, not newly generated results on 2026-11-26.
+Checked the new local links and matched the paired workflow/status guidance.
+
+### 2026-11-25: Finished Phase 2 First-Delivery Scope and Review Redesign
+
+This continues the 2026-11-24 pass. The operator authorized the remaining
+Phase 2 implementation work in one pass, with questions only for decisions
+that actually needed their input. Three answers resolved the remaining
+product choices: keep the existing CISA SSVC decision points and park the
+full outcome; expose retained normalized source data and put full original
+response archives in the shared evidence store; change the Since Last Review
+table rather than remove it. Used the proposed compact recent grouping for
+the last choice. No answer authorized deleting or acknowledging the backlog.
+
+The accepted first-delivery implementation is now closed. The detailed
+scope matrix, validation and exclusions are in
+docs/review/2026-11-25-phase2-closeout.md. This is not a declaration of full
+historical coverage, all roadmap ideas implemented, or operational v1
+readiness. Scheduled source freshness and reliable recovery remain important
+before real daily use. They belong to the next existing Build order item,
+the Phase 5 foundation: scheduler, job runner, alert inbox, shared corpus and
+source registry. This does not jump ahead to collectors, OSINT or honeypots.
+
+Expanded Exploited and Unfixed beyond the existing Red Hat VEX adapter.
+The new unfixed.py helper resolves raw CSAF product IDs and group IDs before
+normalization loses identity. It accepts explicit none_available or
+no_fix_planned assertions only for resolvable affected targets. Fixed,
+unaffected, under-investigation and contradictory targets do not qualify.
+Repeated CVE entries are merged before evaluation. Identical display names
+do not merge distinct product IDs. Workarounds are limited to the matching
+targets. Ambiguous vendor-fix scope conservatively suppresses a finding.
+The relevant OASIS CSAF remediation and scope sections were reviewed; this
+helper is not a full schema/conformance validator or a semantic text parser.
+
+Both the existing generic vendor CSAF parser and OT parser retain these
+findings. A derived SQL view unifies them with Red Hat VEX. Shared CVE rows,
+view membership/counts, detail evidence, action badges, First Steps and
+review capture consume the same current source facts. Successful corrections
+remove current findings without erasing historical review events. A change
+to the document date alone does not generate a duplicate target finding.
+Mixed fixed and unfixed releases remain possible. The previous Red Hat test
+expected Patch to disappear globally when one release was unfixed. Changed
+that expectation because a patch for another release remains useful scoped
+evidence. Patch, Mitigate and Hunt can therefore appear together when their
+independent evidence warrants it. Missing patch links never establish no-fix.
+
+Legacy normalized vendor/OT records lack the product-ID provenance needed
+for safe retrospective scope inference. Do not silently promote them.
+The new advisory_reload.py helper and same-site POST let the analyst reread
+one existing advisory from a fixed publisher endpoint. Paths must match an
+eligible stored record and the existing source patterns. No arbitrary URL,
+redirect following or full-feed refresh. SUSE has a 64 MiB body cap and the
+other supported sources 32 MiB, using the existing bounded HTTP helper.
+Invalid documents and request failures preserve previous evidence, with a
+short dated result instead of a raw provider error. OT refuses older document
+revisions. Vendor imports retain the index checkpoint separately from the
+actual scope_revision stored with the evidence. The UI is a bounded local
+workflow, not a distributed concurrency guarantee. No live advisory reload
+was performed in this closeout; HTTP paths were mocked in tests.
+
+Replaced the CVE page's narrow raw-data area with Stored Source Data. It
+uses a fixed list of retained source fields, rendered as escaped JSON under
+collapsible source labels. This includes the local CVE record, NVD, SSVC,
+EPSS, Microsoft, vendor and OT evidence, no-fix sources, exploit indexes,
+GitHub, sightings and related retained facts. The explanatory text says these
+are normalized retained fields, not complete original responses. The shared
+evidence store must add bounded original archives with source/retrieval
+provenance, source revision, retention and redaction. Full SSVC outcomes
+remain parked rather than inventing organizational mission/well-being inputs
+from a public product watchlist.
+
+Since Last Review now groups the dashboard's unread events by CVE over the
+last seven days, limited to five recent CVEs. Show types, source/change
+counts and last local observation. Counts do not imply independent reporting.
+Review This CVE opens a filtered queue. Its item and bulk controls scope SQL
+updates to that CVE and stop at the displayed latest event ID. The full queue
+and 90-day history remain available. Opening pages never acknowledges events.
+No migration reset, deletion or automatic Mark All was added. This first
+slice removes the enormous dashboard count; it does not yet suppress every
+additional citation as immaterial. Keep a future material-change/watchlist
+digest improvement in the parking lot. Existing retention/pruning is unchanged.
+
+Added ten no-fix/reload tests and four digest tests. They cover product/group
+resolution, conflicting targets, mixed releases, source corrections, legacy
+guards, fixed publisher request paths, failed-request retention, source-data
+rendering, grouped limits/order, read-only GET behavior, CVE-scoped review
+and cross-site refusal. The final suite ran 511 tests: 510 passed and one
+existing skip, zero failures/errors. The separate temporary-database coverage
+probe confirmed OT table/detail scores and actions, watchlist/review effects,
+retained legacy report behavior and explicit-ID layout handling. Its uncited
+sighting stays outside Known Exploited; Hunt in that fixture is justified by
+the separate Exploit-DB entry. EUVD publication fallback does not become a
+first exploitation date or a zero-day lead. Manual report intake stays removed.
+
+The trusted interpreter used -B -I -S with explicit project/reviewed-package
+paths for this diagnostic run. No new dependency was installed. The existing
+Starlette/httpx deprecation warning was observed; it did not authorize an
+installation. Initial final-check output was lost in a context interruption,
+so the full suite was repeated while verification was unresolved. That repeat
+completed successfully; do not keep rerunning it without a new reason.
+
+Restarted only the verified project run.py server, with a hidden launcher and
+local logs. Startup completed at 127.0.0.1:8000. On resuming after the credit
+limit, confirmed that restart and the saved successful test result rather
+than repeating completed work. All 26 local acceptance GETs returned 200.
+The new digest and Stored Source Data rendered. Read-only SQLite snapshots
+confirmed unchanged feed status and total/reviewed event counts across the
+walkthrough. No provider refresh, review acknowledgement or arbitrary remote
+request was part of that walkthrough. Runtime result:
+data/phase2-closeout-acceptance.json. Logs:
+data/phase2-closeout.stdout.log and .stderr.log. They stay ignored.
+
+One sequential local pass measured dashboard 16.98 seconds, Zero-Days 7.12,
+and loaded CVE detail 0.30. This is not a benchmark or a performance fix.
+Retain the parked profiling/HTMX work and its focus on actual query costs.
+The original PDF acceptance remains 105 of 106 hashes for the separate
+MuddyWater artifact; the out-of-order cross-page row is still unsupported.
+Preserve other documented later work: broader Supply Chain ecosystems and
+advisory intake, saved extraction/Enrich All, source archives, social/news
+collection, exports, cases, full SSVC, and optional AI narrative inference.
+GreyNoise per-CVE stays at honeypots or the final backlog regardless of keys.
+
+Updated ROADMAP, both agent status summaries, the module/testing runbooks and
+new docs/runbooks/phase2-closeout.md. No git operation, staging, commit or
+push. No credential/configuration change or downloaded artifact execution.
+The pre-interruption roadmap edit briefly referenced a not-yet-written
+closeout document dated 2026-11-24. The completed record is dated 2026-11-25;
+corrected the links and milestone date before handoff. No dangling reference
+should be treated as a completed acceptance record.
+
+### 2026-11-24: Parked GreyNoise and Added Chrome Vendor Exploitation
+
+The operator moved optional GreyNoise per-CVE integration to the very end,
+or no earlier than the honeypot stage. Updated the roadmap parking lot,
+current module notes and both agent status summaries. An available key is
+not a reason to reopen this in Phase 2. Existing Phase 1 community IP lookup
+is separate; no removal or provider operation was requested or performed.
+
+Continued with the existing Chrome exploitation-statement feature. Read
+three original publisher article bodies, with source links in the review.
+They demonstrate why a CVE mentioned elsewhere in a notice must not inherit
+exploitation from the one explicitly named. One other article URL redirected
+to a Google challenge and was not reviewed or bypassed. No live feed import,
+key lookup, dependency installation or upstream code execution in this pass.
+
+Added a small deterministic Chrome prose parser. It recognizes explicit
+Google awareness/report sentences about a named CVE's exploit existing in
+the wild, plus explicit plural CVE lists. Whole-statement grammar avoids
+common quoted examples, conditions, negations and inline corrections. HTML
+quote/code/script blocks are excluded. Non-whitespace barriers prevent a
+removed inline code qualifier from turning the remainder into a positive
+claim. Unknown prose remains a reference; this is not semantic AI extraction
+or protection against every possible misleading publisher statement.
+
+Store the statement and typed report revision with per-CVE vendor evidence.
+Extend the shared positive-source SQL views so Known Exploited, summary,
+P1, Hunt, First Steps, table labels and review events agree. Show a dated
+vendor citation under Exploitation Details. Other CVEs in the same notice
+remain references. Do not infer patch/version status from a stable-channel
+announcement, or Confirmed Zero-Day from this sentence alone.
+
+Use the Atom updated date, not the original publication, discovery or
+mitigation date. This dates a positive advisory revision. Preserve the
+earliest recorded positive revision through continuous later assertions;
+otherwise an unrelated edit would advance the supposed first report date.
+A successful withdrawal removes current evidence; reassertion starts from
+the new revision. Older entries cannot restore a newer withdrawn assertion.
+An HTTP/parse failure retains the previous successful notice. Other source
+assertions survive. Historical review events remain historical.
+
+Vendor notice saves now invalidate view counters after commit. Direct
+same-day imports/corrections would otherwise leave cached counts unchanged.
+The existing schema startup recreates derived SQL views, without a new data
+table or a historical import. Old saved summaries are not reparsed into
+claims because they may be truncated and lack quote/code boundaries. Use
+the existing explicit Refresh Chrome control to populate current-feed data.
+
+The initial focused tests used nonexistent helper names and an incomplete
+KEV fixture. Corrected the tests to the actual BY_SLUG, review.page and
+complete upsert input. Those were test-authoring errors, not application
+failures. Added eight synthetic contracts for parsing, scoping, dates,
+continuous revisions, correction/reassertion, provider failure, shared
+consumers, citations, UI rendering and counter invalidation. The review is
+docs/review/2026-11-24-chrome-exploitation.md; repeatable commands are in
+docs/runbooks/chrome-exploitation.md. No git operation, commit or push.
+The final full offline suite ran 497 tests: 496 passed, one existing skip,
+zero failures/errors. This includes the revision-continuity and excluded-code
+barrier regressions. No provider quota or live feed request was used.
+Restarted the verified project app with hidden logs at
+data/phase2-chrome.stdout.log and .stderr.log. Startup completed and the
+listener remained 127.0.0.1:8000 only. Chrome-filtered Vendor Updates and an
+already loaded CVE returned HTTP 200. A mode=ro SQLite check confirmed the
+new derived evidence view exists in the operator's database. It has zero
+stored assertions because no current-feed import was run and old summaries
+were deliberately not promoted. Do not claim live data was populated by the
+code change. The existing Refresh Chrome POST activates the parser against
+the current public feed when that explicit update is desired.
+
+### 2026-11-24: Resolved Phase 2 Optional Sources and Loading Scope
+
+The operator clarified that freshness is optional only during the build.
+Once v1 is used for actual investigations, it is important. Corrected the
+roadmap, both agent status summaries and runbooks to preserve that boundary.
+Added v1-data-freshness.md: per-source schedules/stale thresholds, distinct
+attempt/success/source/coverage dates, startup gap recovery, visible stale and
+failed states, quotas/backoff and failure-injection acceptance. These are
+Phase 5 foundation requirements before operational v1 use, not delivered
+scheduler functionality. Commits remain separate from network jobs.
+
+Resolved the loading scope explicitly: HTMX partial reloads move to the
+existing post-v1 performance item. No JS artifact was fetched, installed or
+executed. Ordinary URLs, anchors, filters, sorting and SQL catalog paging
+remain. Revisit measured page/database cost before assuming fragment swaps
+will fix latency. Keep history/focus/race/error-fallback/no-JS acceptance in
+that follow-up. Do not label partial loading as built.
+
+Reviewed GreyNoise's current per-CVE operation and plans. The older-looking
+v3getvulndetails documentation URL was inaccessible; getcve is readable and
+documents /v1/cve/{cve_id}, with entitlement-dependent data. Plans distinguish
+community basic IP access from richer CVE products. Deferred this adapter
+until useful permitted access is confirmed. No credentials were read, no
+authenticated provider requests were attempted and no IP allowance was spent.
+The existing keyless community IP enrichment is a separate capability.
+
+CVEDB's primary FAQ and OpenAPI schema support an immediate keyless,
+non-commercial comparison. The interactive docs page had no readable body
+through the web tool, so schema/operation definitions came from OpenAPI.
+Wrote a small own adapter using the existing bounded JSON client, limiter
+and SQLite cache. No upstream executable code or runtime data is shipped.
+No new dependency, key or account was required.
+
+Added an explicit CVE-page comparison POST and collapsible card before
+References. Ordinary GET reads only saved CVEDB state. A fresh success is
+reused for 24 hours unless Refresh Saved Result is selected. Cache retention
+is 30 days, with the normal startup purge. Record success and attempt times
+separately, keep a previous success after an error/404/429/identity mismatch,
+and label stale data without renewing its date. Concurrent duplicate calls
+share the fresh result. Fixed-host HTTPS, no redirects/keys, shared 30-second
+timeout and 5 MiB cap; ten requests/minute is our courtesy limit, not a
+published entitlement. These controls do not make a provider's facts true.
+
+Show CVSS/EPSS/exploitation fields beside current page evidence. Require
+known aligned CVSS versions before flagging a score difference. CVEDB's
+reviewed schema has no EPSS score date, so do not claim a same-day conflict.
+Keep aggregate exploitation coverage uncertain; agreement may share upstream
+sources, while Not Flagged does not mean never exploited. No product import,
+priority/action promotion, view membership change or review capture from the
+comparison. Supplied ransomware text remains escaped source context.
+
+Six new synthetic offline tests cover keyless isolation, cache/force/stale
+behavior, failure retention and dates, concurrency, hostile values, identity
+and comparison semantics, same-site POST, passive escaped rendering and
+unchanged triage. Full suite: 489 tests, 488 passed, one existing skip. No
+live provider API fetch was performed in this pass. The source review and
+scope dispositions are in docs/review/2026-11-24-phase2-source-scope.md;
+repeatable steps are in docs/runbooks/cvedb-comparison.md.
+
+Restarted the verified project app with a hidden launcher and logs at
+data/phase2-source-scope.stdout.log and .stderr.log. Startup completed with
+only a 127.0.0.1:8000 listener. Read-only GET of the already loaded
+CVE-2018-13257 page returned 200 and the new comparison card/control, with
+no saved result. No CVEDB fetch was invoked. Then completed 25 local GETs:
+eight module entry points, all 15 catalog/view routes, Report Extraction and
+Decoder Tool. Every page returned 200; feed status was identical before and
+after. Paths/status/timings are in ignored data/phase2-scope-acceptance.json.
+This proves those routes rendered, not full data correctness or live provider
+availability. Existing semantic regression tests carry the stronger contracts.
+Observed slow GETs were Dashboard 16.31 seconds, Zero-Days 7.78 and AI and ML
+Stack 6.05. These are one-pass timings, not controlled benchmarks. Retain them
+for the existing performance follow-up; all-200 does not mean the UI is fast.
+
+No git operation, commit or push. These scope questions are now resolved.
+Phase 2 retains documented history/coverage limits and one out-of-order PDF
+hash row. The next real feature item is explicit Chrome vendor exploitation
+statements. The current Chrome feed keeps those notices as references; do
+not label that capability delivered or declare all of Phase 2 complete from
+this scope pass. Finish the remaining accepted feature scope before the
+Phase 5 foundation. Do not confuse that foundation with skipping ahead to
+collectors or relaxing data quality once the operator uses v1.
+
+### 2026-11-24: Feature Work, Manual Refresh and Original PDF Check
+
+The operator corrected the direction of work: repeated NVD/CVE List catch-up
+was delaying visible features. Accept that correction. Data freshness is
+optional maintenance during development, not a Phase 2 feature gate. Do not
+add automatic network work to commits. Existing general refresh and isolated
+NVD controls remain available. No live feed import was run in this pass.
+
+Added Fetch New CVE Records under Feeds. Its same-site POST calls CVE List
+incremental refresh only, captures local review changes and redirects to feed
+status. GET remains read-only. Existing missing-snapshot/14-day age checks
+remain. The button never falls back to the large snapshot download or calls
+NVD/unrelated feeds. No new dependency, git operation, commit or push.
+
+Delivered the Phase 2 extension-ID scope item as a small deterministic report
+feature. Chrome IDs require explicit ecosystem labels, recognized official
+store URLs or chrome-extension resource URLs. VS Code requires explicit
+labels or its marketplace URL. Firefox requires a labelled stable add-on ID;
+AMO listing slugs and moz-extension runtime UUIDs do not establish it. Show
+ecosystem, bounded context, copy controls and manual fixed-host store links.
+Do not call stores or install extensions. Recognized references are masked
+before ordinary IOC scans, including after the 200-unique-reference display
+cap. This prevents hex-shaped Chrome IDs becoming MD5s and Firefox IDs
+becoming email IOCs. Rules/YARA remain excluded. Bare strings retain legacy
+behavior. Primary Chrome/Chromium, Microsoft and Mozilla docs are linked in
+the review. No upstream extension code was copied or executed.
+
+Recovered the original 28-page Trend Micro MuddyWater PDF from its publisher.
+The selected public download is 1,617,194 bytes, stored only under ignored
+data/phase2-acceptance-2026-11-24. Defender custom scan completed with explicit
+no-threat output and exit 0. Signature/engine metadata and digest are in the
+review. The sandbox initially blocked the download; the authorized scoped
+retry succeeded. Reading Defender metadata required an elevated read. No
+personal files, secrets, private data or settings were selected or changed.
+
+The original report exposed two deterministic parser issues: SHA-256s was
+not recognized as an explicit heading, leaving 32+32 rows as fragment MD5s;
+and detection names on the following line were not consistently attached.
+Fixed plural headings and next-line detection context, including underscore
+labels. Reset old hash-section headings and avoid carrying previous detection
+names into the next row. Added synthetic regressions. Source material remains
+ignored, never a committed fixture.
+
+Important correction for handoff: I initially described suspicious row
+fragments as publisher errors. That was incorrect. An independent row-end
+scan found 105 complete values plus a 41-character head. Visual appendix
+inspection confirmed its 23-character tail at the next printed page's top.
+The PDF content stream emits that tail after other tables, outside the
+bounded adjacent-line repair. Thus 105 of 106 source rows are recovered,
+all 105 with their detection labels; one remains missed, with no fragment
+MD5s after the fix. This is a reading-order limitation, not missing source
+bytes. Added a specific parking lot follow-up rather than widening PDF layout
+scope silently or blocking other feature work. A trial pypdf layout-mode
+comparison was unreliable and is not evidence of acceptance. Bundled Poppler
+renders pages but does not include pdftotext. Printed pages 19-21 were rendered
+and inspected. The original text, trial output and comparison JSON stay local.
+
+Full offline suite: 483 tests, 482 passed, one existing skip. No external
+requests are allowed by the suite. Synthetic coverage includes extension
+identity ambiguity, disguised stores, code exclusion, truncation, hrefs,
+escaped passive rendering, copy controls and isolated refresh guards. Restarted
+the verified project app with a hidden launcher. Loopback feed GET, synthetic
+three-ecosystem extraction and original PDF upload returned HTTP 200. The
+upload showed 105 hashes; copy controls and row detection context were present.
+No provider refresh POST was invoked during smoke checks. Existing test-client
+deprecation warnings do not authorize installing a replacement dependency.
+The final small URL-context refinement passed all 17 focused tests after the
+full run. Restarted again using the same verified hidden procedure, with logs
+data/phase2-features-final.stdout.log and .stderr.log. Startup completed on
+127.0.0.1:8000. Final loopback checks confirmed feed/control availability,
+nearby source text and removal of a synthetic query token from results.
+
+Files added this pass: software.py, test_software_references.py, the feature
+runbook and acceptance review. Updated extractor, main, PDF repair, feed route,
+two templates, PDF tests, roadmap, testing/module runbooks and paired agent
+status notes. Exact repeatable steps are in
+docs/runbooks/manual-refresh-and-extension-references.md. Phase 2 remains open.
+Next work is the small closeout disposition for HTMX/optional source lookups,
+not another freshness audit. Preserve the remaining known PDF limit, optional
+source decisions and the existing build order when handing back to Claude.
+
+### 2026-11-24: Isolated and Resumed NVD Recent Changes
+
+Continued the next Phase 2 action from the previous handoff: recover the
+interrupted NVD recent-changes import, without refreshing other feeds.
+Read-only baseline still showed 4,000 of 6,472 records processed in the
+old partial run, error=NULL and no completed/pending checkpoint. NVD held
+22,752 local rows, including the nine records loaded in the earlier targeted
+backfill. Catalog and Known Exploited gap counts matched the 2026-11-20
+post-backfill acceptance. No git operation or dependency change was made.
+
+Added a dedicated NVD-only POST and a read-only preview/progress card on
+Feeds. It defaults to public/keyless mode and validates mode/cross-site
+requests. General Refresh feeds retains its separate behavior. The source
+shares a single-worker run lock between general refresh and isolated
+recovery, preventing duplicate concurrent walks. Previewing dates creates
+no pending state and makes no request. Last-run state is retained in
+sync_state, with requested UTC bounds, requests, processed records, source
+total, charged bytes, mode, status and safe errors. It contains no key.
+
+Each dedicated run allows six requests, a 64 MiB response cap, 192 MiB of
+charged bodies and 180 seconds of network/rate-wait time. Parse/write/review
+time is additional. Failed/abandoned responses charge their full allowance.
+At page/body/time limits the pending interval is halved without advancing
+the completed checkpoint. If the first page already reports more records
+than the request allowance covers, split after that page instead of spending
+the rest of an inevitably incomplete run. Ordinary HTTP/quota/parse errors
+retain the requested window. Interrupted writes/cancellation are not marked
+complete. No scheduler, silent key fallback or unrelated source request.
+
+Focused testing found the legacy offset calculation advanced by requested
+page size even if a shorter page was returned. It could skip records or
+declare completion early. Fixed offsets to advance by actual returned count.
+Reject duplicate IDs/pages, total-count changes and wrong response offsets.
+Known page-integrity errors have static, useful messages; malformed source
+values do not get echoed as arbitrary exception text. Window timestamps are
+normalized to the seconds actually sent to NVD. Do not call this a snapshot
+guarantee: historical membership can change as records are revised later.
+
+An old page-walk test requested 2,000 but returned one synthetic row while
+expecting offset 2,000. Corrected it to a realistic one-record page size.
+Added ten independent recovery tests for read-only preview, route isolation,
+public headers/limiter, short pages, duplicate/drifting responses, proactive
+split, body/time budgets, storage interruption, concurrent rejection and
+rate-limit preservation. Full suite: 475 tests, 474 passed, one existing skip.
+The earlier focused budget test initially used a total below the requested
+page size, so no second page was needed. Corrected that fixture; do not
+misreport it as a production body-budget failure.
+
+After tests, restarted the verified loopback app with a hidden launcher.
+Announced each live window and the resource limits before its NVD-only POST.
+Fixed recovery target: 2026-11-25 00:04:21 UTC, which is 2026-11-24 in the
+operator timezone. Public date filters only; no key, private IOC, report,
+watchlist profile or file was uploaded. Provider JSON remains passive data.
+
+Run 1 covered 2026-11-11 00:47 through 2026-11-18 00:47 UTC. Completed
+7,058 records in four requests and 30,390,985 response bytes. Local NVD rows
+increased to 25,268, a gain of 2,516. The legacy original query retained
+only its start date in status; recovery extends that start into bounded
+catch-up windows rather than pretending the old result membership is fixed.
+
+Run 2 covered 2026-11-17 23:47 through 2026-11-24 23:47 UTC. Completed
+8,003 records in five requests and 33,785,400 response bytes. NVD rows
+increased to 31,728. The one-hour overlap is intentional. Inspection during
+this run found 6,953 first-run rows still carrying their original fetch
+times, all with modification dates inside the first window; overlapping
+rows had already been replayed. Do not claim that transient fetch-time
+query was a complete immutable capture of all 7,058 first-run IDs.
+
+Run 3 covered 2026-11-24 22:47 through 2026-11-25 00:09:21 UTC.
+Completed 98 records in one request and 334,334 response bytes. All were
+already stored; this final overlap added no unique rows. Completed coverage
+exceeds the fixed recovery target, pending state is empty and error is NULL.
+The completed UTC time is 2026-11-24 19:09:21 Eastern. Do not equate that
+checkpoint with automatically staying current after the run.
+
+Total: ten public requests, 15,159 processed rows, 64,510,719 charged body
+bytes, about 61.5 MiB. Processed rows include overlap; the unique touched
+cohort is 14,956 CVEs. All have valid modification dates inside the recovered
+date range. NVD rows grew from 22,752 to 31,728, or 8,976 new rows. Other
+feeds' most recent fetched time is still 2026-11-17, confirming that recovery
+did not refresh them. No API key was sent. No provider error or resource
+split occurred in these three live runs; those branches remain tested offline.
+
+The catalog grew from 407,115 to 412,704 active IDs. Local gaps afterward:
+381,923 NVD rows, 165,049 scores, 185,074 CWE IDs, 166,244 vendor/product
+pairs. Do not present these as a fixed-cohort before/after improvement:
+new IDs widened the population. Among touched active records, 5,955 lack a
+local CNA record and 5,630 of those also lack NVD products. CVE List still
+shows sync only through 2026-11-15 1900Z. That source was intentionally not
+refreshed. The next metadata priority is its independent incremental catch-up,
+rather than inferring vendors/products from descriptions or claiming that
+NVD alone supplies all fields. It is not a proof that upstream CNA has
+every missing field. Known Exploited stays at 5,950 active CVEs: NVD-row gaps
+fell from 5,700 to 5,659; scores stay 1,619, CWE IDs 1,865, product pairs one.
+
+Exact repeat commands and limits are in docs/runbooks/nvd-recovery.md;
+acceptance is docs/review/2026-11-24-nvd-recovery.md.
+The separate targeted historical queue, wrapped-PDF acceptance, and Phase 2
+scope decisions remain separate work. No review acknowledgment reset,
+commit, push, full-history import or new dependency was performed.
+
+### 2026-11-20: Built the Targeted NVD Repair Queue
+
+Continued Phase 2 with the bounded historical repair recommended after the
+coverage audit. The operator's continue authorizes that work. The first
+scope is Known Exploited, not all 407,115 local CVEs. No new dependency,
+AI, scheduler, remote hosting or git operation is involved.
+
+Added metadata.py, an additive nvd_backfill_queue table and a repair page
+linked from Feeds. GET reads local candidates and recent results without
+creating queue entries or making requests. POST prepares/reconciles the
+queue, processes 5 or 10 records and redirects to results. Product gaps
+rank first, then CVSS, CWE and absent NVD records. Stored fallback sources
+count toward coverage. Only valid public CVE IDs on the known-exploited
+source set qualify; rejected CVEs are excluded. Watchlist-only scope and
+full-history NVD imports remain follow-ups.
+
+Public/keyless mode is the default. Configured-key mode is explicit and
+never silently falls back. The endpoint validates mode, record limits,
+retry options and cross-site headers. Requests use the existing NVD
+client, fixed HTTPS API, 5 MiB accepted-body cap and rate limiter.
+There is a 90-second network deadline. Local candidate selection and
+review capture are outside that network budget. The app has one worker;
+an in-process lock prevents overlapping batches. Future multi-worker
+hosting needs persistent leases. No automatic background continuation.
+
+Queue progress survives restarts. Pending work remains pending until a
+completed response is handled. Interrupted work can replay safely. Quota
+and rejected keys pause rather than spending the rest of a batch. Ordinary
+errors mark failed items and preserve previous metadata; explicit Retry
+Failed requeues them. Retrieved and not-found entries do not loop merely
+because fields remain absent. Result labels deliberately distinguish
+retrieved from fully populated. A pending gap resolved by another source
+can close without another request. Deadline-limited attempts count and
+rotate behind unattempted work of the same priority.
+
+Hardened per-CVE NVD handling: 429 is quota, malformed bodies and incomplete
+empty pages are errors, and an unexpected CVE ID cannot be saved. This is
+separate from the completed-window fix for NVD's recent-changes feed.
+Raw source data is passive. No page scripts or downloaded commands execute.
+
+Added 12 offline backfill regressions for selection, limits, resume, unknown
+fields, missing records, failed retries, preserved metadata, quota/auth
+pause, wrong identity, deadlines, concurrent runs, reconciliation and routes.
+Initial full suite: 464 tests, 463 passed and one existing skip. Deadline
+attempt tracking then passed all 11 targeted tests. A later interruption
+guard records storage exceptions/cancellation as interrupted, preserves
+pending work and releases the lock. Its added regression brought the final
+full suite to 465 tests, 464 passed and one existing skip.
+
+Read-only live preview found 5,709 candidates, including nine product gaps.
+Announced the first five CVEs, five requests, public/no-key mode and a
+25 MiB accepted-body budget before the first live batch. Reused the verified
+loopback launcher and hidden-window restart procedure. The live preview
+matched the announced IDs before POST. Exact commands are in
+docs/runbooks/nvd-backfill.md.
+
+Live batch 1 retrieved four records and recorded one not found. The not-found
+ID, CVE-2016-200017, is present in the locally stored VulnCheck assertion.
+Do not guess a replacement or label the assertion false merely because NVD
+has no record. Original-source validation remains a follow-up. A second
+announced five-request batch covered the four remaining product candidates
+and first score candidate. It retrieved all five. Ten total public/keyless
+requests, no failed requests, and each attempted ID has exactly one attempt.
+Queue state after both runs: 5,699 pending, nine retrieved, one not found.
+
+Known Exploited gaps fell from 5,709 to 5,700 NVD rows, 1,623 to 1,619
+scores, 1,872 to 1,865 CWE IDs and nine to one product pair. Population
+stays 5,950 non-rejected CVEs. The remaining product gap is the not-found
+ID. CVE-1999-0192 gained a CVSS 2.0 score and products but still has no
+CWE; its retrieved status must not hide that gap. CVE-2015-0279 also
+demonstrates the older CVSS 2.0 fallback with its version retained.
+
+Both POSTs returned successful result pages. Read-only queue inspection and
+the independent coverage audit confirmed progress and no duplicate attempts.
+The 85 uncited claims and six without other exploitation evidence are
+unchanged. The separate incomplete recent-NVD window was not retried, and
+no review acknowledgment reset, git operation, commit or push occurred.
+Acceptance details are in docs/review/2026-11-20-nvd-backfill.md. Phase 2
+remains open; scheduled continuation still belongs to the Phase 5 foundation.
+After the final interruption guard passed the full suite, restarted the
+idle app again. GET checks confirmed durable queue counts, the unresolved
+NVD result, the Feeds link and the RichFaces score/CWE/product on its detail
+page. No additional NVD request was needed for those checks.
+
+### 2026-11-20: Counted Coverage Gaps and Retired Two Workflows
+
+The operator asked how many uncited exploitation leads and missing metadata
+records remain, why the gaps exist, and how recurrence is prevented. They
+also directed removal of non-explicit TTP mapping until AI assist and removal
+of manual exploitation report intake. This pass stayed within Phase 2.
+No git operation, commit, push, dependency install or bulk feed refresh was
+performed. No credentials or private records were submitted anywhere.
+
+Read-only snapshot: 407,115 non-rejected local catalog CVEs; 385,260 lack
+an NVD row. Across locally stored fallback sources, 165,146 have no CVSS,
+185,000 no CWE ID and 160,987 no usable structured vendor/product pair.
+Among 5,950 non-rejected known-exploited source records, the corresponding
+gaps are 5,709 NVD rows, 1,623 scores, 1,872 CWE IDs and nine product pairs.
+These are local gaps, not proof that upstream NVD has the missing facts.
+Counts overlap. A full CVE List load is not a full NVD load. Local-first
+details intentionally avoid fetching remote data just because a page opens.
+The previous selected-CVE button did not solve historical coverage.
+
+For CVE-2018-13257, NVD lastModified is 2026-06-17. That is outside the
+November recent-change import. Its selected load supplied the previously
+missing authoritative score, CWE and product data. The parser already
+supported CVSS 3.x. Do not attribute the original absence to v4-only parsing.
+
+The first day-level query counted 84 CVEs with an uncited-only daily
+sighting group. A source-level audit counts 85 CVEs with uncited assertions:
+74 labelled The Shadowserver, 11 Telegram. One also has a cited sighting,
+which explains the difference. Six have no other exploitation evidence;
+the other 79 have an independent stored positive source, whose actual
+reporting independence is not established by this count. The snapshot's
+rolling sightings cover 2026-11-14 through 2026-11-16. These are exploitation
+claims, not all GitHub PoC leads or infrastructure candidates. Uncited does
+not mean false. Citation-qualified gating and requested-CVE response checks
+were already implemented and remain. A URL provides traceability, not proof.
+
+Found another correctness bug: the stored NVD recent-changes refresh saved
+4,000 of 6,472 records, with a ReadTimeout in its version text but error=NULL.
+Old code labelled a partial run successful and could use its fetched_at as
+the next starting point. A retry could then skip the unfinished data.
+NVD now pins a pending time window before requests. Only a complete page
+walk advances the completed checkpoint. Failures replay the same window
+from page zero; upserts make replay safe. Avoid claiming API pagination is
+an immutable snapshot. Dense page-capped windows are halved and retried.
+Completed old windows catch up in seven-day slices with an hour of overlap,
+without dropping a watermark merely because it is old. Recognize legacy
+partial version strings and recover their original start. Reject missing
+result metadata, malformed CVE entries, wrong response offsets and empty
+pages before the reported total. Feeds displays the legacy partial state
+as incomplete instead of green OK. Version text shows the window end.
+No live retry ran in this pass. This fix prevents the identified cursor bug;
+it does not promise complete history or populated upstream fields.
+
+Added scripts/audit_vulnerability_coverage.py. It uses only stdlib, opens
+SQLite in mode=ro, takes a consistent read snapshot and reports aggregate
+counts. It does not import the app, load .env or make requests. Its source
+and field rules are covered with a synthetic temp database. Exact repeat
+commands are in the vulnerability runbook. Results and limits are in
+docs/review/2026-11-20-metadata-coverage.md.
+
+Removed behavior.py, its application call and Candidate Behavior Mappings
+UI. Retained explicit ATT&CK/ATLAS ID extraction and inert command/rule
+artifacts. Inferred TTPs wait for optional Phase 11 and still need review;
+AI will not guarantee their correctness. Regression checks ensure a scan
+command remains readable without generating T1046.
+
+Removed manual report list/intake/link routes, navigation, forms and
+production write helpers. The snapshot has zero saved manual reports.
+Kept the table and read-only legacy evidence access so an existing install
+does not lose saved evidence or gain broken source links. Only synthetic
+test fixtures can create/link old-format records now. Existing shared
+evidence compatibility remains tested. No rows or history were deleted.
+The manual feature is off the current scope and should return only if
+the operator requests it. Automatic article discovery remains Phase 4/5.
+
+Updated roadmap, paired agent status, runbooks and regression tests. Initial
+full offline pass: 452 tests, 451 passed and one existing skip. Subsequent
+malformed-response hardening adds one test. Final full suite: 453 tests,
+452 passed and one existing skip. The app was restarted using the verified
+loopback launcher and the existing documented hidden-window procedure.
+Live checks passed after startup: retired listing returns 404; nmap text
+remains a Command Line artifact without T1046; manual navigation is absent;
+the existing partial NVD import displays Incomplete Download. No feed retry
+or manual report write was triggered by those live checks.
+
+### 2026-11-19: Operator Walkthrough, Exploitation Claims and Report Extraction
+
+The operator found missing Microsoft publisher coverage, confusing blank
+code evidence, implausible review volume, missing older-CVE metadata and
+false-positive/partial report extraction. This was a broad corrective pass
+within Phase 2. No dependency was added. No git operation, commit or push
+was performed. Original reports and debug helpers remain in ignored data.
+
+The Blackboard example CVE-2018-13257 had a CVE List description but no NVD
+row, no structured CNA products and no KEV row. NVD's public record supplies
+CVSS 3.1 6.1 Medium, CWE-601 and Blackboard Learn CPE products. Existing
+code already supported CVSS 3.x. Added a bounded per-CVE metadata load and
+explicit public/keyless option rather than inventing products from prose.
+Hardened score selection so empty/invalid newer metrics cannot hide valid
+older metrics. The keyless path has its own conservative rate limit and
+never sends the configured NVD key. Loaded the selected example through
+the local app and verified score, weakness and products in its response.
+This is not a bulk repair of every incomplete historical record.
+
+The exploitation source was an uncited community Telegram assertion. It
+was not a CIRCL KEV assertion. Require an HTTPS citation for community
+exploitation to affect shared views, priority, Hunt or zero-day leads.
+Keep uncited rows and source labels visible as leads. Added an additive
+citation column and a versioned per-CVE cache key; old uncited cached
+summaries are not reused. A wrong-CVE API response is rejected. Citation
+presence provides traceability, not independent credibility or confidence.
+One diagnostic initially used `vulnerability` instead of `vuln_id`, which
+the server ignored. The application already used the correct parameter;
+this was not an application filter fix. Added the response identity guard
+as defense in depth. Do not repeat the diagnostic result as a finding.
+
+Microsoft Publisher rows reuse the existing MSRC advisory store and refresh.
+Watchlist follows Supply Chain; New and Severe is capitalized consistently.
+The shared table now distinguishes Exploitation Evidence from executable
+code/templates, naming the actual source instead of guessing vendor versus
+researcher. The Reports page explains the manual pre-CVE notebook and the
+remaining Phase 4/5 reader/collector work. Direct original free KEV feeds,
+feed administration under Health and a later distinct GUI were recorded.
+Infrastructure already supports C2 IPs and filtered domains; passive DNS,
+certificates, fingerprints, hosting and other infrastructure pivots remain
+in Phase 6. This pass does not advance to that phase.
+
+Review snapshot: 547,973 events across 28,638 CVEs, including reviewed
+events. VulnCheck alone accounts for 468,815 exploitation events across
+5,926 CVEs. Citation-level imports overwhelmed the global counter. Asked
+for a choice between a watchlist digest, no dashboard panel and a grouped
+global digest. No reply arrived during implementation. Recommended removing
+the global counter or using an optional watchlist digest, grouped by CVE
+and material change. No history reset, deletion or mark-reviewed action was
+performed. Existing retention behavior remains unchanged.
+
+ReversingLabs has 193 report hashes in declarative streamed page data;
+ordinary visible HTML exposed 51. Raw HTML contains one additional site
+verification hash. JSON-only reconstruction now recovers the 193 report
+hashes without executing JavaScript. It uses depth, node, input and total
+render-work limits and replaces visible content only when richer. Unknown
+components remain unsupported. The reported hash now retains the Favicon
+SHA256s caption and ARTEX console group. Full source pages were not copied
+into permanent fixtures. Defender scanned the incoming public files and
+completed with no detections; it does not prove content benign.
+
+Google's report yields all 11 IPs from its indicator table with adjacent
+descriptions. Six YARA rules are retained separately, along with recognized
+queries and command lines. Code blocks are inert artifacts, excluded from
+ordinary enrichment. Unlabelled plain-text code and publisher changes still
+need review. Source links are references, not automatic IOCs. A first pass
+that appended every anchor target created social-share/related-article
+noise; corrected it to a separate reference list. Known TLD filtering drops
+img.src, data.mdb and request.getparameter. The scanned public IANA list was
+loaded into the ignored local cache. Pasted defanged hosting URLs remain
+candidates rather than blanket-suppressing every GitHub path.
+
+ATLAS IDs are kept separately from ATT&CK. The supplied ATLAS matrix URL
+returned 404; reviewed MITRE's own repository docs and Apache-2.0 license.
+Official ATLAS catalog loading/names are not built. Google has no explicit
+ATT&CK IDs; the previous empty explicit table was therefore not a missing-ID
+parser failure. Added narrow command-pattern candidate mappings, clearly
+separate from reported techniques. Do not claim complete narrative TTP
+mapping. Images have explicit click-to-load previews, not automatic fetches.
+They remain outside IOC enrichment. The browser contacts the source on click.
+
+Report success clears text, URL and upload inputs; errors preserve them.
+Copy controls trim values, and indicator markup keeps spacing outside the
+value. Decoder has its own tab. Regression fixtures cover streamed JSON,
+rule isolation, context, controls, Microsoft, metadata and exploitation
+traceability. Full offline suite: 448 tests, 447 passed, one existing skip.
+Live checks passed Microsoft Publishers, the selected NVD record, Views
+capitalization, Decoder separation and the Zero-Day exploitation column.
+Avoided querying the full exploitation union for each last-sighting lookup
+by using a small shared citation-qualified sightings view, followed
+by affected-view regression checks. This is a query correction, not a full
+performance audit. See docs/review/2026-11-19-operator-report-checks.md and
+the updated extraction/vulnerability runbooks for behavior and limits.
+The first request after the final restart raced database initialization
+and received connection refused; the startup log completed normally, then
+both original URL checks succeeded. Do not interpret a started launcher as
+an already-ready server. Final plain-text replay found method calls ending
+in `.read`, which is also a delegated TLD; added a separate plain-call
+filter with a regression. Special-use names such as vsphere.local remain
+source candidates rather than being called public DNS names. Later affected
+checks passed: 51 view/evidence tests, 87 extraction tests with one existing
+skip, and 59 tests after the final method-call change. The warm Zero-Day
+page still took 8.95 seconds; broader query optimization remains open.
+Final context presentation prefers source rows/group labels inside Report
+Context instead of making the analyst open a second non-PDF dropdown.
+PDF Row Context remains available. Its 20 affected parser/route tests passed.
+The app is running on loopback with the final filter loaded; live checks
+confirmed method-call rejection, a valid defanged domain, and row context.
+
+### 2026-11-19: Strings, Deobfuscation and Domain Review Proposal
+
+Detailed recommendations and primary sources are in
+docs/research/2026-11-19-static-supply-chain-review.md. Prioritize changed
+artifacts and transitive dependencies; keep location and decode lineage for
+every destination. Redact credentials/query values, keep decoded instructions
+passive and report partial/unsupported analysis. Do not automatically visit
+discovered hosts. No dependency decision follows merely from a domain
+reputation result. A scan with no findings can still have blind spots.
+
+The Phase 2 closeout terms mean: select an older-CVE metadata strategy;
+provide resumable visibility into Red Hat/SUSE changed-document backlogs;
+decide whether HTMX partial refresh is required for closeout; and review the
+incremental value/access of optional GreyNoise/CVEDB/extension sources.
+Recommendation remains targeted missing-CVE enrichment and resumable bounded
+vendor batches before a blanket historical import. No backfill or new feed
+refresh was authorized or run by this clarification.
+
+### 2026-11-19: Explain Skill Overrides and Retain Explicit Retry Controls
+
+The operator asked what local overrides meant. They are text already in
+installed cards directing use of a local source profile instead of broader
+upstream examples. For instance, the URL profile uses existing scan records
+and requires authorization for a new submission. They are not implemented
+toolkit features, changes to provider permissions or evidence of uploads.
+No installed skill was changed during this pass. Current chat authorization
+still governs actions. Microsoft sample analysis may use additional cloud
+scanning/detonation, but not every scanned file is necessarily submitted.
+
+Retained explicit Try Headless Browser and Try Alternate HTTP/TLS Client
+controls in the Phase 7 requirements after a failed username check. Record
+each attempted method, time and outcome; show unavailable methods with their
+setup/policy reason. A TCP reachability probe is diagnostic, not proof a
+profile exists. Source-specific review and the existing legitimate-platform
+policy remain. No new browser/TLS client or challenge bypass was installed.
+
+### 2026-11-18: Follow-up source decisions and changed installed skill profile
+
+On re-reading the installed cards, found 71 CTI cards rather than the earlier
+78-card snapshot. Enrichment and pivoting were replaced with local routing;
+IP/domain/hash/URL cards carry a Local Source Profile override. The profile
+requires existing-record lookups and separate authorization for scans,
+samples and publishing. Underlying upstream text still describes broader
+defaults. These files were not edited by this project pass. Updated the
+review to distinguish upstream examples from effective local restrictions;
+the earlier 78-row matrix is a historical inventory, not today's installed
+count. Re-inventory before Phase 11 rather than silently wiring stale text.
+
+Specific examples retained: url-investigation's upstream unlisted urlscan
+submission, lookup-urlscan's stale/missing-scan fallback, orchestrator extra
+provider chaining and knowledge-cell updates, MISP publishing capability,
+and cti-setup's different credential store. The earlier Liberty91 upload
+card required confirmation and is now absent; it was not a silent upload.
+No lookup or setup workflow was invoked. An installed key is not blanket
+permission for query expansion or disclosure.
+
+Recorded the operator's decisions in the relevant phases and parking lot:
+revisit username tools at Phase 7; automate permitted rendering/backoff and
+show actionable challenged states; preserve Principle 8's source distinction.
+The operator questioned blanket refusal of automatic fallback, not a need
+to mark all blocks as permanent failures. Reviewed per-source rendering can
+be automatic. A TLS-client change is not a guaranteed challenge solution.
+
+For Common Crawl, cover useful archive/index/graph families but show transfer,
+expanded and temporary storage estimates and free disk before downloads.
+Unknown size needs a bounded sample and explicit label, not a guessed number.
+No bulk dataset was downloaded. IODA fits IP/ASN context and case timelines;
+its widget remains a later candidate, without claiming per-site cause or
+DDoS attribution. Parked saved dashboard layouts with source/time/freshness
+controls. Added a phase-entry checkpoint to revisit SitDeck candidates for
+usefulness, cost, access, overlap, terms and maintenance. The previous 319
+catalog-entry review is not 319 independently accepted live integrations.
+
+Actual skill-derived pivot buttons remain Phase 11 candidates. Keep a
+deterministic tool boundary, typed values, bounded scope, credential isolation
+and tests for instructions in all inputs and tool results. Include ordinary
+web injection and SSRF cases too. No claim of complete injection immunity.
+
+### 2026-11-18: Full honeypot paper, 78 skills and OSINT source review
+
+The operator supplied the main Gone in 8 Seconds PDF after ACM access failed.
+Read all 15 pages and visually checked the instrumentation diagram and
+timing table. The earlier appendix-only review is now completed, though no
+experiment or artifact was executed. Added Cowrie/MySQL-style session
+logging, resource limits, rotation, distinct provider/session/lifecycle
+streams and outcome-aware events to the parked sensor design. Missing
+beacons are not proof of no execution; aggregate sequences are not actor
+identities. The paper's funded AI keys are not the default for our pilot.
+
+Inventoried 78 installed CTI capability cards and their supporting files.
+Mapped every skill to pre-AI templates/logic/manual fields or optional
+Phase 11 assistance. Reviewed selected workflow bodies in depth, not every
+bundled script or every historical knowledge-cell claim. All 78 bodies match
+the existing local MIT Liberty91 pack after newline normalization; ten
+descriptions were reworded. Individual skill copies omit pack-root clients
+and data referenced by some commands. Installation is not toolkit wiring.
+The per-skill matrix and adoption limits are in
+docs/research/2026-11-18-cti-skills-integration-review.md.
+
+Used the in-chat browser to expand all 38 SitDeck catalog categories and
+read 319 feed entries. Search-readable content and llms.txt show older
+counts. Prioritized network context, historical web evidence, company
+identifiers and public profile sources; not every upstream endpoint or
+license was vetted. No SitDeck account or normalized data was used.
+
+Read WMN's complete README/schema and all three username rulesets as inert
+JSON in memory. WMN has 691 entries in the final archived snapshot, Maigret
+9,978 public entries and Sherlock 481 targets. These are inventory counts,
+not live working-rule counts. Maigret's README, generated statistics and raw
+flags disagree in some details. Read MIT licenses for Maigret and Sherlock;
+WMN's CC BY-SA 4.0 data/schema stay runtime-only under project policy.
+Retain our own async checker, reviewed upstream imports and local overrides.
+Record typed failures and positive/negative health controls. Protection tags
+explain blocked checks; they do not override the no-bypass rule for
+legitimate platforms. No curl_cffi or CLI dependency was added.
+
+Reviewed Common Crawl's index, URL/Parquet and CDXJ guides, archive formats,
+web graphs, host index, statistics and terms. Checked the Hugging Face
+organization's 12 dataset cards: nine accessible and read, three HTTP 401
+(CommonLID, commonlid-cache_commonlid_nano, eot2024_hostlevel_logs). No corpus,
+model or graph dump was fetched. Primary next slice is bounded CDXJ and
+selected archived response retrieval. Large graph/Parquet/model work remains
+later. IODA supplies macro network-disruption context, not website discovery
+or proof of DDoS. Documented the public API entry point and originating
+methodology, not a validated live connector. Full source/access/terms notes
+are in docs/research/2026-11-18-osint-source-expansion.md.
+
+Recorded these candidates in the existing phases and parking lot. Phase 2
+and its original-report acceptance work remain open; research did not change
+the agreed build order or silently add new modules.
+
+### 2026-11-18: Registry honeytokens and malicious agent repositories
+
+The operator supplied an ACM paper, its local artifact appendix and a
+Bitdefender report about agent-targeting repositories. Read both appendix
+pages and the authors' project summary. ACM epdf/pdf returned HTTP 403;
+neither author's publication page supplied an alternate manuscript. The
+main paper remains unread, so this is explicitly a partial paper review.
+The local appendix belongs to the same study, not a second independent one.
+No archive, notebook, image or payload was fetched or executed. Parked a
+small isolated registry honeytoken experiment beside the VPS sensor plans,
+with unique decoys and distinct pull, execution and credential-use events.
+
+Read the full Bitdefender article and all 22 repository indicators. Checked
+those names against 186 project files, 703 stored GitHub leads, 49,660
+exploit links and the empty cache table, using a read-only database
+connection. No matches. No explicit hooks were present in the inspected
+global/project Claude settings. Plugins, editor configuration, downloads
+outside the project and historical sessions were not exhaustively audited.
+This is a scoped exposure check, not a machine-clean verdict.
+
+The current session restricts writes and command networking but has broad
+read access. .env/data ignore rules do not prevent credential reads. The
+transcript hook is not a general secret scanner. Recommended stronger
+isolation, separate research credentials, enforced egress and explicit
+hook/task/MCP reviews. No global profile, permission list or security
+software was changed. Full evidence, limits and future implementation notes
+are in docs/research/2026-11-18-honeypots-agent-repository-safety.md; the
+manual workflow is docs/runbooks/untrusted-repository-review.md.
 
 ### 2026-11-17: Public vendor notice endpoints
 

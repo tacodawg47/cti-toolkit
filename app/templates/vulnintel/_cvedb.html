@@ -1,0 +1,20 @@
+<details class="card" id="source-crosscheck"{% if cvedb.attempted_at %} open{% endif %}>
+  <summary>CVEDB Source Comparison</summary>
+  <p class="muted">Optional Shodan CVEDB comparison. Its aggregate flags do not change this page's exploitation status, priority or actions. Matching values may come from shared upstream sources.</p>
+  <form method="post" action="{{ prefix }}/cve/{{ rep.cve_id }}/cvedb">
+    <button type="submit" class="small">Fetch CVEDB Comparison</button>
+    {% if cvedb.has_snapshot %}<label><input type="checkbox" name="force" value="true"> Refresh Saved Result</label>{% endif %}
+  </form>
+  <p class="muted"><small>Keyless. Sends this CVE ID only. Non-commercial API use; review terms before commercial use. Saved results are reused for 24 hours unless Refresh Saved Result is selected.</small></p>
+  {% if cvedb.error %}<p class="err" role="status">{{ cvedb.error }}{% if cvedb.has_snapshot %}. Showing the previous successful result.{% endif %}</p>{% endif %}
+  {% if cvedb.fetched_at %}<p>Last Successful Fetch: <time datetime="{{ cvedb.fetched_at }}">{{ cvedb.fetched_at }}</time>{% if cvedb.stale %} <span class="badge">Stale: Over 24 Hours Old</span>{% endif %}<br><small class="muted">Retrieval time, not the publisher's update time.</small></p>{% endif %}
+  {% if cvedb.attempted_at %}<p class="muted"><small>Last Attempt: {{ cvedb.attempted_at }}</small></p>{% endif %}
+  {% if cvedb_rows %}
+  <table><tr><th>Field</th><th>Current Page Evidence</th><th>CVEDB</th><th>Comparison</th></tr>
+    {% for row in cvedb_rows %}<tr><th>{{ row.field }}</th><td>{{ row.local }}</td><td>{{ row.remote }}</td><td>{{ row.note }}</td></tr>{% endfor %}
+  </table>
+  <p class="muted">Different coverage or dates can explain differences. Not Flagged does not establish absence of exploitation. Follow the original sources before changing an assessment.</p>
+  {% if cvedb.data.ransomware_campaign %}<p><strong>CVEDB Ransomware Field:</strong> {{ cvedb.data.ransomware_campaign }}</p>{% endif %}
+  {% elif not cvedb.attempted_at %}<p class="muted">No saved comparison. Opening this page does not query CVEDB.</p>{% endif %}
+  <p><a href="https://cvedb.shodan.io/cve/{{ rep.cve_id }}" rel="noopener noreferrer" referrerpolicy="no-referrer" target="_blank">View CVEDB Record</a> · <a href="https://cvedb.shodan.io/" rel="noopener noreferrer" referrerpolicy="no-referrer" target="_blank">API Terms and Documentation</a></p>
+</details>

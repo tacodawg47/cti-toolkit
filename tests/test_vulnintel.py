@@ -696,7 +696,7 @@ class RouteTests(TempDbMixin, unittest.TestCase):
         sightings = vulnlookup.summarise({"data": [{
             "type": "confirmed", "source": article, "creation_timestamp": "2026-11-14T00:00:00Z",
         }]})
-        cache.put(vulnlookup.VENDOR, cve_id, {"status": "ok", **sightings}, 300)
+        cache.put(vulnlookup.VENDOR, "cited3:" + cve_id, {"status": "ok", **sightings}, 300)
 
         def unexpected(req):
             self.fail(f"Local CVE detail made a network request to {req.url.host}")
@@ -1151,7 +1151,7 @@ class ChatterTests(unittest.TestCase):
             {"vulnerability": "GHSA-x", "type": "seen", "creation_timestamp": f"{today}T03:00:00"},
         ]
         rows = sorted(vulnlookup.aggregate_recent(data))
-        self.assertEqual(rows, [("CVE-2026-1", "exploited", today, 1), ("CVE-2026-1", "seen", today, 2)])
+        self.assertEqual(rows, [("CVE-2026-1", "exploitation-claim", today, 1), ("CVE-2026-1", "seen", today, 2)])
 
     def test_cvss_from_record(self):
         c = vulnlookup.cvss_from_record(CVE5_RECORD)
@@ -1335,14 +1335,15 @@ class NvdRecentTests(TempDbMixin, unittest.IsolatedAsyncioTestCase):
             idx = int(req.url.params.get("startIndex", "0"))
             pages.append(idx)
             self.assertIn("lastModStartDate", dict(req.url.params))
-            doc = {"resultsPerPage": 2000, "totalResults": 2001, "vulnerabilities": NVD_DOC["vulnerabilities"]}
-            if idx == 2000:
+            doc = {"resultsPerPage": 1, "totalResults": 2, "vulnerabilities": NVD_DOC["vulnerabilities"]}
+            if idx == 1:
                 doc["vulnerabilities"] = [{"cve": {**NVD_DOC["vulnerabilities"][0]["cve"], "id": "CVE-2026-999999"}}]
             return httpx.Response(200, json=doc)
         base.set_client(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
-        res = await nvd_recent.refresh()
+        with unittest.mock.patch.object(nvd_recent, "PAGE", 1):
+            res = await nvd_recent.refresh()
         self.assertTrue(res["ok"], res)
-        self.assertEqual((res["entries"], pages), (2, [0, 2000]))
+        self.assertEqual((res["entries"], pages), (2, [0, 1]))
         self.assertIsNotNone(store.get_cve("CVE-2026-999999"))
         self.assertEqual(len(store.get_cve("CVE-2026-999999")["products"]), 2)
 
@@ -2042,7 +2043,8 @@ class ViewRouteTests(ViewTests):
             }, "2026-11-13T00:00:00+00:00")
         store.save_cve({"cve_id": rejected, "status": "Rejected"})
         store.upsert_epss([(both, 0.1, 0.9), (rejected, 0.9, 0.99)], "2026-11-14")
-        store.replace_recent_sightings([(observed, "exploited", store._since(0), 1)])
+        store.replace_recent_sightings([(observed, "exploited", store._since(0), 1)],
+            [(observed, store._since(0), "Researcher", "https://research.example/report", 1)])
         likely = views.BY_SLUG["likely"]
         rows = {row["cve_id"]: row for row in likely.rows()}
         self.assertEqual(likely.count(), 4)
@@ -2065,7 +2067,8 @@ class ViewRouteTests(ViewTests):
             (old_cve, "exploited", store._since(1), 1),
             (stale_cve, "exploited", store._since(2), 1),
             (stale_cve, "seen", store._since(0), 1),
-        ])
+        ], [(old_cve, store._since(1), "Researcher", "https://research.example/old", 1),
+            (stale_cve, store._since(2), "Researcher", "https://research.example/stale", 1)])
         store.add_watchlist("Citrix")
         url = "/vulnerability-intelligence/views/exploited"
         body = self.client.get(url, params={"v_tag": ["recent_sighting", "watchlist"]}).text
@@ -2504,45 +2507,23 @@ class ExploitationReportTests(TempDbMixin, unittest.TestCase):
             "exploitation": "reported", "patch_status": "absent", "advisory_status": "absent", "cve_status": "absent",
         }
 
-    def test_report_survives_later_cve_link_and_duplicate_submission(self):
-        from unittest.mock import AsyncMock, patch
-        from app.modules.vulnerability_intelligence import reports
+    def test_saved_evidence_remains_read_only(self):
+        from tests import legacy_reports as reports
 
-        created = self.client.post(self.url, data=self.report, follow_redirects=False)
-        self.assertEqual(created.status_code, 303)
-        detail = created.headers["location"]
-        self.assertIn("Confirmed Zero-Day", self.client.get(detail).text)
-        self.assertIn("Gateway investigation", self.client.get(self.url, params={"unlinked": True}).text)
-        duplicate = self.client.post(self.url, data={**self.report, "evidence": "Different text"})
-        self.assertIn("Showing the original entry", duplicate.text)
-        self.assertNotIn("Different text", duplicate.text)
-        self.assertEqual(reports.page(1)["total"], 1)
-        cve_id = "CVE-2026-12345"
-        linked = self.client.post(f"{detail}/link", data={"cve_id": cve_id.lower()})
-        self.assertEqual(linked.status_code, 200)
-        self.assertIn("Confirmed Zero-Day", linked.text)
-        self.assertIn(self.report["evidence"], linked.text)
-        self.assertIn("2026-11-12", linked.text)
-        self.assertIn("No unlinked reports.", self.client.get(self.url, params={"unlinked": True}).text)
+        ident, _ = reports.save(self.report)
+        reports.link(ident, "CVE-2026-12345")
+        detail = f"{self.url}/{ident}"
+        page = self.client.get(detail)
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("Archived Local Report", page.text)
+        self.assertIn("Confirmed Zero-Day", page.text)
+        self.assertNotIn('<form', page.text)
         store.init_schema()
-        saved = reports.for_cve(cve_id)[0]
-        self.assertEqual(saved["source_ref"], "IR-42")
-        self.assertEqual(saved["cve_status"], "absent")
-        # The CVE route still uses its ordinary evidence pipeline.
-        with patch("app.modules.vulnerability_intelligence.routes.service.report", new_callable=AsyncMock) as fetch:
-            fetch.return_value = {"cve_id": cve_id, "cve": None, "sightings": {}, "microsoft": None,
-                                  "kev": [], "epss": None, "ssvc": None,
-                                  "priority": {"level": "N/A", "reasons": []}, "nvd": {}, "exploits": {},
-                                  "record": {}, "github": {}, "otx": {}, "feeds": {}, "actions": []}
-            cve_page = self.client.get(f"{self.prefix}/cve/{cve_id}")
-        self.assertIn("Linked Exploitation Reports", cve_page.text)
-        self.assertIn(detail, cve_page.text)
-        self.client.post(f"{detail}/link", data={"remove": "true"})
-        self.assertEqual(reports.for_cve(cve_id), [])
-        self.assertIn("Confirmed Zero-Day", self.client.get(detail).text)
+        self.assertEqual(reports.get(ident)["source_ref"], "IR-42")
+        self.assertEqual(reports.for_cve("CVE-2026-12345")[0]["id"], ident)
 
-    def test_assessment_uses_explicit_evidence_and_date(self):
-        from app.modules.vulnerability_intelligence import reports
+    def test_legacy_assessment_is_preserved(self):
+        from tests import legacy_reports as reports
 
         for number, (changes, label) in enumerate((
             ({"patch_status": "unknown"}, "Possible Zero-Day"),
@@ -2551,24 +2532,17 @@ class ExploitationReportTests(TempDbMixin, unittest.TestCase):
             ({"exploitation": "unknown"}, "Exploitation Unconfirmed"),
             ({"cve_status": "unknown"}, "Possible Zero-Day"),
         )):
-            report_id, _ = reports.save({**self.report, **changes, "source_ref": f"IR-{number}"})
-            self.assertEqual(reports.get(report_id)["assessment"], label)
+            ident, _ = reports.save({**self.report, **changes, "source_ref": f"IR-{number}"})
+            self.assertEqual(reports.get(ident)["assessment"], label)
 
-    def test_invalid_input_and_cross_site_posts(self):
-        for changes in ({"source_url": "javascript:alert(1)"}, {"patch_status": "missing"},
-                        {"exploited_on": "2026-11-15"}, {"reported_on": "20261114"}):
-            response = self.client.post(self.url, data={**self.report, **changes})
-            self.assertEqual(response.status_code, 422)
-            self.assertIn("Gateway investigation", response.text)
-        headers = {"Sec-Fetch-Site": "cross-site"}
-        self.assertEqual(self.client.post(self.url, data=self.report, headers=headers).status_code, 403)
-        created = self.client.post(self.url, data=self.report, follow_redirects=False)
-        detail = created.headers["location"]
-        self.assertEqual(self.client.post(f"{detail}/link", data={"cve_id": "bad"}).status_code, 422)
-        self.assertEqual(self.client.post(f"{detail}/link", data={"cve_id": "CVE-2026-1234"},
-                                          headers=headers).status_code, 403)
+    def test_manual_workflow_has_no_routes_or_navigation(self):
+        self.assertEqual(self.client.get(self.url).status_code, 404)
+        self.assertEqual(self.client.post(self.url, data=self.report).status_code, 404)
+        self.assertEqual(self.client.post(f"{self.url}/1/link", data={"cve_id": "CVE-2026-12345"}).status_code, 404)
+        self.assertNotIn('href="' + self.url + '"', self.client.get(f"{self.prefix}/search").text)
         self.assertEqual(self.client.get(f"{self.url}/999").status_code, 404)
-
+        with db.connect() as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM exploitation_reports").fetchone()[0], 0)
 
 class SupplyChainTests(TempDbMixin, unittest.TestCase):
     def test_refresh_merges_aliases_and_retains_withdrawn_sources(self):
@@ -2754,7 +2728,9 @@ class RedHatVexTests(TempDbMixin, unittest.TestCase):
             self.assertIn("Red Hat also lists fixed targets", page.text)
             self.assertIn("Disable the sample service.", page.text)
             self.assertIn(">Mitigate</span>", page.text)
-            self.assertNotIn(">Patch</span>", page.text)
+            # The NVD patch reference can apply to another target. Keep it
+            # alongside the explicit no-fix scope instead of suppressing it.
+            self.assertIn(">Patch</span>", page.text)
             self.assertNotIn("For Release 2 only.", page.text)
             self.assertNotIn(f"/cve/{unaffected}", page.text)
             self.assertNotIn(unknown, page.text)
@@ -3040,6 +3016,9 @@ class MoreViewTests(ViewTests):
                              [("CVE-2025-1111", "exploited", "2026-11-09", 1),
                               ("CVE-2025-1111", "exploited", "2026-11-10", 2),
                               ("CVE-2025-2222", "seen", "2026-11-10", 5)])
+            conn.executemany("INSERT INTO exploitation_sighting_sources VALUES (?, ?, ?, ?, ?)",
+                             [("CVE-2025-1111", day, "Researcher", "https://research.example/report", n)
+                              for day, n in (("2026-11-09", 1), ("2026-11-10", 2))])
             conn.commit()
         rows = self._ids("sightings")
         self.assertEqual(set(rows), {"CVE-2025-1111"})                  # "seen" is not "exploited"
