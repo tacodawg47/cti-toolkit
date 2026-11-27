@@ -81,12 +81,14 @@ class EvidenceDbTests(unittest.TestCase):
             "required_action": "Apply update", "notes": ""}], "cisa")
         store.set_feed_status("cisa", entries=1, version="synthetic")
 
+        # Freeze the actual legacy table set before additive migrations. New
+        # module tables must not be mistaken for changed legacy rows.
+        with db.connect() as conn:
+            legacy_names = [row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")]
+
         def snapshot():
             with db.connect() as conn:
-                names = [row[0] for row in conn.execute("""SELECT name FROM sqlite_master WHERE type='table'
-                    AND name NOT LIKE 'evidence_%' AND name NOT LIKE 'durable_job%' AND name<>'job_schema_versions'
-                    AND name NOT IN ('feed_schedules','feed_request_usage','feed_cooldowns','feed_capture_progress','feed_schema_versions')""")]
-                rows = {name: sorted(map(tuple, conn.execute(f'SELECT * FROM "{name}"')), key=repr) for name in names}
+                rows = {name: sorted(map(tuple, conn.execute(f'SELECT * FROM "{name}"')), key=repr) for name in legacy_names}
                 schema = [tuple(row) for row in conn.execute("SELECT name,sql FROM sqlite_master WHERE type='view' ORDER BY name")]
                 return rows, schema
 

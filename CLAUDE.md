@@ -95,21 +95,23 @@ validation and remaining limits. Its final suite ran 511 tests: 510 passed,
 one skipped; all 26 local acceptance pages returned 200. These are prior
 verified results, not an automatic rerun in a new session.
 
-Subphase 3A.1 Complete, 2026-11-26. API-only RansomLook recent victim claims
-and local organization/sector/country watch semantics use shared evidence,
-durable jobs and the inbox. Final focused acceptance: 31 passed in 28.725
-seconds. Full compatibility: 681 tests, 680 passed and one existing skip in
-151.119 seconds. See docs/review/2026-11-26-3a1-closeout.md and
-docs/runbooks/ransomware-victims.md. Coverage is recent 100 posts only;
-RansomLook supplies no sector/country. All 32 schedules, worker, bulk and
-raw storage default off. No live migration/restart, enabling or provider
-API data request occurred. Linux/native-browser visual and live v1
-acceptance remain unperformed. Approved read-only inspection on 2026-11-27
-confirmed main/local origin/main at a947eb0 and an empty index; the operator
-reports its completed push. Do not repeat 5F.5. No remote contact or Git
-mutation occurred during inspection. The 3A.1 commit proposal was subsequently
-approved; execution is prepared and separate push approval is pending. Read docs/handoff.md for its
-resumption prompt. Other Phase 3 capabilities remain later subphases.
+Subphase 3A.2 Complete, 2026-11-27, for implementation/offline acceptance.
+One bounded HIBP direct-email consumer uses shared evidence, durable jobs
+and the inbox for at most ten separately approved exact email watches.
+Final focused breach/shared-evidence acceptance: 54 passed in 32.105 seconds.
+Full compatibility: 717 tests, 716 passed and one existing skip in 180.083
+seconds. See docs/review/2026-11-27-3a2-closeout.md and
+docs/runbooks/breach-lookups.md. All 33 schedules, worker, bulk and raw
+storage default off. No source enabling, selector submission, live migration/
+restart, API data request or install occurred. Linux/native-browser visual
+and live v1 acceptance remain unperformed. The operator confirms 3A.1
+committed and separately pushed as d34a37d on 2026-11-27 with matching hashes
+and an empty index. Do not repeat it. Approved local read-only inspection
+confirmed main/HEAD/local origin/main at d34a37d and an empty index, without
+remote contact. The operator subsequently approved the exact 3A.2 commit and
+explicitly authorized its push. Execution is prepared; reconcile the actual
+closing result before repeating any checkpoint step.
+Read docs/handoff.md for checkpoint resumption; other capabilities stay later.
 
 Data catch-up is optional during the build only. Scheduled freshness,
 visible stale/failure states and tested recovery are required before v1

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Breach Associations | CTI Toolkit{% endblock %}
+{% block content %}
+<h1>Breach Associations</h1>
+<p>Source: <a href="https://haveibeenpwned.com/" rel="noopener noreferrer" target="_blank">Have I Been Pwned</a>, CC BY 4.0. These are provider association claims. They do not establish identity or current compromise.</p>
+<p><a href="/alerts">Local Watches and Alert Reviews</a> · <a href="/breaches">Watched Addresses</a></p>
+<p>Direct email lookups disclose the full watched address to HIBP. Local watches do not authorize submission. Collection requires a separate current submission permission, consent record, paid entitlement and enabled source, schedule and worker.</p>
+<p>Coverage is a snapshot for each approved address. Sensitive, retired and opted-out results may be absent. No publicly disclosable result does not mean an address has never been breached. Historical completeness and continuity are unassessed. Raw responses are omitted.</p>
+{% include "source_health.html" %}
+{% if watches is defined %}
+<h2>Per-Address Freshness</h2>
+<p>Use each address's last good capture age below. A source pass can fail or remain incomplete after another address succeeds.</p>
+<table><tr><th>Watch</th><th>Submission Permission</th><th>Last Attempt</th><th>Last Good Capture</th><th>State</th><th>Result</th></tr>
+{% for w in watches %}<tr><td><code>{{ w.value }}</code> · <a href="/breaches/watches/{{ w.id }}">History</a></td><td>{{ 'Current' if w.authorized else 'Disabled, Revoked or Expired' }}</td><td>{{ w.last_attempt or 'Never' }}</td><td>{{ w.last_good or 'Never' }}</td><td>{{ w.state }}{% if w.incomplete %} · Incomplete{% endif %}{% if w.error %} · Failed: {{ w.error }}{% endif %}</td><td>{% if w.document_id %}<a href="/breaches/captures/{{ w.document_id }}">{{ 'No Publicly Disclosable Result' if w.no_result else w.breaches | length ~ ' Associations' }}</a>{% else %}Not assessed{% endif %}</td></tr>
+{% else %}<tr><td colspan="6">No separately approved email watches. Opening this page performs no provider request.</td></tr>{% endfor %}</table>
+{% elif history is defined %}
+<h2>Lookup Capture History</h2>
+<table><tr><th>Capture</th><th>Collected</th><th>Ingestion</th></tr>{% for h in history %}<tr><td><a href="/breaches/captures/{{ h.document_id }}">{{ h.document_id }}</a></td><td>{{ h.collected_at }}</td><td>{{ 'Complete' if h.completed else 'Incomplete' }}</td></tr>{% endfor %}</table>
+{% if history | length == 50 %}<a href="/breaches/watches/{{ selector_id }}?before={{ history[-1].document_id }}">Older Captures</a>{% endif %}
+{% else %}
+<h2>Lookup Capture</h2>
+<p>Capture: {{ document.capture_key }} · SHA-256: <code>{{ document.content_sha256 }}</code> · Collected: {{ document.collected_at }}</p>
+<p>Request Surface: <code>{{ document.source_url }}</code>. The selector segment and query are deliberately omitted. This is not a literal full request URL. No original-source hops are inferred from a breach name.</p>
+<p>Published: {{ document.source_published_at or 'Unknown' }} · Modified: {{ document.source_modified_at or 'Unknown' }} · Handling: {{ document.sensitivity }}</p>
+<p>Originating Execution: {{ document.job_run_id }} · Originating State: {{ document.originating_state }} · Current Job State: {{ document.job_state }}</p>
+<p>Original Availability: {{ archive.state if archive else 'Unavailable' }}. Digests establish byte identity, not authenticity.</p>
+{% if status == 404 %}<p>No publicly disclosable result at this capture. This is not a clean verdict.</p>{% endif %}
+{% for a in associations %}<section class="card"><h3>{{ a.breach.title }}</h3>
+<p>Provider Identifier: <code>{{ a.breach_name }}</code> · Provider-Reported Breach Date (Approximate): {{ a.breach.breach_date or 'Unknown' }} · Added to HIBP: {{ a.breach.added_date or 'Unknown' }} · Modified in HIBP: {{ a.breach.modified_date or 'Unknown' }}</p>
+<p>Provider-Supplied Attribution (Passive): <code>{{ a.breach.attribution or 'Not supplied' }}</code></p>
+<p>{% for field in ('verified','fabricated','spam_list','malware','stealer_log') %}{{ field | replace('_',' ') | title }}: {{ a.breach[field] if a.breach[field] is not none else 'Unknown' }} · {% endfor %}</p>
+<p>{% for alert in a.alerts %}<a href="/alerts/{{ alert.id }}">Alert {{ alert.id }}: {{ alert.state | title }}</a> {% endfor %}</p></section>{% endfor %}
+<h3>Literal Citation Hops</h3>
+<ul>{% for c in citations %}<li><code>{{ c.target_reference }}</code> · {% if c.target_document_id %}Resolved to {{ c.target_document_id }}: {{ c.resolution_note }}{% else %}Unresolved{% endif %}</li>{% else %}<li>Not supplied.</li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}

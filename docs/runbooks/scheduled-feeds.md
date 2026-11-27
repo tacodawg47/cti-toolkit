@@ -1,5 +1,10 @@
 # Scheduled Feed Refresh and Source Health
 
+Update 2026-11-27: [HIBP Watched Email Lookups](breach-lookups.md) adds one
+disabled daily API consumer for up to ten separately approved email watches.
+The composed catalog is now 33; all schedules and the worker default off.
+Per-address capture age remains separate from global pass completion.
+
 Update 2026-11-26: [Ransomware Victim Claims](ransomware-victims.md) adds one
 disabled API snapshot schedule. `app.core.feed_catalog.catalog` composes it
 with the existing 31 vulnerability/infrastructure surfaces for app startup,

@@ -1,5 +1,11 @@
 # V1 Data Freshness Requirements
 
+Update 2026-11-27: [HIBP Watched Email Lookups](breach-lookups.md) adds one
+disabled daily schedule with a two-day stale threshold. Each address shows
+its own last attempt, last good original capture and failure/incomplete
+state. The composed catalog has 33 disabled schedules. Source/selector
+approval and measured live acceptance remain required before daily use.
+
 Update 2026-11-26: [Ransomware Victim Claims](ransomware-victims.md) adds an
 hourly recent-100 snapshot proposal with a six-hour stale threshold. Scoped
 Current status cannot establish continuous monitoring or historical coverage.

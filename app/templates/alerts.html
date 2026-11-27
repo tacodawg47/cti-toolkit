@@ -2,6 +2,8 @@
 {% block title %}Alert Inbox | CTI Toolkit{% endblock %}
 {% block content %}
 <h1>Alert Inbox</h1>
+{% if breach_document_id %}<p>Source: <a href="https://haveibeenpwned.com/">Have I Been Pwned</a>, CC BY 4.0. <a href="/breaches/captures/{{ breach_document_id }}">Breach Association and Provider Dates</a>. Association claims do not establish identity or current compromise.</p>{% endif %}
+{% if rows is defined and rows | selectattr('source_id','equalto','hibp_email') | list | length %}<p>HIBP associations: <a href="https://haveibeenpwned.com/">Have I Been Pwned</a>, CC BY 4.0. <a href="/breaches">Per-Address Freshness</a>.</p>{% endif %}
 <p><a href="/alerts">All Alerts</a> · <a href="/reports">Saved Reports</a> · <a href="/health">Health</a></p>
 <p>Local selector matches identify source assertions for review. A mention is not a malicious verdict.
   Repeated citations do not establish independent corroboration.</p>

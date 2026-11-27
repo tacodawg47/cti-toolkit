@@ -120,7 +120,7 @@ class Scope:
         await asyncio.to_thread(save)
         raise Retry(Failure.RATE_LIMIT, after_seconds=delay)
 
-    async def capture(self, url, raw, allowance, *, request_identity="", media_type="application/octet-stream"):
+    async def capture(self, url, raw, allowance, *, request_identity="", media_type="application/octet-stream", sensitive=False):
         await self.check()
         digest = sha256(raw).hexdigest()
         parts = urlsplit(url)
@@ -134,7 +134,7 @@ class Scope:
                 source_id=self.feed.source, external_id=safe_url, capture_key=uuid4().hex,
                 title=self.feed.label, source_url=safe_url, kind=getattr(self, "capture_kind", "feed"),
                 collection_method=self.feed.method, content_sha256=digest,
-                sensitivity="public" if self.feed.raw_allowed and self.feed.source in settings.archive_public_sources else "unknown",
+                sensitivity="sensitive" if sensitive else "public" if self.feed.raw_allowed and self.feed.source in settings.archive_public_sources else "unknown",
                 collected_at=self.context._runner._stamp(self.context._runner._now())))
             # Saved metadata can only be replayed for this exact original input.
             if doc.content_sha256 != digest:
@@ -150,6 +150,7 @@ class Scope:
         async with self.lock:
             self.charged -= allowance - len(raw)
             self.captures.setdefault(digest, set()).add(ident)
+        return ident
 
     async def validated(self, raw=None, *, ingested=False, only_validated=False):
         await self.check()

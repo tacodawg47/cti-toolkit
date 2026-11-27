@@ -1,5 +1,10 @@
 # Ransomware Victim Claims and Watches
 
+Checkpoint update 2026-11-27: the operator confirms 3A.1 committed and
+separately pushed as d34a37d68aa120b58ee3d18822ccf5ebcc54b31c, matching
+local/remote hashes and an empty index afterward. Prepared commands and
+pending statements below are historical. Do not repeat this checkpoint.
+
 Written 2026-11-26. Subphase 3A.1. API-only implementation, offline acceptance.
 No live migration/restart or source enabling has occurred. No dependency added.
 Source review: [Current API Review](../research/2026-11-26-ransomware-api-review.md).

@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # ransomware.live PRO (free key from my.ransomware.live): group profiles
     # with the CVEs each group exploits. Phase 3 reuses it for victims.
     ransomwarelive_api_key: str = ""
+    # HIBP direct-email API. Entitlement expiry is reviewed manually, never
+    # inferred from the existence of a key or a locally watched address.
+    hibp_api_key: str = ""
+    hibp_subscription_until: str = ""
     # VulnCheck community token: VulnCheck KEV (broader than CISA's, with
     # citations) and the XDB exploit index. Feed wired once a key exists.
     vulncheck_api_key: str = ""

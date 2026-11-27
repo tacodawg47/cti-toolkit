@@ -1,12 +1,13 @@
 # Runbook: Running the tests
 
-Written 2026-10-28. Updated 2026-11-26.
+Written 2026-10-28. Updated 2026-11-27.
 
-The current suite ran 681 tests, with 680 passing and one skipped, verified
-at the 2026-11-26 subphase 3A.1 closeout in 151.119 seconds. Final ransomware
-acceptance passed all 31 tests in 28.725 seconds. An earlier grouped consumer/
-foundation run passed 167 tests in 82.121 seconds, before three final tests
-and small identity/transaction refinements covered by the final runs.
+The current suite ran 717 tests, with 716 passing and one existing skip,
+verified at the 2026-11-27 subphase 3A.2 closeout in 180.083 seconds. Final
+breach/shared-evidence acceptance passed 54 tests in 32.105 seconds, including
+all 36 breach cases. The intermediate breach suite passed 35 in 28.061 seconds
+before the final progress-recovery case. Prior 3A.1 results remain in its
+dated closeout.
 They use Python's built-in `unittest`,
 so no extra dependency is needed, and they never touch the network: importing the
 `tests` package replaces the shared HTTP client with one that refuses every
@@ -40,6 +41,7 @@ import base (so `import app...` works), and `-v` lists each test.
 
 | File | Covers |
 |---|---|
+| `tests/test_breaches.py` | 36 bounded HIBP cases: explicit submission consent/authority, ten-watch cap, disabled defaults, fixed encoded requests, immutable plans, claim/event deduplication and review preservation, literal dates/citations, sensitive raw omission and field minimization, suppression, atomic rollback, staged changed-response recovery, progress repair, source/selector/schedule/expiry/retry gates, cancellation, durable quota/cooldown, real stream timeout and response/request/byte/elapsed bounds, partial per-address freshness, passive escaped attributed pages and additive migration. See [HIBP Lookups](breach-lookups.md). |
 | `tests/test_ransomware.py` | 31 API-only ransomware cases: disabled defaults, fixed destinations and scoped calls, explicit typed watch semantics, claim/capture deduplication and preserved reviews, local catch-up, literal dates/citations, omitted or expired originals, staged changed-response recovery, atomic row failure, revocation at requests/waits/rows/retries/resumption, cancellation, schedule disablement, durable/shared quota and cooldowns, finite requests/bytes/time, passive escaped local pages and additive migration rollback/newer-version refusal. See [Ransomware Victim Claims](ransomware-victims.md). |
 | `tests/test_alerts.py` | 16 inbox cases: atomic report/observation matches, canonical typed values, domain/CIDR boundaries, passive/invalid rules, separate assertions, disabled/replayed selectors, paged restart/concurrent catch-up, rollback, review conflicts/history, provenance/citation resolution, expiry preservation, capacity/paging, migration rollback and guarded escaped routes. |
 | `tests/test_foundation_acceptance.py` | 7 cross-feature integrations: crash after alert before progress, retained originating run and review on restart, failed/stale freshness rendered on eight consuming pages, offline first start/recovery, 429/cancellation, revocation at ingestion, downtime/daily quotas and missing-original reconciliation. See [Alert Inbox](alert-inbox.md) for commands and live acceptance limits. |

@@ -1609,6 +1609,144 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-27: Authorized the 3A.2 Commit and Push
+
+After the exact 34-path/selective-block proposal and message were shown,
+the operator directly approved the commit and explicitly authorized its
+push in the current chat. The prior local inspection confirmed main/HEAD/
+local origin/main at d34a37d and an empty index. Three reviewed ignored
+staging inputs preserve the independent working text while excluding it
+from this checkpoint. Updated the approval records and repeatable runbook
+before execution. No application code or acceptance result changed.
+Execution is prepared; the actual commit ID and verified push result belong
+to the closing message. Saved prepared notes cannot approve another chat's
+Git operation or justify repeating an already completed checkpoint.
+
+### 2026-11-27: Inspected the 3A.2 Checkpoint After Direct Approval
+
+The operator approved the local read-only Git inspection after implementation
+closeout. Confirmed main, HEAD and local origin/main at
+d34a37d68aa120b58ee3d18822ccf5ebcc54b31c with an empty index. No remote contact
+or Git mutation occurred. Reviewed the tracked diffs, new authored files and
+exact 34-path manifest. Independent OSINT, detection and prototype additions
+remain outside the checkpoint, including their shared-document blocks.
+The whole-tree whitespace check found only the known unrelated roadmap line;
+exclude it rather than changing that independent work. Global-ignore access
+and LF/CRLF notices were nonfatal. Recorded the exact commands in the breach
+runbook and updated paired status, roadmap, closeout, manifest and handoff.
+Individual staging/commit and separate push remain unapproved. No application
+code or test result changed; no compatibility rerun is needed for these
+checkpoint-record edits. Saved notes grant no future Git permission.
+
+### 2026-11-27: Subphase 3A.2 Complete, Bounded HIBP Watched Email Lookups
+
+Implemented only the requested Phase 3 slice A breach consumer after the
+required roadmap/foundation/provenance/data-handling, newest research,
+handoff, closeout, runbook and source-review reading. The operator supplied
+the actual 3A.1 closing result: d34a37d68aa120b58ee3d18822ccf5ebcc54b31c,
+individually committed and separately pushed on 2026-11-27 with matching
+local/remote hashes and an empty index afterward. Reconciled the prepared
+notes without repeating or newly inspecting any Git operation. No saved
+handoff or earlier approval was treated as current-chat permission.
+
+Selected HIBP direct email lookup after reading its full current v3 API,
+2026-10-27 terms, canonical pricing, sign-in and privacy pages. Core allows
+direct email searches for own users/customers; the published annual Core 1
+price is USD 52.68 before taxes. Actual account tier/RPM/expiry and live
+schema are still unverified. No account, payment, key or selector submission
+was performed. The unavailable guessed pricing path was replaced with the
+documentation's canonical link, not a block workaround. Other providers
+were not newly reviewed. The dated source review identifies unchecked
+material and separates documented access from activation authority.
+
+Revisited the shared vendor client/limiter, original RansomLook consumer and
+historical source/OSINT reviews. No HIBP client existed in project/reference
+scripts to port. Added original app/modules/breaches code and an independent
+transactional migration. One disabled daily registration composes with the
+existing 32. The runner, app loop/client, existing limiter, durable quotas,
+cooldowns, evidence and inbox retain their ownership. No extra dependency,
+parallel worker, upstream service implementation or AI was introduced.
+
+Each of at most ten exact email watches needs a separate expiring submission
+permission with explicit authority/consent record references and defensive
+purpose. Local watch creation cannot grant that permission. Revocation and
+case-insensitive suppression stop units/retries/resumption. A new permission
+cannot replace the immutable identity in a queued plan. Actual source review,
+paid entitlement and schedule/worker controls remain separate gates.
+
+The pass snapshots bounded permission IDs, stages validated normalized input
+and commits each lookup's reported associations, literal citation hops,
+stable inbox events and completion atomically. Resume saved input without
+another request or changed upstream substitution. A crash after completion
+but before progress repairs progress from committed units. Source/email/
+breach identity deduplicates alerts while retaining separate observations,
+captures, originating executions and revision-checked reviews. Failed
+terminal/cancelled scopes retain staged evidence but are not automatically
+resurrected under another daily scope; later passes are new acquisitions.
+
+The full breach response preserves titles, approximate breach dates,
+addition/modification dates, category caveats, attribution and literal
+DisclosureUrl. Dates with unknown values remain unknown. Minute precision
+and offsets stay literal. No provider date is invented as publication,
+observation or collection time. HIBP's public account results can omit
+sensitive, retired and opted-out data. A 404 records no publicly disclosable
+result and never erases an earlier claim or asserts a clean account.
+
+Passwords, authentication secrets, descriptions, logos, source account records
+and unknown fields are discarded. Common credential patterns in retained
+metadata fail closed. Captures are sensitive, with originals forced omitted
+even under generic public archive settings. The saved request surface is
+explicitly redacted: email URL segment, query and headers are omitted.
+Audit units retain job/permission, attempt, staged status and completion;
+provider error text never becomes a job error. No new export/raw route or
+privacy-deletion/encryption policy is implied by local handling labels.
+
+The consumer allows ten requests/10 MiB charged bytes/120 seconds per
+attempt, 1 MiB and 30 seconds per response, 100 associations and 512 KiB
+normalized input per lookup, three total attempts, 10/minute and 240/day
+local bounds with persisted cooldowns. Eligibility is rechecked after quota
+waits/responses/parsing and inside staging/ingestion. In-flight requests
+cannot be retracted; parsing/writes use cooperative elapsed checks.
+
+Passive /breaches pages show per-address last attempt, original last-good
+age, failure/incomplete/stale states, paged captures and inbox reviews.
+Source-wide pass success cannot replace an address's capture age. All HIBP
+result views carry linked attribution. No GET collects, authorizes a
+selector, scans history or resolves a citation.
+
+The first consumer tests exposed an async-generator selection mistake;
+returning the saved capture ID directly removed that mistake. Intermediate
+breach suite: 35 passed in 28.061 seconds. Added a crash-before-progress
+repair case and finalized list/detail attribution. First full compatibility
+ran 717 tests in 180.748 seconds with one failure and one existing skip:
+the legacy migration fixture mistook new breach tables for old rows. It now
+freezes every actual pre-migration legacy table instead of maintaining
+prefix exclusions. No existing row/view/user_version assertion was removed.
+Final focused breach/shared-evidence suite: 54 passed in 32.105 seconds.
+Final full compatibility: 717 tests in 180.083 seconds, 716 passed and one
+existing skip. Tests use only temporary databases and synthetic/refused HTTP.
+Existing deprecation/PDF/asyncio diagnostics remain. The established Windows
+managed launcher restriction required the existing test execution path;
+no environment, dependency or security setting changed.
+
+**Subphase 3A.2 Complete, 2026-11-27.** Implementation/offline acceptance
+ended here. All 33 schedules, feed worker, bulk and raw storage default off.
+No live migration/restart, enabling, API data request, live submission
+permission, install, historical reload or private-data transfer occurred.
+The live database remains unmigrated/unrestarted for 5F.1 through 3A.2.
+Linux, native-browser visual and live v1 operational acceptance remain
+unperformed. The current source review/runbook specify approved measured
+live acceptance still required.
+
+Updated roadmap, paired summaries, runbooks, dated closeout and handoff.
+The exact 34-path authored checkpoint is prepared; actual Git inspection,
+individual commit approval/execution and separate push remain pending.
+Preserve unrelated Feedly/local settings, prototypes and their notes,
+OSINT/untrusted-repository-review, detection/catalog additions and independent
+shared-document edits. No blanket staging/reset/discard/stash. Exclude keys,
+runtime data and conversation exports. The full saved/on-screen next prompt
+resumes only the checkpoint and stops. No other Phase 3 capability was begun.
+
 ### 2026-11-27: Inspected the Pending 3A.1 Checkpoint After Approval
 
 The operator approved read-only Git inspection in the current chat and then

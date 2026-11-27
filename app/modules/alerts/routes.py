@@ -30,6 +30,8 @@ def detail(request: Request, ident: int, citation_offset: int = Query(0, ge=0), 
         raise HTTPException(404, "Alert not found")
     feeds = [feed for feed in catalog() if feed.source == value["document"]["source_id"]]
     value["ransomware_claim_id"] = ransomware_store.for_observation(value["observation"]["id"])
+    if value["document"]["source_id"] == "hibp_email":
+        value["breach_document_id"] = value["document"]["id"]
     value["source_health"] = health(feeds) if feeds else []
     return templates.TemplateResponse(request, "alerts.html", value)
 

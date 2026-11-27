@@ -104,7 +104,7 @@ class RansomwareTests(unittest.IsolatedAsyncioTestCase):
     async def test_default_disabled_fixed_surface_and_unscoped_calls_refused(self):
         from app.core.feed_catalog import catalog
         feeds = catalog()
-        self.assertEqual(len(feeds), 32)
+        self.assertEqual(len(feeds), 33)
         scheduler = Scheduler(feeds, asyncio.get_running_loop())
         scheduler.initialize()
         with evidence.connect() as conn:

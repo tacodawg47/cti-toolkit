@@ -55,6 +55,7 @@ LIMITS: dict[str, dict[str, int]] = {
     # RansomLook publishes no numeric public cap. These are local courtesy
     # bounds for the hourly recent-post snapshot, not provider guarantees.
     "ransomlook": {"rpm": 1, "rpd": 24},
+    "hibp": {"rpm": 10, "rpd": 240},  # Local bounds, reviewed paid entitlement required.
     "vulnlookup": {"rpm": 30},            # CIRCL's public instance, keyless; courtesy limit
     "cvedb": {"rpm": 10},                # keyless, on-demand only; local courtesy limit
     "euvd": {"rpm": 60},                  # ENISA's public API, keyless; courtesy limit

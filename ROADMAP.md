@@ -1,6 +1,6 @@
 # CTI Toolkit Roadmap
 
-Last updated: 2026-11-26
+Last updated: 2026-11-27
 
 A local-only cyber threat intelligence toolkit that puts multiple analyst
 tools under one web interface. Built as a daily-use workflow aid and as a
@@ -957,10 +957,37 @@ slice A capabilities remain separate subphases. Live activation needs approval.
 31 focused tests passed; full compatibility ran 681 tests, 680 passed and one
 existing skip. See docs/review/2026-11-26-3a1-closeout.md. All 32 composed
 schedules default off. No live source enabling, migration, restart or API
-data request occurred. The 3A.1 Git checkpoint is pending current-chat approval.
+data request occurred. Operator closing result, reconciled 2026-11-27: 3A.1
+was individually committed and separately pushed as
+d34a37d68aa120b58ee3d18822ccf5ebcc54b31c, with matching local/remote hashes
+and an empty index. Do not repeat that checkpoint. No new Git operation was
+performed to reconcile this supplied result.
 
 **Breach and credential-leak monitoring** (for the watched domains and email
 addresses)
+
+3A.2 scope, decided 2026-11-27: one HIBP direct-email API consumer for at most
+ten explicitly approved exact email watches. Reuse shared evidence, runner,
+app loop/client/limiter and inbox. Source review and paid entitlement do not
+imply selector submission authority or consent. Immutable permission IDs,
+revocation/expiry/suppression, bounded staged lookups and atomic alerts preserve
+capture and review identity on restart. Preserve provider dates and literal
+citations separately; force raw omission and sensitive handling. Show each
+address's freshness and no-public-result caveat. Add one disabled daily
+schedule; all 33 schedules and workers default off. See
+docs/runbooks/breach-lookups.md and the dated source review. Domain searches,
+other breach providers and other slice A capabilities remain later subphases.
+
+**Subphase 3A.2 Complete, 2026-11-27.** Implementation/offline acceptance:
+54 focused breach/shared-evidence tests passed in 32.105 seconds. Full suite:
+717 tests, 716 passed and one existing skip in 180.083 seconds. See
+docs/review/2026-11-27-3a2-closeout.md. No live enabling, selector submission,
+migration/restart, API data request or install occurred. All 33 schedules
+default off. Approved local inspection confirmed main/HEAD/local origin/main
+at d34a37d and an empty index, without remote contact. The operator approved
+the exact 3A.2 commit and explicitly authorized its push. Execution is prepared;
+reconcile the actual closing result before repeating a checkpoint step.
+
 - Vendor sources: Have I Been Pwned domain search, Hudson Rock free infostealer
   API, IntelligenceX free tier, LeakCheck. These clients are shared with the
   Phase 7 identity lookup.
@@ -1355,11 +1382,11 @@ at a tested milestone if its scope proves too large.
 
 At each boundary update the table's status, dated review, journal and
 docs/handoff.md. Commit and push remain separately approved operations.
-Approved read-only inspection on 2026-11-27 confirmed main/local origin/main
-at a947eb0 with an empty index; the operator reports its completed push.
-Do not repeat 5F.5. Phase 3 slice A starts with bounded ransomware victim/watch
-consumer 3A.1. Use the current prompt in docs/handoff.md for its checkpoint
-or later subphase. Live v1 activation remains separately approved work.
+The operator's closing result confirms 3A.1 committed and pushed as d34a37d
+on 2026-11-27, with matching hashes and an empty index. Do not repeat 5F.5 or
+3A.1. Phase 3 slice A continues only through bounded breach consumer 3A.2
+in this chat. Use docs/handoff.md for its actual checkpoint or resumption.
+Live v1 activation remains separately approved work.
 
 5F.5 design, decided 2026-11-26: match bounded operator-configured typed
 selectors against local immutable observations. Deduplicate by selector and
