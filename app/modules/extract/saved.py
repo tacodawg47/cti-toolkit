@@ -123,7 +123,10 @@ def save(document, raw: bytes, metadata: ReportMetadata, *, origin: str,
                                       observed_at=metadata.observed_at,
                                       excerpt=item["excerpt"] if metadata.sensitivity == "public" else "",
                                       locator=f"extracted mention {i+1}; occurrences={item['count']}")
-                evidence._snapshot(conn, "evidence_observations", mention, ("document_id", "observation_key"))
+                observation_id = evidence._snapshot(conn, "evidence_observations", mention, ("document_id", "observation_key"))
+                from ...core.alerts import match_observation
+
+                match_observation(conn, observation_id)
             for citation in citations:
                 evidence._snapshot(conn, "evidence_citations", citation.model_copy(update={"document_id": ident}),
                                    ("document_id", "citation_key"))

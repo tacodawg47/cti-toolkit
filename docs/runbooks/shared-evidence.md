@@ -1,5 +1,10 @@
 # Shared Evidence and Source Registry
 
+Update 2026-11-26: [Alert Inbox](alert-inbox.md) adds atomic local selector
+matching to shared observation writes and report saves. Its separate additive
+schema retains alert/review history independently of original availability.
+Explicit paged catch-up matches older observations. No collection is implied.
+
 Update 2026-11-26: [Saved Reports and Archives](saved-reports-and-archives.md)
 implements the 5F.4 consumer and bounded raw-retention contract. The original
 5F.1 scope and future-facing descriptions below remain historical. Version 2

@@ -2,9 +2,9 @@
 
 Written 2026-10-28. Updated 2026-11-26.
 
-The current suite ran 627 tests, with 626 passing and one skipped, verified
-at the 2026-11-26 subphase 5F.4 closeout. Final focused acceptance passed all
-42 new tests after the last credential guard refinement. They use Python's built-in `unittest`,
+The current suite ran 650 tests, with 649 passing and one skipped, verified
+at the 2026-11-26 subphase 5F.5 closeout in 138.479 seconds. Grouped foundation
+acceptance passed all 139 tests in 61.754 seconds. They use Python's built-in `unittest`,
 so no extra dependency is needed, and they never touch the network: importing the
 `tests` package replaces the shared HTTP client with one that refuses every
 request, so a test that forgets to mock fails loudly instead of spending
@@ -37,6 +37,8 @@ import base (so `import app...` works), and `-v` lists each test.
 
 | File | Covers |
 |---|---|
+| `tests/test_alerts.py` | 16 inbox cases: atomic report/observation matches, canonical typed values, domain/CIDR boundaries, passive/invalid rules, separate assertions, disabled/replayed selectors, paged restart/concurrent catch-up, rollback, review conflicts/history, provenance/citation resolution, expiry preservation, capacity/paging, migration rollback and guarded escaped routes. |
+| `tests/test_foundation_acceptance.py` | 7 cross-feature integrations: crash after alert before progress, retained originating run and review on restart, failed/stale freshness rendered on eight consuming pages, offline first start/recovery, 429/cancellation, revocation at ingestion, downtime/daily quotas and missing-original reconciliation. See [Alert Inbox](alert-inbox.md) for commands and live acceptance limits. |
 | `tests/test_saved_reports.py` | 42 offline save/archive/bulk cases: atomic saves and migrations, replay/changed input, source/run/date/citation provenance, malformed/bounded input, handling and credential guards, capacity/concurrency, interrupted file writes/rename recovery, corruption/orphans, expiry preserving history, local escaped views, provider selection/gates, app-loop quota ownership, request/byte/time/day budgets, 429 cooldowns, cancellation/revocation/retry, cached originals, Enrich All batching and finite RDAP redirects. See [Saved Reports and Archives](saved-reports-and-archives.md). |
 | `tests/test_feed_scheduler.py` | 32 offline schedule/health tests: disabled defaults, durable due work, restart and interrupted pagination, capture replay, source/schedule revocation, shared-loop quotas/client, persisted 429/daily caps, request/byte/time bounds, vendor queue continuation, retained snapshots/checkpoints, constrained redirects, shutdown/drained siblings, archive validation and analyst-page freshness. See [Scheduled Feeds](scheduled-feeds.md). |
 | `tests/test_jobs.py` | 24 durable-runner acceptance tests: registration/parameter limits, additive migration rollback/retry and schema guards, actual process-death recovery, independent process exclusion, concurrent enqueues/claims, immutable logical identity, bounded retries/backoff, queued/running/interrupted cancellation, source revocation on units/retries/restart, separate retrieval/coverage checkpoints, evidence replay with originating run identity, progress bounds and startup WAL contention handling. Commands and handler limits: [Durable Jobs](durable-jobs.md). |

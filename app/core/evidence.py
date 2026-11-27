@@ -114,7 +114,11 @@ def get_document(document_id: int) -> dict | None:
 
 def record_observation(observation: Observation) -> int:
     with connect() as conn, conn:
-        return _snapshot(conn, "evidence_observations", observation, ("document_id", "observation_key"))
+        ident = _snapshot(conn, "evidence_observations", observation, ("document_id", "observation_key"))
+        from .alerts import match_observation
+
+        match_observation(conn, ident)
+        return ident
 
 
 def observations_for_subject(subject_type: str, subject_value: str, *, limit: int = 100, offset: int = 0) -> list[dict]:

@@ -1,5 +1,10 @@
 # Scheduled Feed Refresh and Source Health
 
+Update 2026-11-26: [Alert Inbox](alert-inbox.md) reuses this read-only source
+health panel. Foundation integration tests connect mocked scoped retrievals,
+observation alerts, progress/recovery, persistent cooldowns and archive
+availability. The source/worker activation gates below still apply.
+
 Update 2026-11-26: [Saved Reports and Archives](saved-reports-and-archives.md)
 adds optional bounded retention at the existing capture boundary. Unknown
 source handling omits raw bodies. Request identity now hashes method,

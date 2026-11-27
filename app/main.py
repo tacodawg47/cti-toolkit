@@ -29,6 +29,7 @@ from .core.web import reject_cross_site
 from .modules.enrich import base, registry, shodan
 from .modules.enrich.bulk import Service as BulkService
 from .modules.extract import saved, saved_routes
+from .modules.alerts import routes as alert_routes
 from .modules.extract import atlas, attack, attack_catalog, content, decode, extractor, markdown, tlds
 from .modules.extract import fetch as extract_fetch
 from .modules.extract import pdf as extract_pdf
@@ -121,6 +122,7 @@ app.mount("/static", StaticFiles(directory=str(static_dir), check_dir=False), na
 app.include_router(vulnintel_routes.router)
 app.include_router(infra_routes.router)
 app.include_router(saved_routes.router)
+app.include_router(alert_routes.router)
 
 
 @app.get("/", response_class=HTMLResponse)

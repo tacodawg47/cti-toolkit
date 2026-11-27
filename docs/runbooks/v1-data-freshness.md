@@ -1,5 +1,12 @@
 # V1 Data Freshness Requirements
 
+Update 2026-11-26: 5F.5 connects local alerts to evidence and displays the
+shared freshness panel in the inbox. Its cross-feature mock acceptance and
+the earlier failure-injection suites establish application invariants. They
+do not establish live operational acceptance. Named source reviews, approved
+live migration/restart, bounded refresh/recovery measurements and deployment
+checks are still required before daily v1 use. See [Alert Inbox](alert-inbox.md).
+
 Update 2026-11-26: Subphase 5F.3 passed offline schedule/health/recovery and
 compatibility acceptance. See [Closeout](../review/2026-11-26-5f3-closeout.md)
 and [Scheduled Feeds](scheduled-feeds.md). All schedules and the worker

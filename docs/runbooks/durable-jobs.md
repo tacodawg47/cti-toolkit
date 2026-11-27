@@ -1,5 +1,10 @@
 # Durable Job Runner
 
+Update 2026-11-26: [Alert Inbox](alert-inbox.md) displays the originating
+capture execution separately from its logical job's current state. Foundation
+integration tests crash after alert creation and before ingestion progress,
+then verify restart replay retains the original run and review state.
+
 Update 2026-11-26: [Saved Reports and Archives](saved-reports-and-archives.md)
 registers explicit opt-in saved-report bulk jobs using the same app-loop
 bridge, provider quotas and OS execution lock. Committed units resume without

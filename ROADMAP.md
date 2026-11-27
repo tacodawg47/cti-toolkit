@@ -1321,8 +1321,9 @@ they are.
 
 **Foundation slice: scheduler and alerting**
 
-Session boundaries, decided 2026-11-26. 5F.1 to 5F.4 are complete; 5F.5
-is not started.
+Session boundaries, decided 2026-11-26. 5F.1 to 5F.5 are complete.
+Foundation implementation and offline acceptance are complete; approved live
+operational acceptance remains separate.
 These divide the existing foundation scope; they do not bring forward the
 collectors or change the numbered Build order. A subphase can be split again
 at a tested milestone if its scope proves too large.
@@ -1333,12 +1334,22 @@ at a tested milestone if its scope proves too large.
 | 5F.2 Complete 2026-11-26 | Durable job runner | Trusted registration, distinct work/run identity, durable progress, bounded retries, cancellation and interrupted-job recovery pass temporary-database acceptance. Serial process-held execution lock and transactional claims control duplicates. Shared eligibility and original capture replay contracts preserved. Final suite 553 tests, 552 passed and one existing skip. See docs/review/2026-11-26-5f2-closeout.md. |
 | 5F.3 Complete 2026-11-26 | Scheduled feed refresh and source health | 31 explicit existing feed surfaces have opt-in schedules, bounded requests, shared-loop async/quota integration, durable cooldowns and separate capture/progress/coverage state. Last-good age and never-loaded/stale/failed/incomplete states are visible at consumption. Final suite 585 tests: 584 passed and one existing skip. No source enabling, live migration, restart or traffic. See docs/review/2026-11-26-5f3-closeout.md. |
 | 5F.4 Complete 2026-11-26 | Saved reports and original-source archives | Atomic report/file/paste saves preserve mentions, dates, literal citation hops and replay identity. Opt-in originals have finite capacity/age limits, handling gates and recoverable file reconciliation; expiry preserves evidence. Enrich All uses bounded durable jobs, explicit provider controls and the app loop. Full suite 627 tests: 626 passed and one existing skip; final focused 42 passed. No live activation or migration. See docs/review/2026-11-26-5f4-closeout.md. |
-| 5F.5 | Alert inbox and foundation acceptance | Evidence-linked alerts, deduplication and review state work; selector matching has integration coverage; cross-feature freshness, recovery and restart checks meet the foundation requirements. Email/webhooks and collector playbooks remain later work. |
+| 5F.5 Complete 2026-11-26 | Alert inbox and foundation acceptance | Atomic evidence-linked typed matches, deterministic deduplication, bounded local catch-up and revision-checked review history pass offline acceptance. Grouped foundation 139 passed; full suite 650 tests, 649 passed and one existing skip. No live migration, restart or activation. See docs/review/2026-11-26-5f5-closeout.md. Email/webhooks and collector playbooks remain later work. |
 
 At each boundary update the table's status, dated review, journal and
 docs/handoff.md. Commit and push remain separately approved operations.
-The next chat starts at 5F.5 after resolving the 5F.4 checkpoint, using
-the prompt in docs/handoff.md.
+The next chat starts Phase 3 slice A with ransomware victim tracking and
+local watch alerts as its first coherent subphase, after resolving the 5F.5
+checkpoint. Use the prompt in docs/handoff.md. Live v1 activation remains
+separately approved work, not implied by foundation completion.
+
+5F.5 design, decided 2026-11-26: match bounded operator-configured typed
+selectors against local immutable observations. Deduplicate by selector and
+observation, retain separate source assertions, and commit incremental alerts
+with evidence writes. Use paged atomic catch-up and revision-checked review
+history. Keep source dates, literal citation hops, originating execution and
+archive availability separate. No selector grants collection permission.
+See docs/runbooks/alert-inbox.md. Broader Phase 3 selector families remain later.
 
 5F.4 design, decided 2026-11-26: commit report metadata, indicator mentions
 and literal citation edges atomically. Bind replay identity to capture/input

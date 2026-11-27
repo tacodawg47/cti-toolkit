@@ -81,6 +81,9 @@ def init_db() -> None:
         from .feed_schema import migrate as migrate_feeds
 
         migrate_feeds(conn)
+        from .alert_schema import migrate as migrate_alerts
+
+        migrate_alerts(conn)
         # Drop expired cache rows so the table doesn't grow without bound.
         conn.execute("DELETE FROM cache WHERE expires_at < ?",
                      (datetime.now(timezone.utc).isoformat(),))

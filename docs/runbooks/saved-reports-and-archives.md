@@ -1,5 +1,10 @@
 # Saved Reports and Original Archives
 
+Update 2026-11-26: [Alert Inbox](alert-inbox.md) matches saved report
+observations atomically. Alerts preserve document/citation/run associations
+when originals are omitted, expired or fail reconciliation. It adds no raw
+serving route, collection permission or automatic historical matching worker.
+
 Written 2026-11-26. Subphase 5F.4. No new dependency. All new network workers,
 raw storage and source collection switches default off. Tests use temporary
 databases and mocked HTTP. No live migration, restart or enabling was done.

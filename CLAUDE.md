@@ -95,22 +95,20 @@ validation and remaining limits. Its final suite ran 511 tests: 510 passed,
 one skipped; all 26 local acceptance pages returned 200. These are prior
 verified results, not an automatic rerun in a new session.
 
-Subphase 5F.4 Complete, 2026-11-26. Full offline compatibility ran 627 tests:
-626 passed and one existing skip. Final focused acceptance passed all 42
-new tests after the last credential guard refinement. See
-docs/review/2026-11-26-5f4-closeout.md and
-docs/runbooks/saved-reports-and-archives.md. Report saves, bounded original
-retention and durable bulk enrichment are implemented. Raw storage, bulk
-work, all 31 schedules and the feed worker default off. No source was enabled
-or contacted. The live database has not been migrated/restarted for 5F.1 to
-5F.4. Read-only inspection confirmed 5F.3 commit 2491fb3 and matching local
-origin/main tracking. The exact 5F.4 commit proposal is approved; execution
-is prepared and separate push approval remains pending;
-reconcile the closing chat result before repeating any checkpoint.
-The next planned work is 5F.5, Alert Inbox and Foundation Acceptance.
-Read docs/handoff.md for
-the checkpoint and next-chat prompt after the roadmap and current journal
-entry. Follow docs/runbooks/session-handoff.md at every boundary.
+Subphase 5F.5 Complete, 2026-11-26. Full offline compatibility ran 650 tests:
+649 passed and one existing skip in 138.479 seconds. Grouped foundation
+acceptance passed all 139 tests. Local evidence-linked alerts, bounded typed
+matching/catch-up and review history are implemented. See
+docs/review/2026-11-26-5f5-closeout.md and docs/runbooks/alert-inbox.md.
+Raw storage, bulk work, all 31 schedules and the feed worker default off.
+No source was enabled/contacted. The live database has not been migrated or
+restarted for 5F.1 to 5F.5. Linux/native-browser visual and live v1 operational
+acceptance remain unperformed. Approved read-only inspection confirmed main
+and local origin/main at the completed 5F.4 commit c5cdae9 with an empty index.
+The 5F.5 commit/push checkpoint remains pending; saved notes grant no Git
+permission. Next: Phase 3 slice A, starting with ransomware victim tracking
+and local watch alerts in one coherent subphase. Read docs/handoff.md after
+the roadmap/current journal entry. Follow session-handoff.md at boundaries.
 
 Data catch-up is optional during the build only. Scheduled freshness,
 visible stale/failure states and tested recovery are required before v1

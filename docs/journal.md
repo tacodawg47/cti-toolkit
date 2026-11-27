@@ -1609,6 +1609,80 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-26: Subphase 5F.5 Complete, Alert Inbox and Foundation Acceptance
+
+Implemented only 5F.5 after the required foundation, provenance, handling,
+handoff and runbook reading. The operator supplied the completed 5F.4 commit
+and push result. Current-chat approved read-only Git inspection confirmed
+main and local origin/main at c5cdae9ec0cd378b1d4fc90bfdaf912490958bb6, with
+an empty index. No remote contact or repeated checkpoint occurred. Inspection
+also identified unrelated roadmap whitespace; it remains outside this work.
+
+Added an independent additive inbox migration and a local module at /alerts.
+Selectors are immutable typed definitions with exact, domain-tree and strict
+IP-network matching, capped at 100 definitions. New shared observations and
+saved report mentions match enabled selectors atomically. Older observations
+use explicit pages of at most 200 with a durable cursor committed alongside
+the alerts. Incremental matches need no new worker. Unsupported generic
+subjects remain evidence without a guessed match. No regex, content-derived
+commands, destinations, credentials, registrations or collection approvals.
+
+Alert uniqueness is selector plus immutable observation. Replay cannot reset
+review state. Separate assertions and captures stay separate even for equal
+values. New, Reviewed and Dismissed have dated review history and revision
+conflict checks. No destructive delete/reset or automatic credibility rating.
+Details retain source assertions, distinct dates, literal/resolved citation
+hops, capture identity and originating run. An interrupted originating run
+can belong to a logical job that later succeeds; both states are visible.
+Archive expiry, omission and reconciliation failure preserve all alert and
+indicator history. Restricted/non-public excerpts are suppressed in the inbox.
+
+The inbox reuses source freshness; details show relevant source health or an
+explicit absence of a scheduled freshness assessment. Read-only page loads
+do not scan observations, reconcile files, enqueue work or poll providers.
+The existing app loop, shared client/limiter, durable runner, eligibility
+checks, request/byte/time budgets and archive maintenance remain the owners
+of collection and recovery. Broad Phase 3 brand/identity and source matching,
+notifications, collectors and playbooks remain later work.
+
+The initial command met the documented Windows venv launcher restriction.
+Used the established execution path outside that restriction with no package,
+interpreter or security-setting change. The first completed new-suite run
+found a test fixture expecting the wrong source ID, then passed all 23 new
+tests in 10.276 seconds after correcting that assertion. Added explicit
+originating-execution/current-job visibility and verified the grouped
+foundation suite: all 139 passed in 61.754 seconds. Final full compatibility
+ran 650 tests in 138.479 seconds: 649 passed and one existing skip.
+Existing Starlette/httpx, invalid-PDF and asyncio timing diagnostics remain.
+
+New integration tests use synthetic scoped mock HTTP and temporary databases.
+They cover a crash between alert creation and progress, restart replay with
+review preservation, failed refresh retaining last good age/coverage, offline
+first startup, cooldown/quota persistence, cancellation/revocation between
+capture and ingestion, downtime and missing-original reconciliation. The
+real calculated failure state is rendered through panels on eight consuming
+pages. Earlier grouped tests additionally cover actual process-death
+recovery/exclusion, interrupted pagination, source windows, budgets, archive
+write/rename recovery and expiry. No live source terms, schema or quota,
+deployment uptime, Linux or native-browser visual acceptance is established.
+See docs/runbooks/alert-inbox.md and the closeout's acceptance matrix.
+
+No live migration/restart, source enabling, worker enabling, provider traffic,
+installation, external transfer or Git index/history mutation occurred.
+The live database has not been migrated/restarted for 5F.1 to 5F.5. Raw
+storage, bulk work, all 31 schedules and the feed worker default off. V1
+daily use still requires approved source reviews and measured bounded live
+freshness/recovery acceptance. No large historical reload was performed.
+
+**Subphase 5F.5 Complete.** The proposed 26-path checkpoint is documented in
+docs/review/2026-11-26-5f5-checkpoint-files.md with message Add local alert
+inbox and accept foundation integration. The operator individually approved
+this exact commit proposal. Execution is prepared; separate push approval
+remains pending. Preserve unrelated prototype, Feedly,
+local settings, OSINT research and all independent shared-document edits.
+Stop at this boundary. Next chat: Phase 3 slice A, first coherent subphase
+ransomware victim tracking and local watch alerts, using docs/handoff.md.
+
 ### 2026-11-26: Subphase 5F.4 Complete, Saved Reports and Original Archives
 
 Implemented only 5F.4 after the required roadmap, newest research, handoff,

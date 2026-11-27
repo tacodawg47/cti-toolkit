@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Alert Inbox | CTI Toolkit{% endblock %}
+{% block content %}
+<h1>Alert Inbox</h1>
+<p><a href="/alerts">All Alerts</a> · <a href="/reports">Saved Reports</a> · <a href="/health">Health</a></p>
+<p>Local selector matches identify source assertions for review. A mention is not a malicious verdict.
+  Repeated citations do not establish independent corroboration.</p>
+{% if rows is defined %}
+{% include "source_health.html" %}
+<form method="get" action="/alerts" class="filterbar"><label>Review State
+<select name="state"><option value="">All</option>{% for s in ('new','reviewed','dismissed') %}<option value="{{ s }}" {% if state == s %}selected{% endif %}>{{ s | title }}</option>{% endfor %}</select></label><button class="small">Filter</button></form>
+<div class="tablescroll"><table><tr><th>Alert</th><th>Matched Selector</th><th>Source Assertion</th><th>Source Published</th><th>Collected</th><th>State</th></tr>
+{% for r in rows %}<tr><td><a href="/alerts/{{ r.id }}">{{ r.title }}</a></td><td>{{ r.subject_type }} · {{ r.mode }} · <code>{{ r.value }}</code></td><td>{{ r.source_id }} · {{ r.assertion }} · <code>{{ r.subject_value }}</code></td><td>{{ r.source_published_at or 'Unknown' }}</td><td>{{ r.collected_at }}</td><td>{{ r.state | title }}</td></tr>
+{% else %}<tr><td colspan="6">No alerts in this view. Check selector catch-up below.</td></tr>{% endfor %}</table></div>
+{% if rows | length == 50 %}<p><a href="/alerts?state={{ state }}&amp;before={{ rows[-1].id }}">Older Alerts</a></p>{% endif %}
+<h2>Local Selectors</h2>
+<p>New saved observations match enabled selectors immediately. Match Saved Page checks up to 200 existing observations, committing a restart-safe cursor. Repeat while catch-up is pending. No collection runs here.</p>
+<table><tr><th>Selector</th><th>Local Matching</th><th>Catch-Up</th><th>Actions</th></tr>
+{% for s in selectors %}<tr><td>{{ s.subject_type }} · {{ s.mode }} · <code>{{ s.value }}</code></td><td>{{ 'Enabled' if s.enabled else 'Disabled' }}</td><td>{{ 'Pending' if s.pending else 'Caught Up' }} · through observation {{ s.scanned_through }}</td><td>
+<form method="post" action="/alert-selectors/{{ s.id }}/enabled" class="inline-form"><input type="hidden" name="enabled" value="{{ 'false' if s.enabled else 'true' }}"><button class="small">{{ 'Disable' if s.enabled else 'Enable' }}</button></form>
+{% if s.enabled %}<form method="post" action="/alert-selectors/{{ s.id }}/scan" class="inline-form"><button class="small">Match Saved Page</button></form>{% endif %}</td></tr>{% endfor %}</table>
+<details class="card"><summary>Add Local Selector</summary>
+<p>Use only selectors you own or are authorized to monitor. Stored privately in the local database. Selectors never enable a provider or authorize an external query. Limit: 100 immutable definitions. Disable old definitions to retain their history.</p>
+<form method="post" action="/alert-selectors">
+<label>Subject Type <select name="subject_type">{% for t in types %}<option>{{ t }}</option>{% endfor %}</select></label>
+<label>Match <select name="mode"><option value="exact">Exact Typed Value</option><option value="domain_tree">Domain and Subdomains</option><option value="network">IP in CIDR Network</option></select></label>
+<p>Domain trees match domain observations only. Networks match IP observations only. Exact URLs preserve case; email local parts preserve case. No regex or substring rules.</p>
+<label>Value <input type="text" name="value" maxlength="2048" required></label>
+<label><input type="checkbox" name="authorized" value="true" required> I own or am authorized to monitor this selector.</label><p><button>Add Selector</button></p></form></details>
+{% else %}
+<h2>{{ document.title }}</h2>
+{% include "source_health.html" %}
+<p>Evidence Capture Age: {{ document.collected_at | ago }}. This immutable capture describes the source at collection time.
+{% if not source_health %}This evidence source has no scheduled freshness assessment.{% endif %}</p>
+<p>State: {{ alert.state | title }} · Matched Locally: {{ alert.matched_at }} · Selector: {{ selector.subject_type }} / {{ selector.mode }} / <code>{{ selector.value }}</code> · {{ 'Enabled' if selector.enabled else 'Disabled' }}</p>
+<form method="post" action="/alerts/{{ alert.id }}/review"><input type="hidden" name="revision" value="{{ alert.revision }}"><label>Review State <select name="state">{% for s in ('new','reviewed','dismissed') %}<option value="{{ s }}" {% if alert.state == s %}selected{% endif %}>{{ s | title }}</option>{% endfor %}</select></label><button class="small">Save Review</button></form>
+<h3>Source Assertion</h3>
+<p>{{ observation.assertion }}: <code>{{ observation.subject_type }} · {{ observation.subject_value }}</code></p>
+<p>Observed: {{ observation.observed_at or 'Unknown' }} · First Seen: {{ observation.first_seen or 'Unknown' }} · Last Seen: {{ observation.last_seen or 'Unknown' }}</p>
+{% if document.sensitivity == 'public' and document.tlp in (none, 'CLEAR') %}<blockquote>{{ observation.excerpt }}</blockquote>{% endif %}
+<p>Locator: {{ observation.locator }}</p>
+<h3>Capture Provenance</h3>
+<p>Source: {{ document.source_id }} · Publisher: {{ document.publisher or 'Unknown' }} · Reliability: {{ source.reliability }} · Terms: {{ source.terms_status }}</p>
+<p>Source Published: {{ document.source_published_at or 'Unknown' }} · Source Modified: {{ document.source_modified_at or 'Unknown' }} · Collected: {{ document.collected_at }}</p>
+<p>Reference: <code>{{ document.source_url or 'Unknown' }}</code> · Captured Record: <code>{{ document.external_id }}</code></p>
+<p>Capture: <code>{{ document.capture_key }}</code> · Upstream Revision: {{ document.source_revision or 'Unknown' }} · Originating Execution: {{ document.job_run_id or 'Manual / Unspecified' }}</p>
+{% if execution %}<p>Originating Attempt: {{ execution.attempt }} · Execution State: {{ execution.state }} · Job: {{ execution.job_id }} · Current Job State: {{ execution.job_state }} · Saved Units: {{ execution.progress_done }} / {{ execution.progress_total if execution.progress_total is not none else 'Unknown' }} · Coverage Completed: {{ execution.coverage_completed_at or 'Not Established' }}</p>{% endif %}
+<p>Digest: <code>{{ document.content_sha256 or 'Unknown' }}</code> · Handling: {{ document.sensitivity }} · TLP: {{ document.tlp or 'Unspecified' }}</p>
+<h3>Original Availability</h3>
+<p>{{ archive.state if archive else 'Unavailable' }} · {{ archive.reason if archive else 'No archive record' }}. Alert and indicator history survive raw expiry or omission. Digests do not establish authenticity.</p>
+{% if archive %}<p>SHA-256: <code>{{ archive.sha256 }}</code> · Bytes: {{ archive.byte_count }} · Expires: {{ archive.expires_at or 'Not retained' }}</p>{% endif %}
+<h3>Literal Citation Hops</h3>
+<ul>{% for c in citations %}<li><code>{{ c.target_reference }}</code> · {{ c.relationship }} · {% if c.target_document_id %}Resolved to local document {{ c.target_document_id }}: {{ c.resolution_note }}{% else %}Unresolved{% endif %}</li>{% else %}<li>No citation hops on this page.</li>{% endfor %}</ul>
+{% if citations | length == 100 %}<a href="/alerts/{{ alert.id }}?citation_offset={{ citation_offset + 100 }}&amp;review_offset={{ review_offset }}">More Citation Hops</a>{% endif %}
+<h3>Review History</h3><ul>{% for r in reviews %}<li>{{ r.reviewed_at }} · {{ r.state | title }} · Revision {{ r.revision }}</li>{% else %}<li>No review changes.</li>{% endfor %}</ul>
+{% if reviews | length == 100 %}<a href="/alerts/{{ alert.id }}?citation_offset={{ citation_offset }}&amp;review_offset={{ review_offset + 100 }}">Older Reviews</a>{% endif %}
+{% endif %}
+{% endblock %}
