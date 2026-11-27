@@ -89,38 +89,36 @@ APScheduler, Cytoscape.js (vendored). pip + venv. Docker in phase 8.
 
 ## Current status (2026-11-27)
 
-Subphase 3A.5 Complete, implementation/offline acceptance, 2026-11-27.
-Full compatibility: 841 tests in 302.124 seconds, 840 passed and one existing skip.
-One disabled CTLogs passive exact-domain
-inventory consumer has immutable two-page plans/captures, literal names and
-wildcards, separate provider validity/local capture dates, atomic inbox
-matches and per-domain freshness. Focused 113 passed in 91.091 seconds;
-two final recovery cases passed in 2.563 seconds. Final inventory: 38 cases.
-All 36 schedules, workers, bulk and raw storage default off. No source
-enabling, selector submission, provider data request, install or live
-migration/restart. CTLogs actual key/tier/purpose/contract/handling and measured
-live acceptance remain unapproved. GitHub access/terms and crt.sh current
-terms/access/schema gaps remain unchanged. See docs/review/2026-11-27-3a5-closeout.md.
+Subphase 3A.6 Complete, implementation/offline acceptance, 2026-11-27.
+Compatibility: 888 tests in 366.300 seconds, 887 passed and one existing skip.
+One disabled Shodan indexed cloud-metadata
+consumer has exact-domain query permissions, immutable two-page plans/captures,
+literal host/service/cloud attribution, atomic inbox matches and per-domain
+freshness. Expanded cloud/inbox/evidence: 80 passed in 53.683 seconds.
+Final cloud-only: 47 passed in 50.715 seconds after the truncation guard.
+All 37 schedules, workers,
+bulk and raw storage default off. No provider data request, domain submission,
+source enabling, install or live migration/restart. Shodan automated-use/
+storage terms, actual entitlement, privacy handling and projected live schema
+remain unresolved. CTLogs, GitHub and crt.sh gaps are unchanged. See
+docs/review/2026-11-27-3a6-closeout.md.
 
-Operator-supplied completed/pushed checkpoints: 3A.1 d34a37d, 3A.2
-3eaf484bcdb803555c5f199c1906b30969dce80f and 3A.3
-749d97351c5158558789afa8a297a461999b9c42, most recently 2026-11-27 with
-matching local/remote hashes and an empty index then. Do not repeat them.
-Approved inspection confirmed the 3A.3 base and an empty index. The operator
-directly instructed commit and push each reviewed 3A.4/3A.5 checkpoint.
-3A.4 committed/pushed as eccbf441db7ffbd6647d11fab7db7f8dcb304216;
-local HEAD/origin/main/live main matched. The exact 38-path 3A.5 selective
-checkpoint is approved and prepared; its actual closing hash/result
-supersedes this note. Independent reconciliation/handoff-rule work stays
-excluded. Saved notes grant no future Git permission.
-Proposed next bounded scope: 3A.6, one API-only indexed public-cloud metadata
-lead consumer for exact authorized domains, reviewing Shodan first. Do not
-begin it here. No target probing or storage-name guessing.
+3A.1 through 3A.5 are already committed/pushed. Approved local inspection
+confirmed main, HEAD/local origin/main at the supplied 3A.5 hash
+5cbcc426f3e16fc254258be12f60de8a3302678d and an empty index. The operator
+supplied matching live remote main on 2026-11-27; no remote was contacted
+here. Actual 3A.5 completion supersedes prepared/pending notes. Do not repeat
+completed checkpoints. New 3A.6 selective commit/push remain unapproved/pending.
+Preserve independent research, prototypes, reconciliation, handoff rules,
+settings and other work. Saved notes grant no future Git approval.
 
-Phase 1 and Phase 2 accepted first delivery remain complete. Live database
-unmigrated/unrestarted for 5F.1 through 3A.5. Linux, native-browser visuals and
-live v1 acceptance remain unperformed. Freshness/failure/recovery acceptance
-is required before daily v1 use. Preserve unrelated work. See docs/handoff.md.
+Next proposed bounded scope: 3A.7, one HIBP public breach-catalogue change
+consumer with immutable metadata and exact breached-service-domain review
+leads. Catalogue changes never establish watched-email breach membership.
+Do not begin it here. Phase 1 and Phase 2 accepted first delivery remain
+complete. Live database unmigrated/unrestarted for 5F.1 through 3A.6.
+Linux, native-browser visuals and live v1 acceptance remain unperformed.
+See docs/handoff.md for the full concrete next prompt and checkpoint status.
 
 The roadmap holds scope, order, and decisions only. Troubleshooting, policy
 exceptions, build narrative, and parked design notes go in docs/journal.md.

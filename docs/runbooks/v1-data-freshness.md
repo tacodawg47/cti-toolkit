@@ -1,5 +1,12 @@
 # V1 Data Freshness Requirements
 
+Update 2026-11-27, 3A.6: [Indexed Cloud Leads](cloud-exposure.md) adds daily
+per-domain freshness and two-day staleness. Original oldest-page capture age
+survives restart. Short, duplicate, drifting, partial and over-cap windows
+retain evidence without renewing success. All 37 schedules default off.
+Real Shodan entitlement, terms, projection and measured freshness/recovery
+remain separately approved work. No live acceptance occurred.
+
 
 Update 2026-11-27, 3A.5: [Passive Subdomain Inventory](subdomain-inventory.md)
 adds daily per-domain two-day staleness. Original oldest-page age survives

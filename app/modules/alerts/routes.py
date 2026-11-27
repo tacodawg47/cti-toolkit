@@ -38,6 +38,8 @@ def detail(request: Request, ident: int, citation_offset: int = Query(0, ge=0), 
         value["github_document_id"] = value["document"]["id"]
     if value["document"]["source_id"] == "subdomain_inventory":
         value["subdomain_document_id"] = value["document"]["id"]
+    if value["document"]["source_id"] == "cloud_exposure":
+        value["cloud_document_id"] = value["document"]["id"]
     value["source_health"] = health(feeds) if feeds else []
     return templates.TemplateResponse(request, "alerts.html", value)
 

@@ -1,5 +1,11 @@
 # Durable Job Runner
 
+Update 2026-11-27, 3A.6: [Indexed Cloud Leads](cloud-exposure.md) freezes
+exact permissions and two search-page slots per domain. Original normalized
+staging and atomic inbox ingestion recover without refetching. Durable
+consumer-local monthly credit reservations and one-second request slots
+survive restart; query/access changes invalidate queued authority. No new loop.
+
 
 Update 2026-11-27, 3A.5: [Passive Subdomain Inventory](subdomain-inventory.md)
 freezes exact-domain permissions and two page slots. It reuses logical-unit

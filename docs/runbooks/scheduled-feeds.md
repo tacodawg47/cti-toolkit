@@ -1,5 +1,11 @@
 # Scheduled Feed Refresh and Source Health
 
+Update 2026-11-27, 3A.6: [Indexed Cloud Leads](cloud-exposure.md) adds the
+disabled daily cloud_exposure search schedule. All 37 composed schedules,
+workers, bulk and raw storage default off. Exact query permissions and actual
+Shodan terms/access/cost/handling approval remain separate. Per-domain success
+uses the oldest original capture of a consistent terminated bounded window.
+
 
 Update 2026-11-27, 3A.5: [Passive Subdomain Inventory](subdomain-inventory.md)
 adds the disabled daily subdomain_inventory API schedule. The current composed

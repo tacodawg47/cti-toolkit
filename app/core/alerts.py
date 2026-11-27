@@ -19,7 +19,7 @@ from .indicators import canonical, detect_type, normalise
 
 STATES = ("new", "reviewed", "dismissed")
 TYPES = ("domain", "ip", "hash", "url", "email", "cve", "organization", "sector", "country",
-         "ct_domain", "ct_organization", "ct_brand", "github_domain", "github_organization", "subdomain_domain")
+         "ct_domain", "ct_organization", "ct_brand", "github_domain", "github_organization", "subdomain_domain", "cloud_domain")
 MAX_SELECTORS = 100
 
 
@@ -38,6 +38,9 @@ def normalize_subject(subject_type, value):
         return selector(value, subject_type)
     if subject_type == "subdomain_domain":
         from ..modules.subdomains.models import selector
+        return selector(value)
+    if subject_type == "cloud_domain":
+        from ..modules.cloud_exposure.models import selector
         return selector(value)
     if subject_type in ("organization", "sector", "country"):
         value = " ".join(unicodedata.normalize("NFKC", value).split()).casefold()
@@ -67,7 +70,7 @@ def normalize_subject(subject_type, value):
 
 
 class Selector(Metadata):
-    subject_type: Literal["domain", "ip", "hash", "url", "email", "cve", "organization", "sector", "country", "ct_domain", "ct_organization", "ct_brand", "github_domain", "github_organization", "subdomain_domain"]
+    subject_type: Literal["domain", "ip", "hash", "url", "email", "cve", "organization", "sector", "country", "ct_domain", "ct_organization", "ct_brand", "github_domain", "github_organization", "subdomain_domain", "cloud_domain"]
     mode: Literal["exact", "domain_tree", "network"] = "exact"
     value: str = Field(min_length=1, max_length=2048)
 
@@ -81,6 +84,8 @@ class Selector(Metadata):
             raise ValueError("GitHub query attribution uses exact selectors only")
         if self.subject_type == "subdomain_domain" and self.mode != "exact":
             raise ValueError("Inventory uses exact approved domain attribution")
+        if self.subject_type == "cloud_domain" and self.mode != "exact":
+            raise ValueError("Cloud metadata uses exact approved domain attribution")
         if self.mode == "network":
             if self.subject_type != "ip":
                 raise ValueError("Networks match IP observations only")

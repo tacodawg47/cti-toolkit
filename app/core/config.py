@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     abuseipdb_api_key: str = ""
     otx_api_key: str = ""
     shodan_api_key: str = ""
+    # Search eligibility and cost are reviewed separately from IP enrichment.
+    shodan_cloud_access_reviewed: bool = False
+    shodan_cloud_access_tier: str = ""
+    shodan_cloud_monthly_credits: int = Field(default=20, ge=1, le=1000)
     urlscan_api_key: str = ""
     abusech_auth_key: str = ""
     greynoise_api_key: str = ""

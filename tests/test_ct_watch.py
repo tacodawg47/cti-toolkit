@@ -170,12 +170,12 @@ class ConsumerTests(unittest.IsolatedAsyncioTestCase):
     def watch(self):
         return store.watches(self.now)[0]
 
-    async def test_36_schedules_default_off_unscoped_and_fixed_surface(self):
+    async def test_37_schedules_default_off_unscoped_and_fixed_surface(self):
         from app.core.feed_catalog import catalog
         scheduler = Scheduler(catalog(), asyncio.get_running_loop())
         scheduler.initialize()
         with evidence.connect() as conn:
-            self.assertEqual(conn.execute("SELECT count(*),sum(enabled) FROM feed_schedules").fetchone()[:], (36, 0))
+            self.assertEqual(conn.execute("SELECT count(*),sum(enabled) FROM feed_schedules").fetchone()[:], (37, 0))
         self.assertFalse(settings.scheduled_feeds_enabled)
         for url in ("http://crt.sh/", "https://crt.sh/?q=x", "https://crt.sh/other", "https://crt.sh.evil.invalid/"):
             self.assertFalse(self.feed.permits(url))

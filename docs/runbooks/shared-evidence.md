@@ -1,5 +1,11 @@
 # Shared Evidence and Source Registry
 
+Update 2026-11-27, 3A.6: [Indexed Cloud Leads](cloud-exposure.md) retains
+bounded literal Shodan service/cloud fields and unresolved literal IP
+citations. Provider banner time, unknown index/publication dates and local
+first capture stay distinct. Exact query authority is separate from local
+matching. Sensitive raw originals are forced omitted. Source stays unapproved.
+
 
 Update 2026-11-27, 3A.5: [Passive Subdomain Inventory](subdomain-inventory.md)
 preserves literal CTLogs host/pattern citations, certificate-window validity

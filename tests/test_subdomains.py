@@ -405,7 +405,7 @@ class ConsumerTests(unittest.IsolatedAsyncioTestCase):
         scheduler = Scheduler(catalog(), asyncio.get_running_loop())
         scheduler.initialize()
         with evidence.connect() as conn:
-            self.assertEqual(conn.execute("SELECT count(*),sum(enabled) FROM feed_schedules").fetchone()[:], (36, 0))
+            self.assertEqual(conn.execute("SELECT count(*),sum(enabled) FROM feed_schedules").fetchone()[:], (37, 0))
         for url in ("https://api.ctlogs.dev/v1/cert/x", "https://api.ctlogs.dev/v1/hosts/example.invalid?after=x", "https://evil.invalid/v1/hosts/example.invalid"):
             self.assertFalse(self.feed.permits(url))
         with self.assertRaises(PermissionError):

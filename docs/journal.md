@@ -1609,6 +1609,118 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-27: Built Bounded Indexed Cloud Metadata Leads, 3A.6
+
+**Subphase 3A.6 Complete, implementation/offline acceptance, 2026-11-27.**
+
+The operator directly scoped one API-only indexed cloud consumer and
+authorized public-doc research, in-scope edits and offline tests. Read the
+requested Build order, cloud/foundation/data-handling scope, newest notes,
+handoff, 3A.5 closeout/API review/runbook, CT and GitHub reviews, shared
+Shodan client/reference and named shared runbooks. Revisited saved SitDeck
+selection and historical source/tool reviews. Kept one editor and all
+3A.1 through 3A.5 consumers intact.
+
+Read full relevant Shodan search/field documentation, primary terms/privacy,
+filter/syntax, billing/credit and timeframe pages. The initial guessed terms
+and privacy paths were inaccessible; official static/account versions
+were subsequently read fully. The
+[API Review](research/2026-11-27-cloud-exposure-api-review.md) distinguishes
+complete relevant reading from unchecked products, protocols, contracts and
+account behavior. No provider data endpoint or private selector was queried.
+
+Real live-use gaps: broad automated-use/content restrictions alongside the
+documented API, actual filtered/paged search entitlement and professional
+purpose, storage/derived rights, privacy/retention and nested fields projection
+remain unresolved. Book credit wording differs from endpoint/help docs;
+use a stricter one-credit/page reservation. Billing user-count and FAQ sharing
+descriptions differ. No account/key/contract/purchase was inspected or made.
+Human access attestation defaults false, tier blank, source unapproved.
+
+Chose only fixed hostname:"canonical-domain" search with explicit metadata
+projection. Local checks require a literal returned hostname inside the
+seed's full DNS label boundary and explicit structured cloud attribution.
+No ISP inference, storage-name guessing, domain expansion or target request.
+Other valid rows retain only hashed service identities/counts for consistency.
+Provider results are indexed leads, not ownership, current reachability,
+public exposure, misconfiguration, compromise or maliciousness verdicts.
+
+At most ten expiring exact query permissions; immutable empty/nonempty plans
+and two 100-service pages; endpoint/projection/access/version/cap bindings;
+atomic observation/citation/match/page writes; stable service events and
+retained reviews. Original normalized staging and committed pages recover
+without transport. Identical refetch preserves original capture/run; changed
+bytes create another capture. Later jobs never adopt cancelled/failed scopes.
+The final capture-review query is scoped to its exact domain selector so
+overlapping domain watches cannot display each other's review links.
+
+Provider timestamp is explicitly UTC banner acquisition, preserved literally
+and normalized for observed_at. Index/publication/modified and first/last
+observation dates remain unknown; missing timestamp stays unknown. Local
+first capture is distinct. Raw originals are forced omitted, references
+passive, and capture request metadata omits key/private query/headers.
+Shodan attribution/ownership wording is visible. No dependency was added.
+
+Daily per-domain freshness uses the oldest original page capture only when
+totals, expected lengths, distinct endpoint identities and termination agree
+within the 200-row cap. Partial/short/duplicate/drifting/over-cap results
+retain leads without renewing success. Provider 30-day indexing, PTR gaps,
+virtual hosting, attribution lag and reassigned IPs limit interpretation.
+Stable endpoint events can conflate reassigned services; they do not define
+an owned asset. No empty/deletion/clean verdict is generated.
+
+All 37 schedules/workers/bulk/raw default off. Each attempt permits 20 requests,
+40 MiB/120 seconds; each response 2 MiB/30 seconds, identity encoding; each
+normalized page 512 KiB. Three attempts. Durable local 20/minute, 48/day,
+one-second request slots and monthly credit reservations survive restart.
+Failed/refetched requests stay charged; key changes never reset local usage.
+Default monthly cap 20. Other app/manual usage is not covered. 429/503 save
+bounded Retry-After cooldowns. No quota/count/host/DNS endpoint is invoked.
+
+Initial 33 cases ran in 35.542 seconds with four fixture-assumption failures:
+timestamp microseconds, localhost Host validation, finite retry timing and
+the guarded month reset boundary. Corrected fixtures; 33 passed in 35.349
+seconds. Expanded cloud/inbox/shared-evidence acceptance passed 80 in 53.683
+seconds, including 46 cloud cases. Self-review strengthened normalized
+count/position/identity guards, error-envelope refusal and exact-selector
+review links. Final cloud-only suite passed 47 in 56.638 seconds. The first
+full run passed 887 tests in 361.827 seconds, with one existing skip. Repeated
+compatibility after those guards: 888 tests in 366.300 seconds, 887 passed
+and one existing skip. A last API-contract check then added handling of
+documented per-result metadata.truncated lists: retain metadata but keep the
+window incomplete and do not renew success. The full 47-case cloud suite
+passed again in 50.715 seconds, including that freshness regression. No
+further application changes; no third full run for this isolated parser guard.
+
+The managed Windows venv launcher failed before test execution. The
+authorized established external launcher ran the offline suites without
+interpreter/dependency/security-setting changes. Fixtures use temporary
+databases and blocked/mock HTTP. Existing diagnostics remain. Linux,
+native-browser visuals and measured live v1 acceptance remain unperformed.
+No live migration/restart, source enabling, selector submission, provider
+data request, install or other consumer occurred. Live database stays
+unmigrated/unrestarted for 5F.1 through 3A.6.
+
+The operator supplied completed 3A.5 commit/push
+5cbcc426f3e16fc254258be12f60de8a3302678d with matching hashes and empty index,
+superseding prepared notes. After direct current-chat approval, local
+read-only Git inspection confirmed main, HEAD/local origin/main at that
+hash and an empty index. No remote was contacted. Existing independent
+research/prototype/reconciliation/handoff-rule/settings work remains outside
+the new [37-path Scope](review/2026-11-27-3a6-checkpoint-files.md). Whole-tree
+whitespace checks found unrelated roadmap trailing spaces and our added test
+EOF blank lines. Fixed only our EOF additions; focused authored paths pass.
+Ignore-file permission and LF/CRLF warnings changed no config. No staging,
+commit or push is approved or performed. Never repeat 3A.1 through 3A.5.
+
+Next proposed bounded scope from slice A: 3A.7, one HIBP public breach-catalogue
+change consumer, using metadata-only new/changed service records and local
+exact breached-service-domain review leads. A catalogue hit never establishes
+watched-email breach membership. Current catalogue docs/terms/privacy review
+comes first. No 3A.7 implementation began. The full next prompt is saved in
+docs/handoff.md and printed at the boundary. Detailed limits and exact
+repeatable commands are in [Cloud Leads](runbooks/cloud-exposure.md).
+
 ### 2026-11-27: Executed Individually Approved 3A.4 and Prepared 3A.5 Checkpoints
 
 The operator directly approved local inspection and instructed commit and

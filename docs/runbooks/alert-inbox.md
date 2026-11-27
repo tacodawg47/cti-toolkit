@@ -1,5 +1,12 @@
 # Alert Inbox and Foundation Acceptance
 
+Update 2026-11-27, 3A.6: [Indexed Cloud Leads](cloud-exposure.md) adds exact
+cloud_domain observations for provider cloud metadata with a hostname inside
+the approved label boundary. Stable Shodan IP/port/transport events retain
+reviews across revisions and captures. Capture review links stay with the
+exact domain selector. No generic domain/IP match or ownership verdict is
+inferred, and local matching grants no external query permission.
+
 
 Update 2026-11-27, 3A.5: [Passive Subdomain Inventory](subdomain-inventory.md)
 adds exact subdomain_domain query attribution. Stable CTLogs name/pattern events

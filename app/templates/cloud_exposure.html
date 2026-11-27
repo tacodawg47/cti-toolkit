@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Indexed Cloud Leads | CTI Toolkit{% endblock %}
+{% block content %}
+<h1>Indexed Cloud Metadata Leads</h1>
+<p>Source: Shodan. Shodan owns the applicable Shodan information and copyright. Indexed host/service metadata with provider cloud attribution and a hostname inside an approved domain's label boundary. These are review leads. They do not prove ownership, current reachability, public exposure, misconfiguration, compromise or maliciousness.</p>
+<p>Coverage: at most two 100-service pages per exact approved hostname query. Shodan documents a 30-day search index. Missing PTR names, unindexed services, virtual hosting, cloud attribution gaps, provider lag and the local page cap limit discovery. No DNS, target requests, scans, content fetching or storage-name guessing. Empty results establish no absence. Pagination is not a stable snapshot.</p>
+<p>Search access, terms, handling and exact-domain disclosure require separate approval. Current terms contain an automated-access restriction alongside API documentation. Source eligibility remains unapproved by this implementation.</p>
+<p><a href="/cloud-exposure">Per-Domain Freshness</a> · <a href="/alerts">Local Inbox</a> · <a href="/health">Health</a></p>
+{% include "source_health.html" %}
+{% if watches is defined %}
+<h2>Per-Domain Freshness</h2>
+<p>Daily cadence; stale after two days. Last Good Window uses the oldest original page capture of a consistent terminated search window. Truncated, duplicate, short or drifting windows retain evidence without renewing success. Submission authority is separate from local matching.</p>
+<div class="tablescroll"><table><tr><th>Exact Domain</th><th>Query Authority</th><th>Last Attempt</th><th>Last Good Window</th><th>State</th></tr>
+{% for row in watches %}<tr><td><code>{{ row.value }}</code> · <a href="/cloud-exposure/watches/{{ row.id }}">History</a></td><td>{{ 'Current' if row.authorized else 'Not Eligible' }}</td><td>{{ row.last_attempt or 'Never' }}</td><td>{% if row.document_id %}<a href="/cloud-exposure/captures/{{ row.document_id }}">{{ row.last_good }}</a> · {{ row.last_good | ago }}{% else %}Never{% endif %}</td><td>{{ row.state }}{% if row.incomplete %} · Incomplete{% endif %}{% if row.error %} · Failed: {{ row.error }}{% endif %}</td></tr>{% else %}<tr><td colspan="5">No separately approved exact domains. Local selectors grant no external query permission.</td></tr>{% endfor %}</table></div>
+{% elif history is defined %}
+<h2>Domain Capture History</h2>
+<ul>{% for row in history %}<li><a href="/cloud-exposure/captures/{{ row.document_id }}">Capture {{ row.document_id }}</a> · Page {{ row.page }} · {{ row.collected_at }} · {{ 'Bounded Window Complete' if row.window_complete else 'Incomplete' }}</li>{% else %}<li>No captures.</li>{% endfor %}</ul>
+{% if history | length == 50 %}<a href="/cloud-exposure/watches/{{ selector_id }}?before={{ history[-1].document_id }}">Older Captures</a>{% endif %}
+{% else %}
+<h2>Immutable Capture {{ document.id }}</h2>
+<p>Source: {{ document.source_id }} · Collected Locally: {{ document.collected_at }} · Age: {{ document.collected_at | ago }} · Capture: <code>{{ document.capture_key }}</code></p>
+<p>Endpoint Surface: <code>{{ document.source_url }}</code>. Query, key and headers omitted from capture metadata. Published: {{ document.source_published_at or 'Unknown' }} · Modified: {{ document.source_modified_at or 'Unknown' }}. Index ingestion/update dates are unknown.</p>
+<p>Originating Execution: {{ document.job_run_id }} · Originating State: {{ document.originating_state }} · Current Job State: {{ document.job_state }}</p>
+<p>Body SHA-256: <code>{{ document.content_sha256 }}</code>. A digest identifies bytes, not authenticity. Original: {{ archive.state if archive else 'Unavailable' }}. Sensitive raw bodies are forced omitted.</p>
+<p>Page {{ page.page }} · Provider Total: {{ summary.total }} · Returned Services: {{ summary.returned_count }} · Retained Cloud Leads: {{ summary.leads | length }} · Provider Partial: {{ summary.partial }} · {{ 'Bounded Window Complete' if unit.window_complete else 'Incomplete / Not Established' }}.</p>
+<p>{% for sibling in pages %}{% if sibling.document_id %}<a href="/cloud-exposure/captures/{{ sibling.document_id }}">Page {{ sibling.page }}</a> {% endif %}{% endfor %}</p>
+<h3>Literal Provider Metadata</h3>
+<p>timestamp is Shodan's banner acquisition time, documented as UTC even without an offset. It is not index publication or local capture time. Missing dates stay unknown. Local First Capture is the earliest retained acquisition of this Shodan IP/port/transport service. hostnames are provider PTR/reverse-DNS names; org manages IP space and does not identify the monitored domain's owner.</p>
+{% for row in leads %}
+<article><h4>Service {{ loop.index }}</h4>
+<dl><dt>Literal IP / Port / Transport</dt><dd><code>{{ row.lead.ip_str }}</code> / {{ row.lead.port }} / {{ row.lead.transport }}</dd>
+<dt>Literal Hostnames</dt><dd>{{ row.lead.hostnames | join(', ') }}</dd><dt>Literal Domains</dt><dd>{{ row.lead.domains | join(', ') }}</dd>
+<dt>Cloud Provider / Region / Service</dt><dd>{{ row.lead.cloud.provider }} / {{ row.lead.cloud.region or 'Unknown' }} / {{ row.lead.cloud.service or 'Unknown' }}</dd>
+<dt>IP Organization / ISP / ASN</dt><dd>{{ row.lead.org or 'Unknown' }} / {{ row.lead.isp or 'Unknown' }} / {{ row.lead.asn or 'Unknown' }}</dd>
+<dt>Product / Version</dt><dd>{{ row.lead.product or 'Unknown' }} / {{ row.lead.version or 'Unknown' }}</dd>
+<dt>Provider timestamp</dt><dd>{{ row.lead.timestamp or 'Unknown' }}</dd><dt>Local First Capture</dt><dd>{{ row.local_first_capture }}</dd>
+<dt>Original Row</dt><dd>matches[{{ row.lead.row_position }}]</dd><dt>Inbox Reviews</dt><dd>{% for alert in row.alerts %}<a href="/alerts/{{ alert.id }}">{{ alert.state | title }} · Revision {{ alert.revision }}</a> {% else %}No Local Match{% endfor %}</dd></dl></article>
+{% else %}<p>No retained cloud leads. No absence or clean verdict is implied.</p>{% endfor %}
+<h3>Literal Provider References</h3>
+<ul>{% for citation in citations %}<li><code>{{ citation.target_reference }}</code> · {{ citation.locator }} · Unresolved</li>{% else %}<li>No reference hops.</li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}

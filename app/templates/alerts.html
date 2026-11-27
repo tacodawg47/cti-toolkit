@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Alert Inbox | CTI Toolkit{% endblock %}
 {% block content %}
+{% if cloud_document_id %}<p><a href="/cloud-exposure/captures/{{ cloud_document_id }}">Shodan Indexed Cloud Metadata and Coverage</a>. Ownership, current reachability, public exposure, misconfiguration, compromise and maliciousness are unverified.</p>{% endif %}
 {% if subdomain_document_id %}<p><a href="/subdomains/captures/{{ subdomain_document_id }}">CTLogs Literal Inventory and Window Coverage</a>. A name or pattern does not establish DNS activity, ownership, registration, a dangling service, compromise or maliciousness.</p>{% endif %}
 <h1>Alert Inbox</h1>
 {% if github_document_id %}<p><a href="/github-exposure/captures/{{ github_document_id }}">GitHub Search Metadata and Query Coverage</a>. Provider-reported query attribution is a review lead. Exact content, exposure, secret validity, ownership and maliciousness are unverified.</p>{% endif %}
@@ -32,6 +33,7 @@
 <p>Domain trees match domain observations only. Networks match IP observations only. Exact URLs preserve case; email local parts preserve case. Organization and sector use exact case/whitespace/Unicode normalization, with punctuation significant. Country requires an explicit two-letter code. No aliases, inferred classifications, regex or substring rules. <a href="/ransomware">Ransomware Victim Claims</a></p>
 <label>Value <input type="text" name="value" maxlength="2048" required></label>
 <p>subdomain_domain uses Exact Typed Value for a full authorized domain. Inventory results remain attributed to that approved query. Local matching grants no external submission authority. <a href="/subdomains">Passive Inventory and Freshness</a>.</p>
+<p>cloud_domain uses Exact Typed Value for an authorized domain. Shodan leads require a returned hostname inside its label boundary and explicit provider cloud attribution. <a href="/cloud-exposure">Cloud Lead Coverage and Freshness</a>. Local matching grants no external query permission.</p>
 <p>GitHub types attribute results to the exact approved query selector. Organization text is not an inferred GitHub account. Provider search can ignore punctuation; no content is read to confirm an exact occurrence. <a href="/github-exposure">GitHub Lead Coverage and Freshness</a>. Local selectors grant no external submission authority.</p>
 <p>CT seed types use Exact Typed Value only. CT organization/brand seeds are explicit DNS tokens, at least three characters. CT domain seeds are full domains. Matching uses complete hostname labels or hyphen-token sequences, including a full domain sequence before extra labels. No aliases or fuzzy expansion. <a href="/ct-watches">CT Watch Coverage and Freshness</a>. Local matching never grants query submission authority.</p>
 <label><input type="checkbox" name="authorized" value="true" required> I own or am authorized to monitor this selector.</label><p><button>Add Selector</button></p></form></details>

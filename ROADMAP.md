@@ -1228,10 +1228,34 @@ Focused 113 passed in 91.091 seconds; two final recovery cases passed in
 841 tests in 302.124 seconds, 840 passed and one existing skip. See docs/review/2026-11-27-3a5-closeout.md.
 No source enabling, domain submission, provider data request, install, live
 migration/restart or Git operation. Source eligibility remains unapproved.
-Proposed next bounded subphase 3A.6: one API-only indexed public-cloud
-metadata lead consumer for exact authorized domains, reviewing Shodan first.
-This follows slice A's exposed-cloud scope. No storage-name guessing, target
-probing or ownership/exposure verdict. Do not begin it in this chat.
+3A.6 design, decided 2026-11-27: one disabled Shodan host-search consumer for
+at most ten explicitly approved exact domains and two 100-service pages each.
+Use fixed metadata projection, local hostname label boundaries and explicit
+cloud attribution. Separate exact query authority from local matching; freeze
+plans/captures and retain literal provenance, provider banner time and unknown
+index dates. Atomic inbox events preserve reviews; consistent terminated
+bounded windows alone renew per-domain freshness. Durable consumer-local
+credit reservations, pacing, quotas and cooldowns bound cost and recovery.
+This supplies indexed review leads without target requests or storage guessing.
+Shodan automation/storage rights, actual entitlement and projected schema
+remain unresolved live-use gates. See docs/runbooks/cloud-exposure.md.
+
+**Subphase 3A.6 Complete, 2026-11-27, implementation/offline acceptance.**
+Expanded cloud/inbox/evidence: 80 passed in 53.683 seconds. Compatibility:
+888 tests in 366.300 seconds, 887 passed and one existing skip. Final narrow
+truncation-guard follow-up: 47 cloud cases passed in 50.715 seconds. See
+docs/review/2026-11-27-3a6-closeout.md. All 37 schedules, workers, bulk and raw
+storage default off. No provider data request, domain submission, source
+enabling, install or live migration/restart occurred. Only directly approved
+local read-only Git inspection occurred; the new checkpoint remains pending.
+
+Proposed next bounded scope 3A.7: one API-only HIBP public breach-catalogue
+change consumer, as proposed below, with immutable metadata captures, local
+exact breached-service-domain review leads and freshness. Review its current
+catalogue API/terms/privacy first. A service catalogue is not evidence that
+a watched address appears in a breach. Exclude email/domain membership
+queries, sensitive contents, other providers and other consumers. Do not
+begin 3A.7 here. This continues slice A before the Phase 9 seed slice.
 
 - Newly registered domain monitoring: WhoisDS daily NRD files, ICANN CZDS zone files, certstream certificate transparency. dnstwist permutations of org domains, OpenSquat patterns.
   - Scheduled daily run against org domains.
@@ -1470,10 +1494,14 @@ Reconciled without new Git operations. 3A.4 metadata consumer implementation/
 offline acceptance is complete and its selective checkpoint committed/pushed
 as eccbf441db7ffbd6647d11fab7db7f8dcb304216. Approved live verification
 matched local HEAD/origin/main/live main. 3A.5 implementation/offline acceptance
-is complete; its exact selective commit and push are directly approved and
-prepared. Actual closing results supersede saved execution notes. Independent
-shared-document work remains excluded. Proposed next capability is bounded
-3A.6 indexed public-cloud metadata leads through one reviewed API.
+is complete. Operator-supplied closing result, reconciled 2026-11-27:
+3A.5 committed/pushed as 5cbcc426f3e16fc254258be12f60de8a3302678d, with
+matching local HEAD/local origin/main/live main and an empty index then.
+Do not repeat 3A.1 through 3A.5. Reconciliation performed no Git operation.
+3A.6 indexed cloud metadata implementation and acceptance are recorded in
+its dated closeout; its new selective checkpoint remains unapproved/pending.
+Independent shared-document work remains preserved and excluded. Next bounded
+capability is 3A.7, one HIBP public breach-catalogue change consumer.
 See docs/handoff.md for separate checkpoint and implementation instructions.
 Live v1 activation remains separately approved work.
 

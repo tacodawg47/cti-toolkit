@@ -2,6 +2,14 @@
 
 Written 2026-10-28. Updated 2026-11-27.
 
+3A.6 focused acceptance, 2026-11-27: expanded cloud/inbox/shared evidence
+passed 80 tests in 53.683 seconds, including 46 cloud cases. Final cloud-only
+acceptance passed 47 in 50.715 seconds, including the final per-result
+metadata.truncated guard. Full compatibility before that narrow follow-up:
+888 tests in 366.300 seconds, 887 passed and one existing skip.
+Temporary databases and synthetic/refused HTTP only. See
+[Indexed Cloud Leads](cloud-exposure.md). Earlier results are historical.
+
 3A.5 acceptance, 2026-11-27: focused inventory/GitHub/inbox/shared evidence
 passed 113 tests in 91.091 seconds, including 36 inventory cases. Two final
 recovery cases passed in 2.563 seconds. Final inventory has 38 cases.
@@ -60,6 +68,7 @@ import base (so `import app...` works), and `-v` lists each test.
 
 | File | Covers |
 |---|---|
+| `tests/test_cloud_exposure.py` | 47 offline Shodan indexed cloud metadata cases: exact domain/label boundaries and query permissions; explicit cloud/hostname inclusion; literal provenance and provider/index/local dates; immutable plans/captures; staged and changed-response restart; atomic inbox rollback and stable retained reviews; exact-selector review links; partial/duplicate/drifting/capped windows; finite byte/request/time/page bounds; durable month/minute/day reservations, cooldowns/pacing, cancellation and per-domain freshness. See [Cloud Leads](cloud-exposure.md). |
 | `tests/test_github_exposure.py` | 43 offline query/authority/public-metadata cases: fixed pagination and bounds, immutable plans/captures, source/token/version changes, original staged recovery, atomic inbox rollback, retained reviews, partial/stale health, quotas/cooldowns, cancellation, passive pages and additive migration. See [GitHub Leads](github-exposure.md). |
 | `tests/test_ct_watch.py` | 43 provisional CT cases: versioned patterns, strict IDNA/wildcards and exact boundaries; explicit submission permissions/content/version bindings; disabled defaults; parser/request/response/normalized-byte/time bounds; source/selector/schedule/retry/resumption gates; stable inbox events/reviews, immutable captures, staged/atomic crash recovery, cancellation, durable quota/cooldown, per-seed health, passive pages and additive migration. |
 | `tests/test_breaches.py` | 36 bounded HIBP cases: explicit submission consent/authority, ten-watch cap, disabled defaults, fixed encoded requests, immutable plans, claim/event deduplication and review preservation, literal dates/citations, sensitive raw omission and field minimization, suppression, atomic rollback, staged changed-response recovery, progress repair, source/selector/schedule/expiry/retry gates, cancellation, durable quota/cooldown, real stream timeout and response/request/byte/elapsed bounds, partial per-address freshness, passive escaped attributed pages and additive migration. See [HIBP Lookups](breach-lookups.md). |
