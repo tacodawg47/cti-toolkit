@@ -2,6 +2,7 @@
 {% block title %}Alert Inbox | CTI Toolkit{% endblock %}
 {% block content %}
 <h1>Alert Inbox</h1>
+{% if ct_document_id %}<p><a href="/ct-watches/captures/{{ ct_document_id }}">CT Candidate Names and Certificate Dates</a>. Certificate appearance does not establish registration time, live DNS, ownership or maliciousness.</p>{% endif %}
 {% if breach_document_id %}<p>Source: <a href="https://haveibeenpwned.com/">Have I Been Pwned</a>, CC BY 4.0. <a href="/breaches/captures/{{ breach_document_id }}">Breach Association and Provider Dates</a>. Association claims do not establish identity or current compromise.</p>{% endif %}
 {% if rows is defined and rows | selectattr('source_id','equalto','hibp_email') | list | length %}<p>HIBP associations: <a href="https://haveibeenpwned.com/">Have I Been Pwned</a>, CC BY 4.0. <a href="/breaches">Per-Address Freshness</a>.</p>{% endif %}
 <p><a href="/alerts">All Alerts</a> · <a href="/reports">Saved Reports</a> · <a href="/health">Health</a></p>
@@ -28,6 +29,7 @@
 <label>Match <select name="mode"><option value="exact">Exact Typed Value</option><option value="domain_tree">Domain and Subdomains</option><option value="network">IP in CIDR Network</option></select></label>
 <p>Domain trees match domain observations only. Networks match IP observations only. Exact URLs preserve case; email local parts preserve case. Organization and sector use exact case/whitespace/Unicode normalization, with punctuation significant. Country requires an explicit two-letter code. No aliases, inferred classifications, regex or substring rules. <a href="/ransomware">Ransomware Victim Claims</a></p>
 <label>Value <input type="text" name="value" maxlength="2048" required></label>
+<p>CT seed types use Exact Typed Value only. CT organization/brand seeds are explicit DNS tokens, at least three characters. CT domain seeds are full domains. Matching uses complete hostname labels or hyphen-token sequences, including a full domain sequence before extra labels. No aliases or fuzzy expansion. <a href="/ct-watches">CT Watch Coverage and Freshness</a>. Local matching never grants query submission authority.</p>
 <label><input type="checkbox" name="authorized" value="true" required> I own or am authorized to monitor this selector.</label><p><button>Add Selector</button></p></form></details>
 {% else %}
 <h2>{{ document.title }}</h2>

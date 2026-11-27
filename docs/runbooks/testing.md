@@ -2,6 +2,12 @@
 
 Written 2026-10-28. Updated 2026-11-27.
 
+3A.3 acceptance, 2026-11-27: CT/inbox/shared-evidence passed 77 tests in
+30.994 seconds, including 43 CT cases. Full compatibility ran 760 tests in
+208.414 seconds: 759 passed and one existing skip. Temporary databases and
+synthetic/refused HTTP only. See [CT Watches](ct-lookalike-watches.md).
+The full-suite result below is retained as prior 3A.2 verification.
+
 The current suite ran 717 tests, with 716 passing and one existing skip,
 verified at the 2026-11-27 subphase 3A.2 closeout in 180.083 seconds. Final
 breach/shared-evidence acceptance passed 54 tests in 32.105 seconds, including
@@ -41,6 +47,7 @@ import base (so `import app...` works), and `-v` lists each test.
 
 | File | Covers |
 |---|---|
+| `tests/test_ct_watch.py` | 43 provisional CT cases: versioned patterns, strict IDNA/wildcards and exact boundaries; explicit submission permissions/content/version bindings; disabled defaults; parser/request/response/normalized-byte/time bounds; source/selector/schedule/retry/resumption gates; stable inbox events/reviews, immutable captures, staged/atomic crash recovery, cancellation, durable quota/cooldown, per-seed health, passive pages and additive migration. |
 | `tests/test_breaches.py` | 36 bounded HIBP cases: explicit submission consent/authority, ten-watch cap, disabled defaults, fixed encoded requests, immutable plans, claim/event deduplication and review preservation, literal dates/citations, sensitive raw omission and field minimization, suppression, atomic rollback, staged changed-response recovery, progress repair, source/selector/schedule/expiry/retry gates, cancellation, durable quota/cooldown, real stream timeout and response/request/byte/elapsed bounds, partial per-address freshness, passive escaped attributed pages and additive migration. See [HIBP Lookups](breach-lookups.md). |
 | `tests/test_ransomware.py` | 31 API-only ransomware cases: disabled defaults, fixed destinations and scoped calls, explicit typed watch semantics, claim/capture deduplication and preserved reviews, local catch-up, literal dates/citations, omitted or expired originals, staged changed-response recovery, atomic row failure, revocation at requests/waits/rows/retries/resumption, cancellation, schedule disablement, durable/shared quota and cooldowns, finite requests/bytes/time, passive escaped local pages and additive migration rollback/newer-version refusal. See [Ransomware Victim Claims](ransomware-victims.md). |
 | `tests/test_alerts.py` | 16 inbox cases: atomic report/observation matches, canonical typed values, domain/CIDR boundaries, passive/invalid rules, separate assertions, disabled/replayed selectors, paged restart/concurrent catch-up, rollback, review conflicts/history, provenance/citation resolution, expiry preservation, capacity/paging, migration rollback and guarded escaped routes. |

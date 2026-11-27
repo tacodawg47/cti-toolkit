@@ -1,5 +1,12 @@
 # Alert Inbox and Foundation Acceptance
 
+Update 2026-11-27: [CT Lookalike Watches](ct-lookalike-watches.md) adds exact
+CT-domain and explicit organization/brand DNS-token selectors. They match
+only ct_hostname observations using complete labels or hyphen components.
+Wildcard patterns stay distinct from apex/host observations. Stable provider/
+hostname events preserve reviews across captures/certificates. Local selector
+creation and catch-up never grant external seed submission authority.
+
 Update 2026-11-26: [Ransomware Victim Claims](ransomware-victims.md) adds
 exact organization/sector/country selectors and an optional stable source-claim
 deduplication key. All immutable observations/captures survive; repeat victim

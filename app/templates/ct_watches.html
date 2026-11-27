@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}CT Watches | CTI Toolkit{% endblock %}
+{% block content %}
+<h1>Certificate Transparency Watches</h1>
+<p>Provisional provider: <a href="https://crt.sh/">crt.sh</a>. Current hosted-service terms and JSON stability remain unverified. Collection requires separate source review and exact seed submission authority.</p>
+<p>Provider-reported candidate names are leads for local review. CT appearance does not establish registration time, live DNS, ownership or maliciousness. Wildcards are literal patterns, not observed hosts or apexes.</p>
+<p>Coverage: bounded unexpired certificate query snapshots only. Provider completeness, indexing lag, historical coverage and continuity are unassessed. Empty results do not prove absence. Themes are annotations, never verdicts.</p>
+<p><a href="/ct-watches">CT Watches</a> · <a href="/alerts">Local Inbox</a> · <a href="/health">Health</a></p>
+{% include "source_health.html" %}
+{% if watches is defined %}
+<h2>Per-Seed Freshness</h2>
+<p>Daily cadence; stale after two days. Age uses original collection time, including resumed input. A successful global pass does not renew an older seed capture.</p>
+<table><tr><th>Seed</th><th>Submission Authority</th><th>Last Attempt</th><th>Last Good Capture</th><th>State</th></tr>
+{% for row in watches %}<tr><td>{{ row.subject_type }} · <code>{{ row.value }}</code> · <a href="/ct-watches/watches/{{ row.id }}">History</a></td><td>{{ 'Current' if row.authorized else 'Not Eligible' }}</td><td>{{ row.last_attempt or 'Never' }}</td><td>{% if row.document_id %}<a href="/ct-watches/captures/{{ row.document_id }}">{{ row.last_good }}</a> · {{ row.last_good | ago }}{% else %}Never{% endif %}</td><td>{{ row.state }}{% if row.incomplete %} · Incomplete{% endif %}{% if row.error %} · {{ row.error }}{% endif %}</td></tr>{% else %}<tr><td colspan="5">No separately approved query seeds. Local selectors alone grant no submission authority.</td></tr>{% endfor %}</table>
+<h2>Keyword and Pattern Version {{ patterns.version }}</h2>
+<p>{{ patterns.semantics }}</p>
+{% for group in patterns.groups %}<h3>{{ group.name }}</h3><p>{{ group.tokens | join(', ') }}. {{ group.basis }}</p>{% endfor %}
+<h3>Pattern Sources</h3><ul>{% for key, reference in patterns.sources.items() %}<li>{{ key }} · <code>{{ reference }}</code></li>{% endfor %}</ul>
+{% elif history is defined %}
+<h2>Seed Capture History</h2>
+<ul>{% for row in history %}<li><a href="/ct-watches/captures/{{ row.document_id }}">Capture {{ row.document_id }}</a> · {{ row.collected_at }} · {{ 'Ingested' if row.completed else 'Incomplete' }}</li>{% else %}<li>No captures.</li>{% endfor %}</ul>
+{% if history | length == 50 %}<a href="/ct-watches/watches/{{ selector_id }}?before={{ history[-1].document_id }}">Older Captures</a>{% endif %}
+{% else %}
+<h2>Immutable Capture {{ document.id }}</h2>
+<p>Source: {{ document.source_id }} · Collected: {{ document.collected_at }} · Age: {{ document.collected_at | ago }} · Capture: <code>{{ document.capture_key }}</code></p>
+<p>Endpoint: <code>{{ document.source_url }}</code> · Query omitted from request metadata. Published: {{ document.source_published_at or 'Unknown' }} · Modified: {{ document.source_modified_at or 'Unknown' }}</p>
+<p>Originating Execution: {{ document.job_run_id }} · Originating State: {{ document.originating_state }} · Current Job State: {{ document.job_state }}</p>
+<p>Body SHA-256: <code>{{ document.content_sha256 }}</code>. A digest identifies bytes, not authenticity. Original: {{ archive.state if archive else 'Unavailable' }} · {{ archive.reason if archive else 'No archive metadata' }}. Captures are sensitive; raw bodies are forced omitted.</p>
+<table><tr><th>Reported Name</th><th>Certificate ID</th><th>Literal Provider Dates</th><th>Exact Match and Themes</th><th>Inbox Reviews</th></tr>
+{% for row in candidates %}<tr><td><code>{{ row.candidate.name }}</code> · Literal: <code>{{ row.candidate.literal_name }}</code></td><td>{{ row.candidate.certificate_id }}</td><td>Entry Timestamp: {{ row.candidate.entry_timestamp or 'Unknown' }}<br>Validity Start: {{ row.candidate.not_before or 'Unknown' }}<br>Validity End: {{ row.candidate.not_after or 'Unknown' }}</td><td>{{ row.match.rules | join(', ') }} · {{ row.match.themes | join(', ') }} · Version {{ row.match.pattern_version }}</td><td>{% for alert in row.alerts %}<a href="/alerts/{{ alert.id }}">{{ alert.state | title }} · Revision {{ alert.revision }}</a> {% else %}No Local Match{% endfor %}</td></tr>{% else %}<tr><td colspan="5">No matching candidate assertions on this page. No absence or clean verdict is implied.</td></tr>{% endfor %}</table>
+<p>Provider dates remain literal. A naive entry timestamp has no assumed timezone. Certificate validity is not domain registration, source publication or local collection time.</p>
+<h3>Provider References</h3><ul>{% for citation in citations %}<li><code>{{ citation.target_reference }}</code> · {{ citation.locator }} · {{ 'Resolved Locally' if citation.target_document_id else 'Unresolved' }}</li>{% else %}<li>No reference hops on this page.</li>{% endfor %}</ul>
+{% if candidates | length == 100 or citations | length == 100 %}<a href="/ct-watches/captures/{{ document.id }}?offset={{ offset + 100 }}">More Candidate Evidence</a>{% endif %}
+{% endif %}
+{% endblock %}

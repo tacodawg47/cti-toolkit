@@ -90,6 +90,9 @@ def init_db() -> None:
         from ..modules.breaches.schema import migrate as migrate_breaches
 
         migrate_breaches(conn)
+        from ..modules.ct_watch.schema import migrate as migrate_ct
+
+        migrate_ct(conn)
         # Drop expired cache rows so the table doesn't grow without bound.
         conn.execute("DELETE FROM cache WHERE expires_at < ?",
                      (datetime.now(timezone.utc).isoformat(),))

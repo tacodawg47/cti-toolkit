@@ -1609,6 +1609,106 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-27: Inspected the 3A.3 Checkpoint After Direct Approval
+
+The operator directly approved read-only local Git inspection after 3A.3
+implementation/offline closeout. Confirmed main, HEAD and local origin/main
+at 3eaf484bcdb803555c5f199c1906b30969dce80f and an empty index. No remote
+contact, staging or Git mutation occurred. Reviewed tracked scoped diffs,
+new authored files and the exact 35-path proposal. Whole-tree whitespace
+found the known unrelated ROADMAP.md line; exclude it with the independent
+work rather than changing it. Global-ignore access and LF/CRLF notices were
+nonfatal and no configuration was changed.
+
+Prepared five local document review copies under ignored data/3a3-checkpoint/,
+based on inspected HEAD plus only the proposed status/scope/handoff blocks.
+Current status includes the minimum completed 3A.2 result needed to replace
+stale prepared-execution wording. Independent handoff-rule, OSINT, detection,
+prototype and historical journal blocks remain in the real working files
+and outside the proposed copies. Updated the paired summaries, roadmap,
+closeout, manifest, runbook and handoff to reflect this inspection. No code
+or acceptance result changed. The operator subsequently approved this exact
+35-path/selective-block commit and explicitly authorized its push in the
+current chat. Execution is prepared; the actual hash and verified push belong
+to the closing result. Saved records grant no future Git permission.
+
+### 2026-11-27: Subphase 3A.3 Complete, Provisional CT Candidate Watches
+
+The operator directly scoped a bounded API-only CT watch consumer. Read the
+roadmap, current journal/handoff and foundation/breach/inbox contracts, and
+revisited the existing crt.sh client and historical source findings. Preserved
+the supplied completed 3A.2 result and later uncommitted reconciliation and
+handoff-rule edits. No Git operation was authorized or run.
+
+Curated patterns-v1.json first from complete public Okta reporting dated
+2026-07-10 and 2026-11-23. Separated reported passkey/legal/legaldept domain
+tokens from behavioral hypotheses and roadmap IAM/auth vocabulary. Themes
+only annotate an exact seed match. No provider/source data or service code
+was imported. The pure matcher handles explicit DNS seeds, strict IDNA2008,
+complete domain-label and hyphen-component sequences, and literal wildcard
+patterns. It performs no network or fuzzy/permutation expansion.
+
+The first focused run found idna accepting a Unicode full stop even without
+UTS46. Added explicit separator refusal and a hyphenated-seed boundary case.
+Initial matcher acceptance: 8 passed in 0.007 seconds. The established Windows
+managed-launch restriction required the existing external test execution
+path, with no interpreter/package/security setting changes. The completed
+consumer was subsequently integrated and tested as recorded below.
+
+Reviewed the full relevant crt.sh maintainer discussions: historical reasonable
+automation permission, service limits and instability. The homepage timed
+out; no current service-specific terms, access tier, cost policy, stable
+schema or quota was verified. Inspected only the GPL web-interface header/
+parameter declarations, without copying or executing code. SSLMate's inspected
+API supports specific domains, not arbitrary brand searches; its partial
+review is not adoption approval. Research notes enumerate checked and
+unchecked sources without claiming a full current provider review.
+
+Requested the exact unresolved decision before adapter work. The operator
+directly chose the provisional disabled adapter and asked for CTLogs and
+alternatives to be considered. Read the submitted comparison, CTLogs API/
+pricing, terms, privacy, about and homepage text; inspected coverage without
+visiting individual logs. Its documented organization search is subject O=,
+not arbitrary brand tokens in hostnames. Its domain-focused APIs and SSLMate
+remain candidates for later scope. No second provider or silent fallback
+was added. The API review records rate-document inconsistencies, privacy,
+cost, coverage and unchecked material. No live source decision was inferred.
+
+Implemented one original provisional crt.sh adapter, an independent additive
+schema, explicit expiring seed permissions and a frozen normalized plan.
+Permissions bind pattern version/content digest and matcher version. Existing
+jobs, app loop/client/limiter and shared evidence/inbox remain owners.
+Atomic candidate/citation/alert/completion writes preserve capture time,
+originating execution and reviews on restart. Stable source/hostname events
+deduplicate alerts across certificates while keeping separate observations.
+Constructed certificate-ID references are labelled, not invented as supplied
+URLs or original-log citations. Literal certificate dates stay separate from
+unknown observation/publication dates. Per-seed health uses original captures.
+All 34 composed schedules, worker, bulk and raw storage default off. Raw
+bodies are forced omitted and captures sensitive. No dependency was added.
+
+The first consumer run passed 34/35; its page test used the test client's
+default hostname and correctly hit the real Host gate. Changed the fixture
+to 127.0.0.1. The next grouped run had one wrong expected fixed failure code;
+corrected transient_error to the existing transient value. No guard was
+weakened. Final CT/inbox/shared-evidence acceptance: 77 passed in 30.994 seconds,
+including 43 CT cases. Full compatibility: 760 tests in 208.414 seconds,
+759 passed and one existing skip. Tests used temporary databases and synthetic/
+refused HTTP. The full suite includes the final bounded eligibility read.
+Existing deprecation, synthetic PDF and asyncio diagnostics remain.
+
+**Subphase 3A.3 Complete, 2026-11-27.** Provisional implementation/offline
+acceptance only. Updated closeout, paired summaries, roadmap, runbooks/testing
+and handoff. No Git operation, enabling, provider data request, selector
+submission, live migration/restart, install or external private-data transfer.
+The live database remains unmigrated/unrestarted for 5F.1 through 3A.3.
+Current hosted-service terms/access/schema, Linux/native-browser visuals and
+live v1 acceptance remain unverified. Source eligibility stays unapproved.
+The 35-path authored proposal awaits approved actual Git inspection and
+individual commit/push approvals; new and independent prior edits remain
+uncommitted. Proposed next scope is 3A.4 bounded GitHub public-code exposure
+metadata leads. No other consumer was started in this chat.
+
 ### 2026-11-27: Authorized the 3A.2 Commit and Push
 
 After the exact 34-path/selective-block proposal and message were shown,

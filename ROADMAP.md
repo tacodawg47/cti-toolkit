@@ -983,10 +983,12 @@ other breach providers and other slice A capabilities remain later subphases.
 717 tests, 716 passed and one existing skip in 180.083 seconds. See
 docs/review/2026-11-27-3a2-closeout.md. No live enabling, selector submission,
 migration/restart, API data request or install occurred. All 33 schedules
-default off. Approved local inspection confirmed main/HEAD/local origin/main
-at d34a37d and an empty index, without remote contact. The operator approved
-the exact 3A.2 commit and explicitly authorized its push. Execution is prepared;
-reconcile the actual closing result before repeating a checkpoint step.
+default off. Operator closing result, reconciled 2026-11-27: the exact
+34-path/selective-block commit was individually approved and committed as
+3eaf484bcdb803555c5f199c1906b30969dce80f, then separately authorized and
+pushed. Local HEAD/local origin/main/live remote main matched that hash;
+the index was empty afterward. Do not repeat this checkpoint. Reconciliation
+performed no new Git operation. Another subphase requires directly named scope.
 
 - Vendor sources: Have I Been Pwned domain search, Hudson Rock free infostealer
   API, IntelligenceX free tier, LeakCheck. These clients are shared with the
@@ -1121,6 +1123,12 @@ reconcile the actual closing result before repeating a checkpoint step.
   across services using a single private salt.
 - GitHub secret and credential leaks for watched domains and organization
   names. CVE and exploit content on GitHub stays in Phase 2.
+  Proposed next subphase 3A.4: one bounded API-only public-code exposure lead
+  consumer for authorized organization/domain selectors, retaining metadata
+  references only. Review current API terms/access first. Preserve immutable
+  evidence, per-selector submission authority, durable recovery and inbox
+  reviews; omit code/secret values and never test found credentials. This is
+  the next scoped handoff, not work or activation performed in 3A.3.
 - Exposed public cloud assets tied to the organization, found through search
   indexes (Shodan, Censys, GrayhatWarfare-style indexes). No guessing of
   storage names.
@@ -1157,6 +1165,28 @@ reconcile the actual closing result before repeating a checkpoint step.
   again. A hit is a lead for the analyst, not a verdict.
 
 **Domain monitoring detail**
+
+3A.3 scope, started 2026-11-27: one bounded API-only
+certificate-transparency lookalike-domain watch consumer, using crt.sh as the
+first provider candidate subject to its full current source review. First
+curate the IAM/MFA/auth keyword-pattern list required below; then implement
+deterministic exact domain/hostname-label candidate matches with shared
+evidence, jobs and inbox acceptance. CT appearance is not registration time,
+live DNS, ownership or maliciousness. Fuzzy expansion, subdomain enumeration,
+active probing and other Phase 3 consumers remain later subphases. This
+keeps the consumer bounded; live activation requires separate approval.
+
+**Subphase 3A.3 Complete, 2026-11-27.** The operator explicitly permitted a
+provisional disabled crt.sh adapter despite unverified current service terms/
+access/schema. Versioned exact matching, bounded durable staging, immutable
+evidence and review-preserving inbox integration passed 77 focused tests in
+30.994 seconds. Full suite: 760 tests, 759 passed and one existing skip in
+208.414 seconds. All 34 schedules default off; source eligibility stays
+unapproved. No live migration/restart, enabling or provider data request.
+CTLogs was reviewed, not combined: its documented organization search is
+subject O=, not DNS brand-token discovery. See
+docs/review/2026-11-27-3a3-closeout.md. Proposed next scope is bounded 3A.4.
+
 - Newly registered domain monitoring: WhoisDS daily NRD files, ICANN CZDS zone files, certstream certificate transparency. dnstwist permutations of org domains, OpenSquat patterns.
   - Scheduled daily run against org domains.
   - Manual run over a selectable window (1, 7, 30 days).
@@ -1384,8 +1414,15 @@ At each boundary update the table's status, dated review, journal and
 docs/handoff.md. Commit and push remain separately approved operations.
 The operator's closing result confirms 3A.1 committed and pushed as d34a37d
 on 2026-11-27, with matching hashes and an empty index. Do not repeat 5F.5 or
-3A.1. Phase 3 slice A continues only through bounded breach consumer 3A.2
-in this chat. Use docs/handoff.md for its actual checkpoint or resumption.
+3A.1. The operator confirms 3A.2 committed and pushed as 3eaf484 on 2026-11-27,
+with matching local/remote hashes and an empty index afterward. Do not repeat
+3A.2. The operator directly scoped and accepted provisional offline-only
+adapter work for 3A.3 CT-name watches. Implementation/offline acceptance is
+complete; local read-only inspection is complete. Its 35-path selective
+checkpoint commit and push were directly approved. Execution is prepared;
+reconcile the actual closing result before repeating any checkpoint step.
+Proposed next capability is bounded 3A.4 public-code exposure metadata leads.
+See docs/handoff.md for separate checkpoint and implementation instructions.
 Live v1 activation remains separately approved work.
 
 5F.5 design, decided 2026-11-26: match bounded operator-configured typed

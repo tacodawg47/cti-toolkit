@@ -18,7 +18,8 @@ from .evidence_models import Metadata
 from .indicators import canonical, detect_type, normalise
 
 STATES = ("new", "reviewed", "dismissed")
-TYPES = ("domain", "ip", "hash", "url", "email", "cve", "organization", "sector", "country")
+TYPES = ("domain", "ip", "hash", "url", "email", "cve", "organization", "sector", "country",
+         "ct_domain", "ct_organization", "ct_brand")
 MAX_SELECTORS = 100
 
 
@@ -29,6 +30,9 @@ def now():
 def normalize_subject(subject_type, value):
     if subject_type not in TYPES or not isinstance(value, str) or not 1 <= len(value) <= 2048:
         raise ValueError("Use a bounded typed subject")
+    if subject_type.startswith("ct_"):
+        from ..modules.ct_watch.matching import seed
+        return seed(value, subject_type[3:])
     if subject_type in ("organization", "sector", "country"):
         value = " ".join(unicodedata.normalize("NFKC", value).split()).casefold()
         if not value or len(value) > (512 if subject_type == "organization" else 128):
@@ -57,7 +61,7 @@ def normalize_subject(subject_type, value):
 
 
 class Selector(Metadata):
-    subject_type: Literal["domain", "ip", "hash", "url", "email", "cve", "organization", "sector", "country"]
+    subject_type: Literal["domain", "ip", "hash", "url", "email", "cve", "organization", "sector", "country", "ct_domain", "ct_organization", "ct_brand"]
     mode: Literal["exact", "domain_tree", "network"] = "exact"
     value: str = Field(min_length=1, max_length=2048)
 
@@ -65,6 +69,8 @@ class Selector(Metadata):
     def valid(self):
         if archives.secret_material(self.value.encode()):
             raise ValueError("Credential-like selectors are refused")
+        if self.subject_type.startswith("ct_") and self.mode != "exact":
+            raise ValueError("CT seeds use explicit exact label/domain rules")
         if self.mode == "network":
             if self.subject_type != "ip":
                 raise ValueError("Networks match IP observations only")
@@ -107,6 +113,12 @@ def selectors():
 
 
 def matches(selector, observation):
+    if selector["subject_type"].startswith("ct_") and observation["subject_type"] == "ct_hostname":
+        from ..modules.ct_watch.matching import match
+        try:
+            return match(selector["value"], selector["subject_type"][3:], observation["subject_value"]) is not None
+        except ValueError:
+            return False
     if selector["subject_type"] != observation["subject_type"]:
         return False
     try:

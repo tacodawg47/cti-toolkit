@@ -151,6 +151,21 @@ narrative and troubleshooting go to the journal.
 
 ## Current status (2026-11-27)
 
+Subphase 3A.3 Complete, 2026-11-27, for the explicitly approved provisional
+crt.sh implementation/offline acceptance. Versioned patterns, exact CT-name
+matching, immutable staged captures and review-preserving inbox integration
+passed 77 focused tests in 30.994 seconds. Full compatibility: 760 tests,
+759 passed and one existing skip in 208.414 seconds. All 34 schedules,
+workers, bulk and raw storage default off. Current crt.sh hosted-service
+terms/access/schema remain unverified and source eligibility unapproved.
+CTLogs was reviewed, not integrated. Approved local read-only Git inspection
+confirmed main/HEAD/local origin/main at 3eaf484 and an empty index, without
+remote contact or mutation. No provider data request, enabling or live
+migration/restart occurred. The operator approved the exact 35-path commit
+and explicitly authorized its push. Execution is prepared; preserve earlier
+reconciliation/handoff-rule edits. See the 3A.3 closeout and docs/handoff.md
+for the proposed bounded 3A.4 GitHub public-code exposure metadata consumer.
+
 Phase 1 is complete. Phase 2 accepted first-delivery implementation closed
 2026-11-25. See docs/review/2026-11-25-phase2-closeout.md for delivered scope,
 validation and remaining limits. Its final suite ran 511 tests: 510 passed,
@@ -168,12 +183,12 @@ storage default off. No source enabling, selector submission, live migration/
 restart, API data request or install occurred. Linux/native-browser visual
 and live v1 acceptance remain unperformed. The operator confirms 3A.1
 committed and separately pushed as d34a37d on 2026-11-27 with matching hashes
-and an empty index. Do not repeat it. Approved local read-only inspection
-confirmed main/HEAD/local origin/main at d34a37d and an empty index, without
-remote contact. The operator subsequently approved the exact 3A.2 commit and
-explicitly authorized its push. Execution is prepared; reconcile the actual
-closing result before repeating any checkpoint step.
-Read docs/handoff.md for checkpoint resumption; other capabilities stay later.
+and an empty index. The operator confirms 3A.2 individually committed and
+separately pushed as 3eaf484bcdb803555c5f199c1906b30969dce80f on 2026-11-27,
+with matching local HEAD/local origin/main/live remote main and an empty
+index afterward. Do not repeat either checkpoint. This supplied result was
+reconciled without a new Git operation. Read docs/handoff.md. Begin another
+subphase only after the operator directly names its bounded scope.
 
 Data catch-up is optional during the build only. Scheduled freshness,
 visible stale/failure states and tested recovery are required before v1

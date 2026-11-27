@@ -113,7 +113,7 @@ class BreachTests(unittest.IsolatedAsyncioTestCase):
         scheduler = Scheduler(catalog(), asyncio.get_running_loop())
         scheduler.initialize()
         with evidence.connect() as conn:
-            self.assertEqual(conn.execute("SELECT count(*),sum(enabled) FROM feed_schedules").fetchone()[:], (33, 0))
+            self.assertEqual(conn.execute("SELECT count(*),sum(enabled) FROM feed_schedules").fetchone()[:], (34, 0))
         with self.assertRaises(PermissionError):
             await hibp.refresh()
         for url in (hibp.BASE, hibp.BASE+"/x?truncateResponse=false", hibp.BASE+"/x/other", hibp.BASE.replace("https", "http")+"/x", "https://evil.invalid/x"):

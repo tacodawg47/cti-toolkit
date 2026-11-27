@@ -1,5 +1,11 @@
 # Shared Evidence and Source Registry
 
+Update 2026-11-27: [CT Lookalike Watches](ct-lookalike-watches.md) adds one
+provisional disabled consumer. Sensitive captures retain literal certificate
+dates separately from unknown source observation/publication dates. Derived
+certificate-ID references are explicitly constructed, not supplied citation
+hops. No source registry approval or raw retention is granted.
+
 Update 2026-11-26: [Ransomware Victim Claims](ransomware-victims.md) writes
 immutable reported organization assertions, optional explicit structured
 sector/country assertions, and literal original-post citations. Independent

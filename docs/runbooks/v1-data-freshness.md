@@ -1,5 +1,12 @@
 # V1 Data Freshness Requirements
 
+Update 2026-11-27: [CT Lookalike Watches](ct-lookalike-watches.md) adds a
+provisional daily schedule with a two-day stale threshold and per-seed
+original collection age. All 34 schedules default off. Success describes
+bounded unexpired query snapshots only, not provider completeness, continuity
+or registration/DNS activity. Current service review and measured live
+acceptance remain required; no live acceptance occurred.
+
 Update 2026-11-27: [HIBP Watched Email Lookups](breach-lookups.md) adds one
 disabled daily schedule with a two-day stale threshold. Each address shows
 its own last attempt, last good original capture and failure/incomplete

@@ -2,99 +2,113 @@
 
 Updated: 2026-11-27.
 
-**Ended: Subphase 3A.2 Complete, implementation/offline acceptance.** One HIBP
-direct-email consumer uses shared evidence, durable jobs and the inbox for
-at most ten separately approved exact email watches. See
-[Closeout](review/2026-11-27-3a2-closeout.md),
-[Runbook](runbooks/breach-lookups.md) and
-[Current Source Review](research/2026-11-27-breach-api-review.md).
+**Ended: Subphase 3A.3 Complete, provisional implementation/offline acceptance.**
+One bounded crt.sh CT-name watch consumer has versioned patterns, exact IDNA/
+label matching, separately authorized seeds, durable normalized staging,
+immutable evidence and review-preserving local inbox events. See
+[Closeout](review/2026-11-27-3a3-closeout.md),
+[Runbook](runbooks/ct-lookalike-watches.md) and
+[API Review](research/2026-11-27-ct-api-review.md).
 
-Final focused breach/shared-evidence acceptance: 54 passed in 32.105 seconds.
-Final full compatibility: 717 tests in 180.083 seconds, 716 passed and one
-existing skip. Tests use only
-temporary databases and mocked/refused HTTP. Results do not establish live
-schema, account entitlement, Linux, native-browser visual or v1 readiness.
+Focused CT/inbox/shared-evidence: 77 passed in 30.994 seconds. Full compatibility:
+760 tests in 208.414 seconds, 759 passed and one existing skip. Temporary
+databases and synthetic/refused HTTP only. No live readiness is implied.
 
-All 33 composed schedules, worker, bulk and raw storage default off.
-No provider API data request, source enabling, live selector permission,
-migration/restart, install or historical reload occurred. The live database
-remains unmigrated/unrestarted for 5F.1 through 3A.2.
+The operator explicitly permitted the provisional disabled adapter despite
+unverified current crt.sh service terms/access/schema. Source eligibility
+remains unapproved. CTLogs/alternatives were reviewed, not combined. All 34
+schedules, worker, bulk and raw storage default off. No provider data request,
+source enabling, selector submission, live migration/restart, install or
+historical reload. Live database unmigrated/unrestarted for 5F.1 through 3A.3.
+Linux, native-browser visual and live v1 acceptance remain unperformed.
 
-Checkpoint reconciliation: the operator confirms 3A.1 individually committed
-and separately pushed as d34a37d68aa120b58ee3d18822ccf5ebcc54b31c on 2026-11-27,
-with matching local/remote hashes and an empty index. Do not repeat 5F.5 or
-3A.1. Approved local read-only inspection confirmed main/HEAD/local origin/main
-at that hash and an empty index, without remote contact or Git mutation.
-The operator subsequently approved the exact 3A.2 commit and explicitly
-authorized its push. Execution is prepared; the closing message records the
-actual result. See [Exact Authored Scope](review/2026-11-27-3a2-checkpoint-files.md).
-Saved notes grant no Git permission; reconcile any later closing result.
+Checkpoint: 3A.2 was already committed/pushed as
+3eaf484bcdb803555c5f199c1906b30969dce80f on 2026-11-27, with matching local/
+remote hashes and an empty index afterward. Do not repeat 3A.1 or 3A.2.
+Approved local read-only inspection confirmed main/HEAD/local origin/main
+at that hash and an empty index. No remote contact or Git mutation occurred.
+3A.3 and earlier independent reconciliation/handoff-rule edits remain
+uncommitted. The
+[35-path selective proposal](review/2026-11-27-3a3-checkpoint-files.md) was
+individually approved, and the operator explicitly authorized its push.
+Execution is prepared; the closing message records the actual result.
+Checkpoint handling is separate from the next implementation prompt.
 
-Preserve unrelated Feedly/local settings/prototypes, their reviews/runbooks,
-OSINT/untrusted-repository-review work, detection/catalog additions and
-independent shared-document edits. Exclude secrets, runtime data and exports.
-The next prompt resumes only this checkpoint and stops. Other Phase 3
-capabilities remain later subphases.
+Next proposed subphase: 3A.4, one bounded API-only GitHub public-code exposure
+lead consumer for authorized organization/domain selectors, metadata references
+only. Review current API terms/access first. Omit code/secret values and never
+test credentials. No 3A.4 implementation occurred in this chat.
+
+Preserve unrelated Feedly/local settings, prototypes and notes, OSINT/untrusted-
+repository-review, detection/catalog and independent shared-document edits.
+Exclude secrets, runtime data and conversation exports. No blanket staging,
+reset, discard or stash. Saved notes grant no new Git or live permission.
 
 ## Next-Chat Prompt
 
 ```text
 Continue CTI Toolkit at C:\Users\Robert\Projects\cti-toolkit.
-Resume only the pending 3A.2 Git checkpoint, then stop. Do not begin another
-Phase 3 capability or activate a provider in this resumption.
+Begin only Phase 3 slice A, subphase 3A.4: one bounded API-only GitHub
+public-code exposure lead consumer for authorized organization/domain
+selectors, retaining metadata references only, then stop.
 
-Follow AGENTS.md and its required reading order. Read ROADMAP.md Build order,
-Phase 3/foundation/provenance/data handling; newest Research notes in
-docs/journal.md; docs/handoff.md; docs/review/2026-11-27-3a2-closeout.md;
-docs/review/2026-11-27-3a2-checkpoint-files.md; the current HIBP source review;
-and runbooks shared-evidence.md, durable-jobs.md, scheduled-feeds.md,
-alert-inbox.md, saved-reports-and-archives.md, ransomware-victims.md,
-breach-lookups.md, v1-data-freshness.md and session-handoff.md.
+Intended outcome: provider-reported public-code search leads with immutable
+source/capture evidence and local inbox matches. Review GitHub's full current
+API docs, terms, authentication/access tier, costs, fields and quotas first.
+Revisit the existing shared GitHub clients and source reviews. Do not fetch
+code contents, repositories or secret values; do not query with found secrets
+or test credentials. A metadata hit is a review lead, not proof of exposure,
+secret validity, ownership or maliciousness. Name any real access/terms gap.
 
-3A.1 was individually committed and separately pushed on 2026-11-27 as
-d34a37d68aa120b58ee3d18822ccf5ebcc54b31c. The operator confirmed matching
-local HEAD/local origin/main/live remote main and an empty index afterward.
-Do not repeat that checkpoint. Approved local read-only inspection in the
-3A.2 chat confirmed main/HEAD/local origin/main at that hash and an empty
-index. No remote contact or Git mutation occurred during inspection. The
-operator subsequently approved the exact 3A.2 commit and explicitly authorized
-its push. Execution is prepared. Reconcile the latest actual closing message
-before proposing or repeating any operation. If the checkpoint is complete,
-do not repeat it; stop and obtain the next subphase's direct task instruction.
+Follow AGENTS.md and its reading order: ROADMAP.md Build order, Phase 3 GitHub
+leaks, foundation/provenance/data handling; newest docs/journal.md Research
+notes; docs/handoff.md; docs/review/2026-11-27-3a3-closeout.md; CT API/pattern
+reviews; runbooks shared-evidence.md, durable-jobs.md, scheduled-feeds.md,
+alert-inbox.md, breach-lookups.md, ct-lookalike-watches.md,
+v1-data-freshness.md and session-handoff.md. Preserve earlier completed
+3A.1/3A.2 behavior and separate submission authority.
 
-3A.2 delivers one bounded HIBP direct-email consumer for at most ten explicitly
-approved exact email watches. Current own API/terms/pricing/account/privacy
-docs were reviewed. Preserve immutable consent/authority permission IDs,
-expiry/revocation/suppression, staged normalized input, atomic inbox matches,
-capture identity, literal dates/citations, originating execution and reviews.
-A 404 means no publicly disclosable result, not a clean verdict. Raw bodies
-are forced omitted and captures sensitive. Per-address age uses original
-collection time. Domain lookups and other providers remain later work.
+3A.3 is Complete for its explicitly approved provisional crt.sh implementation
+and offline acceptance. Focused CT/inbox/shared-evidence: 77 passed in
+30.994 seconds. Full compatibility: 760 tests in 208.414 seconds, 759 passed
+and one existing skip. Temporary databases and synthetic/refused HTTP only.
+All 34 schedules, workers, bulk and raw storage default off. Current crt.sh
+terms/access/schema remain unverified; source eligibility remains unapproved.
+CTLogs was reviewed, not combined. No provider API data request, source
+activation, selector submission, install or live migration/restart occurred.
+Live database remains unmigrated/unrestarted for 5F.1 through 3A.3. Linux,
+native-browser visuals and live v1 acceptance remain unperformed.
 
-Acceptance results are in the dated closeout. Final focused breach/shared
-evidence acceptance: 54 passed in 32.105 seconds. Final full
-compatibility: 717 tests in 180.083 seconds, 716 passed and one existing skip.
-Only temporary databases and synthetic/refused HTTP were used.
+3A.2 was already committed/pushed as
+3eaf484bcdb803555c5f199c1906b30969dce80f on 2026-11-27 with matching local/
+remote hashes and an empty index afterward. Do not repeat 3A.1 or 3A.2.
+3A.3's 35-path authored checkpoint and earlier reconciliation/handoff-rule
+edits remain uncommitted. Approved local read-only inspection confirmed
+main/HEAD/local origin/main at that hash and an empty index, with no remote
+contact or Git mutation during inspection. The operator then individually
+approved the exact 35-path/selective-block commit and explicitly authorized
+its push. Execution is prepared. Reconcile the actual closing result before
+repeating any operation. Keep checkpoint handling separate
+from this implementation scope; saved notes never grant Git permission.
 
-All 33 composed schedules (the prior 32 plus HIBP), worker, bulk and raw
-storage default off. No source enabling, selector submission, provider API
-data request, live migration/restart, install or historical reload occurred.
-The live database remains unmigrated/unrestarted for 5F.1 through 3A.2.
-Linux, native-browser visual and live v1 acceptance remain unperformed.
+Done when synthetic fixtures and temporary databases prove bounded exact
+selector/query handling, submission eligibility at every unit/retry/resumption,
+immutable plans/captures, literal provenance and distinct/unknown dates,
+atomic inbox matches, deduplication/retained reviews, finite requests/bytes/
+time and pagination, quota/cooldown, cancellation, freshness and restart.
+Keep collection off. Document coverage gaps and separately approved measured
+live acceptance. Update dated closeout, journal, roadmap, paired summaries,
+runbooks and handoff; print a full next concrete bounded-subphase prompt.
 
-Obtain direct current-chat approval before every Git operation, including
-read-only inspection. Review actual tracked/untracked changes and the exact
-manifest, then show exact files/selective shared blocks and the proposed
-message Add bounded HIBP watched-email breach lookups for individual commit
-approval. Obtain separate push approval after verifying the resulting commit
-and intended destination. Never infer permission from these saved notes.
-
-Preserve unrelated Feedly rules, local Claude settings, prototypes and their
-review/runbook, OSINT/untrusted-repository-review additions, detection/catalog
-review work and independent ROADMAP.md/docs/journal.md/docs/handoff.md edits.
-Exclude keys, runtime data and conversation exports. Never blanket-stage,
-reset, discard or stash other work. Update the closeout/handoff with actual
-checkpoint status and print the full next prompt. No live activation, external
-transfers, other slice A capability, collectors, playbooks, email/webhooks,
-scraping, historical reload, GPL/AGPL imports, actor engagement or AI.
+Routine in-scope edits, public-doc research and offline tests are authorized.
+Every Git operation, install, source enabling, selector/provider traffic,
+live migration/restart or external private-data transfer requires direct
+current-chat approval. Show exact selective files/message for each commit;
+obtain push approval separately. Preserve unrelated Feedly/local settings,
+prototypes and notes, OSINT/untrusted-repository-review, detection/catalog
+and independent shared-document edits. Exclude keys, runtime data and
+conversation exports. Never blanket-stage, reset, discard or stash.
+No other consumer, target probing, credential testing, broad historical reload,
+API-source scraping, collector, playbook, email/webhook, GPL/AGPL import,
+actor engagement or AI.
 ```

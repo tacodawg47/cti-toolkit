@@ -1,5 +1,11 @@
 # Durable Job Runner
 
+Update 2026-11-27: [CT Lookalike Watches](ct-lookalike-watches.md) snapshots
+immutable submission permissions, including pattern content/version and
+matcher version. Bounded normalized input resumes under the original capture
+and execution. Completed units repair progress without another request.
+This adds no separate worker and grants no source eligibility.
+
 Update 2026-11-26: [Alert Inbox](alert-inbox.md) displays the originating
 capture execution separately from its logical job's current state. Foundation
 integration tests crash after alert creation and before ingestion progress,

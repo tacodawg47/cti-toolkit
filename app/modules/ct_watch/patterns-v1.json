@@ -1,0 +1,22 @@
+{
+  "version": "2026-11-27.1",
+  "reviewed_on": "2026-11-27",
+  "semantics": "Literal DNS labels and hyphen-delimited tokens only. Tags describe candidate themes, never maliciousness. No queries are generated from this list.",
+  "sources": {
+    "okta-recovery-2026": "https://www.okta.com/blog/threat-intelligence/intrusion-actors-self-serve-their-way-into-accounts/",
+    "okta-inception-2026": "https://www.okta.com/blog/threat-intelligence/former_shinyhunters_cluster_moves_to_new_inception_site/",
+    "roadmap": "ROADMAP.md: Phase 3 Domain monitoring detail, reviewed 2026-11-27"
+  },
+  "groups": [
+    {"name": "Enrollment and Recovery", "tokens": ["passkey", "reset", "password", "authenticator", "otp", "mfa", "helpdesk", "support"], "references": ["okta-recovery-2026"], "basis": "Vocabulary from reported enrollment/recovery and support impersonation. Only passkey is explicitly described there as a domain string; the other tokens are local detection hypotheses."},
+    {"name": "Legal Theme", "tokens": ["legal", "legaldept"], "references": ["okta-inception-2026"], "basis": "Reported legal-target, legaldept-target, target-legal and target.legal patterns. Never synthesize or query those names."},
+    {"name": "IAM and MFA Brands", "tokens": ["okta", "duo", "ping", "microsoft", "entra", "google", "auth0", "1password", "yubico"], "references": ["roadmap"], "basis": "Roadmap seed vocabulary. Not a claim that every listed brand appeared in either report. Never added as watches automatically."},
+    {"name": "Auth Flow", "tokens": ["2fa", "sso", "vpn", "verify", "login", "portal"], "references": ["roadmap"], "basis": "Roadmap hypotheses retained as exact-token tags, not evidence of an observed campaign."}
+  ],
+  "rules": [
+    {"id": "exact-domain", "meaning": "A full authorized domain appears as a contiguous sequence of hostname labels."},
+    {"id": "exact-label", "meaning": "An explicitly authorized organization or brand token equals a complete DNS label."},
+    {"id": "hyphen-token", "meaning": "An explicitly authorized organization or brand token equals a complete hyphen-delimited token within a DNS label."},
+    {"id": "seed-with-theme", "meaning": "An exact seed match co-occurs with an exact theme token anywhere in the hostname. This is annotation, not an extra match or a verdict."}
+  ]
+}

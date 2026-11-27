@@ -1,5 +1,11 @@
 # Scheduled Feed Refresh and Source Health
 
+Update 2026-11-27: [CT Lookalike Watches](ct-lookalike-watches.md) adds one
+provisional disabled daily crtsh_watch schedule. The composed catalog is 34;
+all schedules and the worker default off. Source terms remain unapproved.
+Exact seed submission permissions and per-seed freshness remain separate
+from a global pass. Existing manual crt.sh enrichment is unchanged.
+
 Update 2026-11-27: [HIBP Watched Email Lookups](breach-lookups.md) adds one
 disabled daily API consumer for up to ten separately approved email watches.
 The composed catalog is now 33; all schedules and the worker default off.
