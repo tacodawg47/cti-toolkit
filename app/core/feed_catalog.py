@@ -7,4 +7,5 @@ def catalog():
     from ..modules.breaches.hibp import catalog as breaches
     from ..modules.ct_watch.crtsh import catalog as ct_watch
     from ..modules.github_exposure.github import catalog as github_exposure
-    return vulnerability() + ransomware() + breaches() + ct_watch() + github_exposure()
+    from ..modules.subdomains.ctlogs import catalog as subdomains
+    return vulnerability() + ransomware() + breaches() + ct_watch() + github_exposure() + subdomains()

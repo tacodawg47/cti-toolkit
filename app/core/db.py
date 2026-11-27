@@ -96,6 +96,9 @@ def init_db() -> None:
         from ..modules.github_exposure.schema import migrate as migrate_github_exposure
 
         migrate_github_exposure(conn)
+        from ..modules.subdomains.schema import migrate as migrate_subdomains
+
+        migrate_subdomains(conn)
         # Drop expired cache rows so the table doesn't grow without bound.
         conn.execute("DELETE FROM cache WHERE expires_at < ?",
                      (datetime.now(timezone.utc).isoformat(),))

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Passive Subdomains | CTI Toolkit{% endblock %}
+{% block content %}
+<h1>Passive Subdomain Inventory</h1>
+<p>Source: <a href="https://ctlogs.dev" rel="noreferrer">ctlogs.dev</a>. Provider-reported CT names and literal wildcard patterns. Appearance proves neither live DNS, ownership, registration time, a dangling service, compromise nor maliciousness. Wildcards never expand into hosts.</p>
+<p>Coverage: at most two 100-name pages per exact approved domain. Certificates valid now or expired within 90 days. Older names, unlogged/private certificates, non-certificate services and index gaps are outside this window. Empty results establish no absence. Pages can drift; bounded success is not an atomic snapshot or exhaustive inventory.</p>
+<p><a href="/subdomains">Per-Domain Freshness</a> · <a href="/alerts">Local Inbox</a> · <a href="/health">Health</a></p>
+{% include "source_health.html" %}
+{% if watches is defined %}
+<h2>Per-Domain Freshness</h2>
+<p>Daily cadence; stale after two days. Success uses the oldest original capture of a terminated, ordered bounded window. Partial, duplicate or out-of-order pages retain evidence without renewing success. Submission authority is separate from local matching.</p>
+<div class="tablescroll"><table><tr><th>Exact Domain</th><th>Submission Authority</th><th>Last Attempt</th><th>Last Good Window</th><th>State</th></tr>
+{% for row in watches %}<tr><td><code>{{ row.value }}</code> · <a href="/subdomains/watches/{{ row.id }}">History</a></td><td>{{ 'Current' if row.authorized else 'Not Eligible' }}</td><td>{{ row.last_attempt or 'Never' }}</td><td>{% if row.document_id %}<a href="/subdomains/captures/{{ row.document_id }}">{{ row.last_good }}</a> · {{ row.last_good | ago }}{% else %}Never{% endif %}</td><td>{{ row.state }}{% if row.incomplete %} · Incomplete{% endif %}{% if row.error %} · Failed: {{ row.error }}{% endif %}</td></tr>{% else %}<tr><td colspan="5">No separately approved exact domains. Local selectors grant no submission authority.</td></tr>{% endfor %}</table></div>
+{% elif history is defined %}
+<h2>Domain Capture History</h2>
+<ul>{% for row in history %}<li><a href="/subdomains/captures/{{ row.document_id }}">Capture {{ row.document_id }}</a> · Page {{ row.page }} · {{ row.collected_at }} · {{ 'Bounded Window Complete' if row.window_complete else 'Incomplete' }}</li>{% else %}<li>No captures.</li>{% endfor %}</ul>
+{% if history | length == 50 %}<a href="/subdomains/watches/{{ selector_id }}?before={{ history[-1].document_id }}">Older Captures</a>{% endif %}
+{% else %}
+<h2>Immutable Capture {{ document.id }}</h2>
+<p>Source: {{ document.source_id }} · Collected: {{ document.collected_at }} · Age: {{ document.collected_at | ago }} · Capture: <code>{{ document.capture_key }}</code></p>
+<p>Endpoint Surface: <code>{{ document.source_url }}</code>. Domain, cursor and headers omitted from capture metadata. Published: {{ document.source_published_at or 'Unknown' }} · Modified: {{ document.source_modified_at or 'Unknown' }}. Source observation and CT logging dates are unknown.</p>
+<p>Originating Execution: {{ document.job_run_id }} · Originating State: {{ document.originating_state }} · Current Job State: {{ document.job_state }}</p>
+<p>Body SHA-256: <code>{{ document.content_sha256 }}</code>. A digest identifies bytes, not authenticity. Original: {{ archive.state if archive else 'Unavailable' }}. Sensitive raw bodies are forced omitted.</p>
+<p>Page {{ page.page }} · Returned: {{ summary.returned_count }} · Has Next: {{ summary.has_next }} · Window Days: {{ summary.history_window_days }} · Provider Partial: {{ summary.partial }} · {{ 'Bounded Window Complete' if unit.window_complete else 'Incomplete / Not Established' }}.</p>
+<p>{% for sibling in pages %}{% if sibling.document_id %}<a href="/subdomains/captures/{{ sibling.document_id }}">Page {{ sibling.page }}</a> {% endif %}{% endfor %}</p>
+<h3>Literal Provider Names and Dates</h3>
+<p>Provider first_seen and last_seen are earliest/latest certificate validity starts in this window. last_not_after is the latest certificate's expiry. They are not first CT logging, registration or DNS dates. Local First Capture is our earliest retained acquisition of this provider name or pattern.</p>
+<div class="tablescroll"><table><tr><th>Literal Name or Pattern</th><th>Certificates</th><th>Provider first_seen</th><th>Provider last_seen</th><th>Provider last_not_after</th><th>Local First Capture</th><th>Inbox Reviews</th></tr>
+{% for row in leads %}<tr><td><code>{{ row.lead.host }}</code></td><td>{{ row.lead.certs }}</td><td>{{ row.lead.first_seen or 'Unknown' }}</td><td>{{ row.lead.last_seen or 'Unknown' }}</td><td>{{ row.lead.last_not_after or 'Unknown' }}</td><td>{{ row.local_first_capture }}</td><td>{% for alert in row.alerts %}<a href="/alerts/{{ alert.id }}">{{ alert.state | title }} · Revision {{ alert.revision }}</a> {% else %}No Local Match{% endfor %}</td></tr>{% else %}<tr><td colspan="7">No retained names. No absence or clean verdict is implied.</td></tr>{% endfor %}</table></div>
+<h3>Literal Provider References</h3>
+<ul>{% for citation in citations %}<li><code>{{ citation.target_reference }}</code> · {{ citation.locator }} · Unresolved</li>{% else %}<li>No reference hops.</li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}

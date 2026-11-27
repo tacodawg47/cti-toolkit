@@ -1,4 +1,11 @@
 # CT Lookalike Watches
+
+
+Update 2026-11-27, 3A.5: [Passive Subdomain Inventory](subdomain-inventory.md) is
+a separate disabled CTLogs hosts-window consumer for exact authorized domains. It
+does not change crt.sh matching, approve crt.sh access or combine indexes. Its
+provider validity dates are distinct from CT logging and local capture dates.
+
 Checkpoint update 2026-11-27: the operator confirms the exact 35-path/selective
 commit and authorized push completed as 749d97351c5158558789afa8a297a461999b9c42.
 Local HEAD/local origin/main/live remote main matched and the index was empty

@@ -1209,10 +1209,29 @@ Focused GitHub/inbox/shared-evidence acceptance: 77 passed in 51.547 seconds.
 Full compatibility: 803 tests in 255.655 seconds, 802 passed and one existing
 skip. See docs/review/2026-11-27-3a4-closeout.md.
 No live migration/restart, provider request, enabling, selector submission,
-install or Git operation occurred. Proposed next bounded subphase 3A.5:
-one API-only passive exact-domain subdomain inventory consumer, reviewing
-CTLogs first. Keep literal names/patterns and immutable evidence/inbox without
-DNS, target probing, fuzzy expansion or combining providers.
+install or Git operation occurred. The following bounded inventory slice
+retains separate source and submission authority.
+
+3A.5 design, decided 2026-11-27: one keyed CTLogs /v1/hosts API consumer
+for at most ten separately approved exact domains and two 100-name pages
+each. Exact label boundaries and literal wildcard patterns avoid expansion;
+immutable plans/captures and atomic inbox events preserve evidence/reviews.
+Keep provider certificate-window validity dates separate from local first
+capture and unknown source/CT logging dates. All 36 schedules default off.
+Review actual key/tier/purpose/handling and measured live acceptance separately;
+anonymous quota documentation conflicts and paging requires a key. See
+docs/research/2026-11-27-subdomain-api-review.md and the inventory runbook.
+
+**Subphase 3A.5 Complete, implementation/offline acceptance, 2026-11-27.**
+Focused 113 passed in 91.091 seconds; two final recovery cases passed in
+2.563 seconds. Final inventory has 38 tests. Full compatibility:
+841 tests in 302.124 seconds, 840 passed and one existing skip. See docs/review/2026-11-27-3a5-closeout.md.
+No source enabling, domain submission, provider data request, install, live
+migration/restart or Git operation. Source eligibility remains unapproved.
+Proposed next bounded subphase 3A.6: one API-only indexed public-cloud
+metadata lead consumer for exact authorized domains, reviewing Shodan first.
+This follows slice A's exposed-cloud scope. No storage-name guessing, target
+probing or ownership/exposure verdict. Do not begin it in this chat.
 
 - Newly registered domain monitoring: WhoisDS daily NRD files, ICANN CZDS zone files, certstream certificate transparency. dnstwist permutations of org domains, OpenSquat patterns.
   - Scheduled daily run against org domains.
@@ -1445,13 +1464,16 @@ on 2026-11-27, with matching hashes and an empty index. Do not repeat 5F.5 or
 with matching local/remote hashes and an empty index afterward. Do not repeat
 3A.2. The operator directly scoped and accepted provisional offline-only
 adapter work for 3A.3 CT-name watches. Implementation/offline acceptance is
-complete. The operator confirms its 35-path selective checkpoint completed
-as 749d973 on 2026-11-27 with matching hashes and an empty index then.
-3A.4 implementation/offline acceptance is complete. The operator directly
-approved each reviewed 3A.4/3A.5 commit and push. This 3A.4 checkpoint is
-prepared; its closing hash/result records actual execution. Independent
-shared-document work remains excluded. Proposed next capability is 3A.5
-passive exact-domain subdomain inventory through one reviewed API.
+complete. The operator confirms its 35-path selective checkpoint commit/push
+completed as 749d973 on 2026-11-27 with matching hashes and an empty index then.
+Reconciled without new Git operations. 3A.4 metadata consumer implementation/
+offline acceptance is complete and its selective checkpoint committed/pushed
+as eccbf441db7ffbd6647d11fab7db7f8dcb304216. Approved live verification
+matched local HEAD/origin/main/live main. 3A.5 implementation/offline acceptance
+is complete; its exact selective commit and push are directly approved and
+prepared. Actual closing results supersede saved execution notes. Independent
+shared-document work remains excluded. Proposed next capability is bounded
+3A.6 indexed public-cloud metadata leads through one reviewed API.
 See docs/handoff.md for separate checkpoint and implementation instructions.
 Live v1 activation remains separately approved work.
 

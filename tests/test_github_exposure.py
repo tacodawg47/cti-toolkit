@@ -167,12 +167,12 @@ class ConsumerTests(unittest.IsolatedAsyncioTestCase):
         self.now += timedelta(minutes=6)
         await self.step(scheduler)
 
-    async def test_35_schedules_off_fixed_surface_and_unscoped_refusal(self):
+    async def test_36_schedules_off_fixed_surface_and_unscoped_refusal(self):
         from app.core.feed_catalog import catalog
         scheduler = Scheduler(catalog(), asyncio.get_running_loop())
         scheduler.initialize()
         with evidence.connect() as conn:
-            self.assertEqual(conn.execute("SELECT count(*),sum(enabled) FROM feed_schedules").fetchone()[:], (35, 0))
+            self.assertEqual(conn.execute("SELECT count(*),sum(enabled) FROM feed_schedules").fetchone()[:], (36, 0))
         for url in ("https://api.github.com/repos/x/y", "https://api.github.com/search/code?q=x", "http://api.github.com/search/code", "https://evil.invalid/search/code"):
             self.assertFalse(self.feed.permits(url))
         with self.assertRaises(PermissionError):

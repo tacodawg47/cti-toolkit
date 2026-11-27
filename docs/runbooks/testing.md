@@ -2,6 +2,13 @@
 
 Written 2026-10-28. Updated 2026-11-27.
 
+3A.5 acceptance, 2026-11-27: focused inventory/GitHub/inbox/shared evidence
+passed 113 tests in 91.091 seconds, including 36 inventory cases. Two final
+recovery cases passed in 2.563 seconds. Final inventory has 38 cases.
+Full compatibility: 841 tests in 302.124 seconds, 840 passed and one existing skip.
+Temporary databases and synthetic/refused HTTP only. See
+[Passive Inventory](subdomain-inventory.md). Earlier results are historical.
+
 3A.4 acceptance, 2026-11-27: GitHub/inbox/shared-evidence passed 77 tests in
 51.547 seconds, including 43 GitHub cases. Full compatibility ran 803 tests
 in 255.655 seconds: 802 passed and one existing skip. Temporary databases

@@ -1,4 +1,12 @@
 # V1 Data Freshness Requirements
+
+
+Update 2026-11-27, 3A.5: [Passive Subdomain Inventory](subdomain-inventory.md)
+adds daily per-domain two-day staleness. Original oldest-page age survives
+restart. Partial, duplicate, out-of-order or nonterminated bounded windows retain
+evidence without renewing success. All 36 schedules default off. Actual CTLogs
+access and measured live freshness/recovery remain separate.
+
 Update 2026-11-27: [GitHub Public-Code Leads](github-exposure.md) adds a
 disabled daily consumer with per-selector two-day staleness. A bounded
 consistent query window uses its oldest original page capture for age.

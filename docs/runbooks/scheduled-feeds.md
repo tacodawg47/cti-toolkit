@@ -1,4 +1,12 @@
 # Scheduled Feed Refresh and Source Health
+
+
+Update 2026-11-27, 3A.5: [Passive Subdomain Inventory](subdomain-inventory.md)
+adds the disabled daily subdomain_inventory API schedule. The current composed
+catalog has 36 schedules, all off. Per-domain freshness uses the oldest original
+capture of a terminated bounded window. Key/tier review and exact submission
+authority remain separate.
+
 Update 2026-11-27: [GitHub Public-Code Leads](github-exposure.md) adds one
 disabled daily API schedule, bringing the composed catalog to 35. All
 schedules, workers, bulk and raw storage default off. Exact submission

@@ -1,4 +1,11 @@
 # Durable Job Runner
+
+
+Update 2026-11-27, 3A.5: [Passive Subdomain Inventory](subdomain-inventory.md)
+freezes exact-domain permissions and two page slots. It reuses logical-unit
+progress, original staged input and atomic inbox ingestion. Successful quota
+cooldowns persist before recoverable staging. No new worker or loop.
+
 Update 2026-11-27: [GitHub Public-Code Leads](github-exposure.md) freezes
 exact permission IDs and two page slots per selector. Token/API/query-version
 changes invalidate old authority. Original staged input and committed pages

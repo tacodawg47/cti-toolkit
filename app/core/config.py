@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # Human review of this separate token's public-only access is required.
     github_exposure_token: str = ""
     github_exposure_public_only: bool = False
+    # CTLogs paging requires a key. Tier records human use/entitlement review.
+    ctlogs_api_key: str = ""
+    ctlogs_access_tier: str = ""
     # ransomware.live PRO (free key from my.ransomware.live): group profiles
     # with the CVEs each group exploits. Phase 3 reuses it for victims.
     ransomwarelive_api_key: str = ""

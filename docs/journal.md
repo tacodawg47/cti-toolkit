@@ -1609,6 +1609,108 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-27: Executed Individually Approved 3A.4 and Prepared 3A.5 Checkpoints
+
+The operator directly approved local inspection and instructed commit and
+push each of 3A.4 and 3A.5. Main/HEAD/local origin/main initially matched
+749d973 with an empty index. Reviewed exact path/block inventories and
+prepared selective copies under ignored data/3a45-checkpoint/. Preserved
+independent rules, research, prototypes, settings, reconciliation and notes.
+No blanket staging, reset, discard or stash. Kept runtime data/keys/exports out.
+
+The isolated 3A.4 source copy passed 80 offline tests in 52.900 seconds,
+including its 35 disabled schedules. Its exact 40-path index was checked
+against reviewed blobs, with clean whitespace and the configured hook.
+Commit eccbf441db7ffbd6647d11fab7db7f8dcb304216, message Add bounded GitHub
+public-code exposure leads, succeeded. Its explicitly authorized origin/main
+push succeeded. Local HEAD/origin/main/live main matched; the index was empty.
+Remote inspection first hit an automatic approval-review timeout, then a DNS
+failure. DNS recovered for push. No network/security setting changed.
+
+The separate exact 38-path 3A.5 checkpoint is reviewed and prepared with
+message Add bounded passive subdomain inventory. The operator directly
+authorized its commit and push. Actual closing hash/result supersedes this
+prepared note. Final application acceptance remains 841 tests in 302.124
+seconds, 840 passed and one existing skip; checkpoint changes are docs only.
+All collection remains off. No live database or provider action is attached.
+Exact manual commands are recorded in the two feature runbooks. No saved
+note grants Git approval in a future chat. Next implementation remains 3A.6.
+
+
+### 2026-11-27: Built Passive Exact-Domain CT Inventory, 3A.5
+
+**Subphase 3A.5 Complete, implementation/offline acceptance, 2026-11-27.**
+
+The operator directly scoped one API-only passive inventory consumer and
+permitted public-doc research, in-scope edits and offline tests. Read the
+Build order, domain/subdomain/foundation/data handling, newest research and
+handoff, 3A.4 closeout, CT API/pattern and GitHub reviews, and named runbooks.
+Reviewed the full public CTLogs API docs/terms/privacy, relevant full OpenAPI
+hosts contract and coverage claims. Revisited the 3A.3 alternatives without
+adopting a second source. Full review and unchecked material:
+[API Review](research/2026-11-27-subdomain-api-review.md).
+
+Chose /v1/hosts, not certificate lists or paid historical/first-seen methods.
+Important correction to casual date labels: OpenAPI explicitly says hosts
+first_seen/last_seen are certificate validity starts in the current window,
+not SCT logging dates. Literal fields stay separate from unknown generic
+dates and local first capture. Wildcards remain patterns; returned names
+must equal or lie under an authorized exact domain at a full label boundary.
+No name proves live DNS, ownership, registration, a dangling service,
+compromise or maliciousness. Provider/index/local coverage is bounded.
+
+Implementation uses the existing app loop/client, jobs, evidence and inbox.
+At most ten exact expiring permissions, immutable empty/nonempty plans and
+two 100-name pages, original-cursor restart, atomic row/citation/match/page
+writes, stable source/name events and retained reviews. Key/tier/query/API
+changes and authority loss stop cooperative units. No generic cross-type
+match or external permission is inferred from a local selector. Raw is
+forced omitted. Daily per-domain success uses the oldest original capture
+of a terminated distinct ordered bounded window. Partial windows retain
+leads without renewing age. All 36 schedules/workers/bulk/raw remain off.
+
+Real access gap: paging requires a key, and anonymous quotas differ in terms
+and API docs. Actual key/tier/purpose/contracts/privacy handling and live
+schema/quota behavior remain unapproved. Config defaults blank. Source
+eligibility stays unapproved. No access purchase, account/key creation,
+provider data request, selector submission, install or live change occurred.
+
+A concurrent editor changed the new model while work was active. Paused
+shared implementation edits and resumed only after the operator directly
+confirmed the other editor stopped. Reconciled names/configuration/two-page
+bounds and incompatible date-model import. No unrelated work was discarded.
+A too-long Windows test-authoring command failed before file creation; split
+writes into smaller blocks. The managed venv launcher failed; established
+external offline test execution worked without environment/security changes.
+
+Initial 24 cases: one invalid-fixture error in 18.311 seconds. A single-label
+wildcard correctly raised; corrected the test assumption. Expanded 35 cases
+passed in 40.030 seconds. Review found a real success-cooldown crash window:
+stage could survive while its later cooldown did not. Persist quota exhaustion
+before recoverable capture and test a crash after staging. Focused inventory/
+GitHub/inbox/shared evidence then passed 113 in 91.091 seconds (36 inventory).
+Two final frozen-plan/changed-byte recovery cases passed in 2.563 seconds.
+Final inventory has 38 cases. Full compatibility: 841 tests in 302.124 seconds, 840 passed and one existing skip.
+These are new runs, distinct from the supplied prior 3A.4 results.
+The first full run executed 841 tests in 304.350 seconds with two old breach/CT
+expectations for 35 schedules instead of 36, plus one existing skip. Corrected
+only counts/test name; both affected cases passed in 1.078 seconds. Repeated
+the full suite on that final state.
+
+See [Closeout](review/2026-11-27-3a5-closeout.md),
+[Runbook](runbooks/subdomain-inventory.md) and
+[Authored Scope](review/2026-11-27-3a5-checkpoint-files.md). Live database stays
+unmigrated/unrestarted for 5F.1 through 3A.5. Linux, native-browser visuals
+and measured live v1 acceptance remain unperformed. No Git operation occurred.
+3A.1/3A.2/3A.3 supplied checkpoints stay completed; 3A.4/3A.5 and earlier
+independent reconciliation/handoff-rule work remain uncommitted/unpushed.
+Inventories are not inspected diffs or approvals. Preserve unrelated work.
+
+Next proposed bounded scope from slice A: 3A.6, one API-only indexed public
+cloud metadata lead consumer for exact authorized domains, reviewing Shodan
+first. No target probes, storage-name guessing or exposure/ownership verdict.
+No 3A.6 implementation started. Full concrete prompt is in docs/handoff.md.
+
 ### 2026-11-27: Built Bounded GitHub Public-Code Metadata Leads, 3A.4
 
 **Subphase 3A.4 Complete, implementation/offline acceptance, 2026-11-27.**

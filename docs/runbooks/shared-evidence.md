@@ -1,4 +1,11 @@
 # Shared Evidence and Source Registry
+
+
+Update 2026-11-27, 3A.5: [Passive Subdomain Inventory](subdomain-inventory.md)
+preserves literal CTLogs host/pattern citations, certificate-window validity
+fields and unknown generic observation dates. Local first capture is separate. Raw
+is forced omitted. No source eligibility is granted.
+
 Update 2026-11-27: [GitHub Public-Code Leads](github-exposure.md) retains
 only bounded file references and literal unresolved html_url citations.
 Sensitive raw captures are omitted. Dedicated GitHub observations attribute

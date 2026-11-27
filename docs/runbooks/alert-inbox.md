@@ -1,4 +1,12 @@
 # Alert Inbox and Foundation Acceptance
+
+
+Update 2026-11-27, 3A.5: [Passive Subdomain Inventory](subdomain-inventory.md)
+adds exact subdomain_domain query attribution. Stable CTLogs name/pattern events
+preserve reviews across counts, dates and captures. No generic domain or other
+source match is inferred. Local matching does not grant domain submission
+authority.
+
 Update 2026-11-27: [GitHub Public-Code Leads](github-exposure.md) adds exact
 github_domain and github_organization query-attribution selectors. A local
 match means the provider returned metadata for that approved query, not a

@@ -1,4 +1,11 @@
 # GitHub Public-Code Exposure Leads
+
+
+Update 2026-11-27, 3A.5: [Passive Subdomain Inventory](subdomain-inventory.md)
+adds one independent disabled consumer; the current composed catalog is 36. GitHub
+code-search behavior and its unapproved access/terms/live acceptance gaps are
+preserved.
+
 Written 2026-11-27. Subphase 3A.4. Implementation and offline acceptance only.
 Source research: [API Review](../research/2026-11-27-github-exposure-api-review.md).
 All collection remains off. No live migration, restart or provider request.
