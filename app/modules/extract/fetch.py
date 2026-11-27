@@ -18,6 +18,7 @@ urlscan card in enrichment is for. The page says so next to the box.
 
 import asyncio
 import ipaddress
+from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
 import httpx
@@ -104,8 +105,16 @@ async def fetch_document(url: str) -> tuple[Document | None, str | None, str | N
 
     if ctype.startswith("application/pdf") or raw[:5] == b"%PDF-":
         document, err = pdf_document(raw)
-        return (None, None, err) if err else (document, "pdf", None)
-    decoded = raw.decode(encoding, errors="replace")
-    if "html" in ctype or decoded.lstrip()[:15].lower().startswith(("<!doctype html", "<html")):
-        return parse_document(decoded), "html", None
-    return markdown.parse_document(decoded), "text", None
+        if err:
+            return None, None, err
+        kind = "pdf"
+    else:
+        decoded = raw.decode(encoding, errors="replace")
+        if "html" in ctype or decoded.lstrip()[:15].lower().startswith(("<!doctype html", "<html")):
+            document, kind = parse_document(decoded), "html"
+        else:
+            document, kind = markdown.parse_document(decoded), "text"
+    document.original_bytes = raw
+    document.collected_at = datetime.now(timezone.utc).isoformat()
+    document.final_url, document.media_type = url, ctype.split(";", 1)[0]
+    return document, kind, None

@@ -40,6 +40,11 @@ class Document:
     artifacts: list[dict] = field(default_factory=list)
     images: list[dict] = field(default_factory=list)
     references: list[dict] = field(default_factory=list)
+    # Transient capture input, never serialized into templates or job params.
+    original_bytes: bytes | None = field(default=None, repr=False)
+    collected_at: str | None = None
+    final_url: str | None = None
+    media_type: str = "application/octet-stream"
 
 
 class _TextParser(HTMLParser):

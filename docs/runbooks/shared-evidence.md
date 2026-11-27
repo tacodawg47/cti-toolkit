@@ -1,10 +1,16 @@
 # Shared Evidence and Source Registry
 
+Update 2026-11-26: [Saved Reports and Archives](saved-reports-and-archives.md)
+implements the 5F.4 consumer and bounded raw-retention contract. The original
+5F.1 scope and future-facing descriptions below remain historical. Version 2
+adds report-save manifests, archive availability and normalized bulk results.
+No live migration, source enabling or collection occurred in this pass.
+
 Update 2026-11-26: [Scheduled Feeds](scheduled-feeds.md) now applies this
 registry gate to 31 opt-in feed surfaces. It persists endpoint/digest capture
 metadata before ingestion, verifies replay identity and separates retrieval,
 committed units and coverage. No source is newly approved or enabled. Raw
-archives and saved report observations remain 5F.4.
+archives and saved report observations were delivered separately in 5F.4.
 
 Written 2026-11-26. Subphase 5F.1. This is a local metadata store, not a
 collector or an original-response archive. No new dependency is required.

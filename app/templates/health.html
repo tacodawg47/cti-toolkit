@@ -84,4 +84,8 @@ Each source also requires its own approved review and enabled schedule.</p>
     {% endfor %}
   </table>
 </div>
+<div class="card"><h3>Original Archive Health</h3>
+<p>Storage: {{ 'Enabled' if archive_health.storage_enabled else 'Off' }} · Maintenance: {{ archive_health.state }}</p>
+<p>Last Attempt: {{ archive_health.last_attempt or 'Never' }} · Last Successful Page: {{ archive_health.last_success or 'Never' }}</p>
+<p>Maintenance checks bounded pages. Original availability is shown with each saved report. No original is rendered here.</p></div>
 {% endblock %}

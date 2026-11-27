@@ -1,5 +1,10 @@
 # Durable Job Runner
 
+Update 2026-11-26: [Saved Reports and Archives](saved-reports-and-archives.md)
+registers explicit opt-in saved-report bulk jobs using the same app-loop
+bridge, provider quotas and OS execution lock. Committed units resume without
+moving progress backwards. Its worker and all provider reviews default off.
+
 Update 2026-11-26: 5F.3 adds opt-in production feed registrations and a
 durable scheduler. See [Scheduled Feeds](scheduled-feeds.md). The original
 5F.2 scope and contracts below remain historical. `Retry` now accepts an

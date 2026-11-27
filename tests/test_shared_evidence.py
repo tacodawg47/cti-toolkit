@@ -59,7 +59,7 @@ class EvidenceDbTests(unittest.TestCase):
         self.init()
         self.assertEqual(evidence.get_source("rvm").review_notes, "Local later review")
         with evidence.connect() as conn:
-            self.assertEqual(conn.execute("SELECT count(*) FROM evidence_schema_versions").fetchone()[0], 1)
+            self.assertEqual(conn.execute("SELECT count(*) FROM evidence_schema_versions").fetchone()[0], len(evidence_schema.MIGRATIONS))
 
     def test_existing_phase2_database_keeps_rows_views_and_user_version(self):
         from app.modules.vulnerability_intelligence import store, views
@@ -128,7 +128,7 @@ class EvidenceDbTests(unittest.TestCase):
         with ThreadPoolExecutor(max_workers=2) as pool:
             list(pool.map(lambda _: db.init_db(), range(2)))
         with evidence.connect() as conn:
-            self.assertEqual(conn.execute("SELECT count(*) FROM evidence_schema_versions").fetchone()[0], 1)
+            self.assertEqual(conn.execute("SELECT count(*) FROM evidence_schema_versions").fetchone()[0], len(evidence_schema.MIGRATIONS))
 
     def test_unknown_source_is_unrated_disabled_and_does_not_overwrite_review(self):
         self.init()

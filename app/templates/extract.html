@@ -24,7 +24,23 @@
     <label class="muted">or upload a PDF or text file (max 10 MB):</label>
     <input type="file" name="file" accept=".pdf,.txt,.csv,.json,.html,.htm,.md,application/pdf,text/*">
   </p>
+  <input type="hidden" name="capture_id" value="{{ capture_id }}">
+  <details class="card">
+    <summary>Save Report With Source Metadata</summary>
+    <p class="muted">Saving is local. A mention remains a mention. Unknown publication dates must be entered as unknown. Raw originals require a separately configured archive policy.</p>
+    <label>Title or Name <input type="text" name="source_title" maxlength="1024"></label>
+    <label>Publisher <input type="text" name="publisher" maxlength="256"></label>
+    <label>Publication Date <input type="text" name="publication_date" placeholder="YYYY-MM-DD or unknown"></label>
+    <label>Source URL (optional for files and pastes) <input type="text" name="provenance_url" maxlength="2048"></label>
+    <label>Source Observation Date (optional) <input type="text" name="observed_at" placeholder="YYYY-MM-DD"></label>
+    <label>Source Modification Date (optional) <input type="text" name="source_modified_at" placeholder="YYYY-MM-DD"></label>
+    <label>Handling <select name="sensitivity"><option value="unknown">Unknown</option><option value="public">Public</option><option value="sensitive">Sensitive</option></select></label>
+    <label>TLP <select name="tlp"><option value="">Unspecified</option>{% for v in ('CLEAR','GREEN','AMBER','AMBER+STRICT','RED') %}<option>{{ v }}</option>{% endfor %}</select></label>
+    <label>Literal Citation References (one per line, optional)<textarea name="citations" rows="3" maxlength="204800"></textarea></label>
+    <button type="submit" name="save_report" value="true">Extract and Save</button>
+  </details>
   <button type="submit">Extract</button>
+  <a href="/reports">Saved Reports</a>
 </form>
 {% else %}
 <details class="card" open>
@@ -50,6 +66,7 @@
 {% if error %}
   <div class="card"><p class="err">⚠ {{ error }}</p></div>
 {% endif %}
+{% if saved_report_id %}<p class="card">Saved locally. <a href="/reports/{{ saved_report_id }}">View Saved Report and Enrichment Controls</a></p>{% endif %}
 
 {% if result %}
   {% if recovered %}<p class="muted">Recovered additional report text from embedded page data. No JavaScript was executed. Unsupported components may still require pasted text.</p>{% endif %}

@@ -99,7 +99,43 @@ CREATE TABLE evidence_source_links (
 );
 """
 
-MIGRATIONS = ((1, VERSION_1),)
+VERSION_2 = """
+CREATE TABLE evidence_archives (
+    document_id INTEGER PRIMARY KEY REFERENCES evidence_documents(id),
+    state TEXT NOT NULL CHECK(state IN ('pending','stored','omitted','expired','failed')),
+    reason TEXT NOT NULL,
+    sha256 TEXT NOT NULL,
+    byte_count INTEGER NOT NULL CHECK(byte_count>=0),
+    media_type TEXT NOT NULL,
+    representation TEXT NOT NULL,
+    storage_key TEXT,
+    root_token TEXT,
+    expires_at TEXT
+);
+CREATE INDEX evidence_archive_expiry ON evidence_archives(state,expires_at);
+CREATE TABLE evidence_report_saves (
+    save_key TEXT PRIMARY KEY,
+    document_id INTEGER NOT NULL REFERENCES evidence_documents(id),
+    manifest_sha256 TEXT NOT NULL,
+    complete INTEGER NOT NULL DEFAULT 0 CHECK(complete IN (0,1)),
+    indicator_count INTEGER NOT NULL,
+    parser_version TEXT NOT NULL
+);
+CREATE TABLE evidence_bulk_results (
+    job_id TEXT NOT NULL REFERENCES durable_jobs(id),
+    unit_key TEXT NOT NULL,
+    document_id INTEGER NOT NULL REFERENCES evidence_documents(id),
+    subject_type TEXT NOT NULL,
+    subject_value TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    status TEXT NOT NULL,
+    result_json TEXT NOT NULL,
+    captured_document_id INTEGER REFERENCES evidence_documents(id),
+    PRIMARY KEY(job_id,unit_key)
+);
+"""
+
+MIGRATIONS = ((1, VERSION_1), (2, VERSION_2))
 
 
 def migrate(conn: sqlite3.Connection) -> None:

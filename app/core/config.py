@@ -10,7 +10,7 @@ vendor clients treat as "not configured" rather than crashing.
 import ipaddress
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Project root is two levels up from this file (app/core/config.py -> project).
@@ -49,6 +49,32 @@ class Settings(BaseSettings):
     # A second explicit switch, in addition to per-source review and schedule.
     # Default startup creates metadata but dispatches no provider work.
     scheduled_feeds_enabled: bool = False
+    bulk_enrichment_enabled: bool = False
+    # No implicit raw retention policy. All five values are required to opt in.
+    archive_enabled: bool = False
+    archive_public_sources: tuple[str, ...] = Field(default=(), max_length=200)
+    archive_root: Path | None = None
+    archive_response_bytes: int | None = Field(default=None, gt=0, le=64*1024**2)
+    archive_source_bytes: int | None = Field(default=None, gt=0, le=1024**4)
+    archive_total_bytes: int | None = Field(default=None, gt=0, le=1024**4)
+    archive_retention_seconds: int | None = Field(default=None, gt=0, le=366*86400)
+
+    @field_validator("archive_root", "archive_response_bytes", "archive_source_bytes",
+                     "archive_total_bytes", "archive_retention_seconds", mode="before")
+    @classmethod
+    def blank_archive_values(cls, value):
+        return None if value == "" else value
+
+    @model_validator(mode="after")
+    def archive_policy(self):
+        if self.archive_enabled:
+            bounds = (self.archive_response_bytes, self.archive_source_bytes,
+                      self.archive_total_bytes, self.archive_retention_seconds)
+            if self.archive_root is None or any(v is None for v in bounds):
+                raise ValueError("Archive enabling requires a local root and all finite limits")
+            if not self.archive_response_bytes <= self.archive_source_bytes <= self.archive_total_bytes:
+                raise ValueError("Archive limits must satisfy response <= source <= total")
+        return self
 
     @field_validator("host")
     @classmethod

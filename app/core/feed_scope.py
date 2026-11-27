@@ -11,6 +11,7 @@ from datetime import timezone
 from email.utils import parsedate_to_datetime
 from hashlib import sha256
 import math
+import json
 import time
 from urllib.parse import urlsplit, urlunsplit
 from uuid import uuid4
@@ -119,24 +120,28 @@ class Scope:
         await asyncio.to_thread(save)
         raise Retry(Failure.RATE_LIMIT, after_seconds=delay)
 
-    async def capture(self, url, raw, allowance):
+    async def capture(self, url, raw, allowance, *, request_identity="", media_type="application/octet-stream"):
         await self.check()
         digest = sha256(raw).hexdigest()
         parts = urlsplit(url)
         # Query values (including tokens) never enter evidence/job metadata.
         safe_url = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
-        identity = sha256((safe_url + ":" + digest).encode()).hexdigest()
+        identity = sha256((safe_url + ":" + digest + ":" + request_identity).encode()).hexdigest()
         slot = "response." + identity
         def save():
+            from .config import settings
             doc = self.context.document(slot, lambda: Document(
                 source_id=self.feed.source, external_id=safe_url, capture_key=uuid4().hex,
-                title=self.feed.label, source_url=safe_url, kind="feed",
+                title=self.feed.label, source_url=safe_url, kind=getattr(self, "capture_kind", "feed"),
                 collection_method=self.feed.method, content_sha256=digest,
+                sensitivity="public" if self.feed.source in settings.archive_public_sources else "unknown",
                 collected_at=self.context._runner._stamp(self.context._runner._now())))
             # Saved metadata can only be replayed for this exact original input.
             if doc.content_sha256 != digest:
                 raise ValueError("Replay digest differs")
             ident = evidence.record_document(doc)
+            from .archives import retain
+            retain(ident, raw, media_type=media_type)
             with self.context._runner._connect(write=True) as conn:
                 conn.execute("INSERT OR IGNORE INTO feed_capture_progress(job_id,document_id) VALUES (?, ?)",
                              (self.context.check()["id"], ident))
@@ -197,8 +202,8 @@ async def fetch(url, *, max_bytes, headers=None, links=None, method="GET", param
                     await scope.limited(response.headers.get("Retry-After"))
                 if response.status_code in (301, 302, 303, 307, 308) and scope.feed.redirects:
                     location = response.headers.get("location", "")
-                    # Only the CVE delta adapter permits bounded redirects to
-                    # fixed official release-asset host/path patterns. No auth
+                    # Only explicit registered redirect patterns are allowed.
+                    # Feed release assets and bulk RDAP use finite lists. No auth
                     # headers or request payloads are forwarded to another host.
                     from urllib.parse import urljoin
                     target = urljoin(url, location)
@@ -214,9 +219,14 @@ async def fetch(url, *, max_bytes, headers=None, links=None, method="GET", param
                         return 200, None, "Scheduled response exceeded its byte budget"
                     chunks.append(chunk)
                 raw = b"".join(chunks)
+                media_type = response.headers.get("content-type", "application/octet-stream").split(";", 1)[0][:128]
                 if links is not None:
                     links.update(response.links)
-        await scope.capture(url, raw, max_bytes)
+        # Hash request inputs without persisting query tokens/payload values.
+        # Equal bodies from distinct queries must not reuse capture metadata.
+        request_identity = sha256(json.dumps([method, url, params, data, json_body],
+                                            sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
+        await scope.capture(url, raw, max_bytes, request_identity=request_identity, media_type=media_type)
         return 200, raw, None
     except (TimeoutError, httpx.HTTPError, httpx.InvalidURL):
         raise Retry(Failure.TRANSIENT) from None

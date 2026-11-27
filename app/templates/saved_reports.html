@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Saved Reports | CTI Toolkit{% endblock %}
+{% block content %}
+<h1>Saved Reports</h1>
+<p><a href="/extract">Extract a Report</a> · <a href="/reports">Saved Reports</a></p>
+{% if reports is defined %}
+<table><tr><th>Report</th><th>Publisher</th><th>Published</th><th>Collected</th><th>Mentions</th><th>Original Availability</th></tr>
+{% for r in reports %}<tr><td><a href="/reports/{{ r.id }}">{{ r.title }}</a></td><td>{{ r.publisher }}</td><td>{{ r.source_published_at or 'Unknown' }}</td><td>{{ r.collected_at }}</td><td>{{ r.indicator_count }}</td><td>{{ r.archive_state or 'Unavailable' }} · {{ r.archive_reason or 'No archive record' }}</td></tr>{% endfor %}</table>
+{% elif job is defined %}
+<h2>Enrichment Job</h2><p>State: {{ job.state }} · Saved Units: {{ job.progress_done }} / {{ job.progress_total or 'Unknown' }} · Error: {{ job.error_code or 'None' }}</p>
+<p>Reload this page for current progress. Completion describes the selected batch and providers.</p>
+{% if job.state in ('queued','running') %}<form method="post" action="/report-jobs/{{ job.id }}/cancel"><button>Cancel Job</button></form>{% endif %}
+{% else %}
+<h2>{{ document.title }}</h2>
+<p>Publisher: {{ document.publisher }} · Published: {{ document.source_published_at or 'Unknown' }} · Collected: {{ document.collected_at }}</p>
+<p>Source Reference: <code>{{ document.source_url or document.external_id }}</code></p>
+{% if document.source_url and document.external_id != document.source_url %}<p>Captured Record Reference: <code>{{ document.external_id }}</code></p>{% endif %}
+<p>Capture: <code>{{ document.capture_key }}</code> · Originating Run: {{ document.job_run_id or 'Manual Capture' }}</p>
+<p>Original Availability: {{ archive.state if archive else 'Unavailable' }} · {{ archive.reason if archive else 'No archive record' }}. Digests and metadata do not establish authenticity. Originals are never rendered or served here.</p>
+{% if archive %}<p>SHA-256: <code>{{ archive.sha256 }}</code> · Bytes: {{ archive.byte_count }} · Representation: {{ archive.representation }} · Expires: {{ archive.expires_at or 'Not retained' }}</p>{% endif %}
+<h3>Indicator Mentions</h3>
+<table><tr><th>Type</th><th>Indicator</th><th>Observed</th><th>Report Evidence</th></tr>{% for o in observations %}<tr><td>{{ o.subject_type }}</td><td><code>{{ o.subject_value }}</code></td><td>{{ o.observed_at or 'Unknown' }}</td><td>{{ o.excerpt }} {{ o.locator }}</td></tr>{% endfor %}</table>
+<h3>Citation Hops</h3>
+<ul>{% for c in citations %}<li><code>{{ c.target_reference }}</code> · {{ c.relationship }} · {{ 'Resolved to local document ' ~ c.target_document_id if c.target_document_id else 'Unresolved' }}</li>{% endfor %}</ul>
+<h3>Bulk Enrichment</h3>
+<p>Worker: {{ 'Enabled' if bulk_enabled else 'Off' }}. Each provider needs a reviewed, enabled API entry. This submits the selected public indicators to those providers. Emails and CVEs are excluded. Keyless providers run first. RDAP follows only its fixed registry routes; other destinations are refused.</p>
+<form method="post" action="/reports/{{ document.id }}/enrich">
+<input type="hidden" name="request_key" value="{{ request_key }}">
+<label>First Indicator (zero based) <input type="number" name="offset" min="0" max="1999" value="0"></label>
+<label>Batch Size <input type="number" name="count" min="1" max="10" value="10"></label>
+<p>Keyless:</p>{% for p in keyless %}<label><input type="checkbox" name="providers" value="{{ p }}" checked> {{ p }}</label>{% endfor %}
+<p>Additional Providers (opt in; may use configured keys):</p>{% for p in keyed %}<label><input type="checkbox" name="providers" value="{{ p }}"> {{ p }}</label>{% endfor %}
+<p><button{% if not bulk_enabled %} disabled{% endif %}>Queue Selected Batch</button>
+<button formaction="/reports/{{ document.id }}/enrich-all"{% if not bulk_enabled %} disabled{% endif %}>Enrich All in Bounded Batches</button></p></form>
+<h3>Recent Enrichment Jobs</h3><p>Latest 200 jobs for this report. Each job processes at most 10 indicators.</p>
+<table><tr><th>Job</th><th>State</th><th>Saved Units</th><th>Error</th></tr>{% for j in jobs %}<tr><td><a href="/report-jobs/{{ j.id }}">{{ j.id }}</a></td><td>{{ j.state }}</td><td>{{ j.progress_done }} / {{ j.progress_total or 'Unknown' }}</td><td>{{ j.error_code or 'None' }}</td></tr>{% endfor %}</table>
+<h3>Saved Provider Results</h3>
+<p>Normalized attributes retain their provider and query time. Cached results do not imply a new retrieval or an available original.</p>
+{% for r in bulk_results %}<details><summary>{{ r.provider }} · {{ r.subject_value }} · {{ r.status }}</summary><pre>{{ r.result_json }}</pre><p><a href="/report-jobs/{{ r.job_id }}">Job Status</a> · Capture Document: {{ r.captured_document_id or 'No new response capture' }}</p></details>{% endfor %}
+{% endif %}
+{% endblock %}

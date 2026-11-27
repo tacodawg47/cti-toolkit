@@ -157,15 +157,19 @@ validation and remaining limits. Its final suite ran 511 tests: 510 passed,
 one skipped; all 26 local acceptance pages returned 200. These are prior
 verified results, not an automatic rerun in a new session.
 
-Subphase 5F.3 Complete, 2026-11-26. Scheduled feed/health acceptance ran 585
-tests: 584 passed and one existing skip, including 32 new scheduler tests.
-See docs/review/2026-11-26-5f3-closeout.md and docs/runbooks/scheduled-feeds.md.
-All 31 schedules and the worker default off. No source was enabled/contacted.
-5F.2 commit eff4b41 was pushed and verified, confirmed by the operator.
-The live database has not been migrated or restarted for 5F.1 to 5F.3.
-The 5F.3 commit is approved. Reconcile its execution and separate push status
-with the closing chat result; prepared notes are not a new Git authorization.
-The next planned work is 5F.4, Saved Reports and Original-Source Archives.
+Subphase 5F.4 Complete, 2026-11-26. Full offline compatibility ran 627 tests:
+626 passed and one existing skip. Final focused acceptance passed all 42
+new tests after the last credential guard refinement. See
+docs/review/2026-11-26-5f4-closeout.md and
+docs/runbooks/saved-reports-and-archives.md. Report saves, bounded original
+retention and durable bulk enrichment are implemented. Raw storage, bulk
+work, all 31 schedules and the feed worker default off. No source was enabled
+or contacted. The live database has not been migrated/restarted for 5F.1 to
+5F.4. Read-only inspection confirmed 5F.3 commit 2491fb3 and matching local
+origin/main tracking. The exact 5F.4 commit proposal is approved; execution
+is prepared and separate push approval remains pending;
+reconcile the closing chat result before repeating any checkpoint.
+The next planned work is 5F.5, Alert Inbox and Foundation Acceptance.
 Read docs/handoff.md for
 the checkpoint and next-chat prompt after the roadmap and current journal
 entry. Follow docs/runbooks/session-handoff.md at every boundary.

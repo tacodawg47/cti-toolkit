@@ -2,8 +2,9 @@
 
 Written 2026-10-28. Updated 2026-11-26.
 
-The current suite ran 585 tests, with 584 passing and one skipped, verified
-at the 2026-11-26 subphase 5F.3 closeout. They use Python's built-in `unittest`,
+The current suite ran 627 tests, with 626 passing and one skipped, verified
+at the 2026-11-26 subphase 5F.4 closeout. Final focused acceptance passed all
+42 new tests after the last credential guard refinement. They use Python's built-in `unittest`,
 so no extra dependency is needed, and they never touch the network: importing the
 `tests` package replaces the shared HTTP client with one that refuses every
 request, so a test that forgets to mock fails loudly instead of spending
@@ -36,6 +37,7 @@ import base (so `import app...` works), and `-v` lists each test.
 
 | File | Covers |
 |---|---|
+| `tests/test_saved_reports.py` | 42 offline save/archive/bulk cases: atomic saves and migrations, replay/changed input, source/run/date/citation provenance, malformed/bounded input, handling and credential guards, capacity/concurrency, interrupted file writes/rename recovery, corruption/orphans, expiry preserving history, local escaped views, provider selection/gates, app-loop quota ownership, request/byte/time/day budgets, 429 cooldowns, cancellation/revocation/retry, cached originals, Enrich All batching and finite RDAP redirects. See [Saved Reports and Archives](saved-reports-and-archives.md). |
 | `tests/test_feed_scheduler.py` | 32 offline schedule/health tests: disabled defaults, durable due work, restart and interrupted pagination, capture replay, source/schedule revocation, shared-loop quotas/client, persisted 429/daily caps, request/byte/time bounds, vendor queue continuation, retained snapshots/checkpoints, constrained redirects, shutdown/drained siblings, archive validation and analyst-page freshness. See [Scheduled Feeds](scheduled-feeds.md). |
 | `tests/test_jobs.py` | 24 durable-runner acceptance tests: registration/parameter limits, additive migration rollback/retry and schema guards, actual process-death recovery, independent process exclusion, concurrent enqueues/claims, immutable logical identity, bounded retries/backoff, queued/running/interrupted cancellation, source revocation on units/retries/restart, separate retrieval/coverage checkpoints, evidence replay with originating run identity, progress bounds and startup WAL contention handling. Commands and handler limits: [Durable Jobs](durable-jobs.md). |
 | `tests/test_shared_evidence.py` | 18 shared-corpus acceptance tests: additive/repeated/concurrent migrations, atomic rollback/retry and newer-version refusal, unchanged legacy rows/views, explicit source eligibility, dated license findings, distinct source times, idempotent captures and citation resolution, scoped lineage, FK integrity, bounded metadata/reads, job identifiers and six offline startup/page checks. Commands and future integration contracts: [Shared Evidence](shared-evidence.md). |

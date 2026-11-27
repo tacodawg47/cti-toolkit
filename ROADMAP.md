@@ -1321,8 +1321,8 @@ they are.
 
 **Foundation slice: scheduler and alerting**
 
-Session boundaries, decided 2026-11-26. 5F.1 to 5F.3 are complete; 5F.4 and 5F.5
-are not started.
+Session boundaries, decided 2026-11-26. 5F.1 to 5F.4 are complete; 5F.5
+is not started.
 These divide the existing foundation scope; they do not bring forward the
 collectors or change the numbered Build order. A subphase can be split again
 at a tested milestone if its scope proves too large.
@@ -1332,12 +1332,23 @@ at a tested milestone if its scope proves too large.
 | 5F.1 Complete 2026-11-26 | Shared evidence model and source registry | Additive schema/access layer preserve source identity, document and citation links, scoped lineage and distinct timestamps. Unknown sources are F and collection-disabled. Historical license findings stay separate from terms decisions. All 18 migration/provenance tests pass; full suite 529 tests, 528 passed and one existing skip. Archive and job contracts are documented. See docs/review/2026-11-26-5f1-closeout.md. |
 | 5F.2 Complete 2026-11-26 | Durable job runner | Trusted registration, distinct work/run identity, durable progress, bounded retries, cancellation and interrupted-job recovery pass temporary-database acceptance. Serial process-held execution lock and transactional claims control duplicates. Shared eligibility and original capture replay contracts preserved. Final suite 553 tests, 552 passed and one existing skip. See docs/review/2026-11-26-5f2-closeout.md. |
 | 5F.3 Complete 2026-11-26 | Scheduled feed refresh and source health | 31 explicit existing feed surfaces have opt-in schedules, bounded requests, shared-loop async/quota integration, durable cooldowns and separate capture/progress/coverage state. Last-good age and never-loaded/stale/failed/incomplete states are visible at consumption. Final suite 585 tests: 584 passed and one existing skip. No source enabling, live migration, restart or traffic. See docs/review/2026-11-26-5f3-closeout.md. |
-| 5F.4 | Saved reports and original-source archives | Extraction can save documents and indicator sightings with provenance. Original-response storage has size/retention limits and sensitive-data handling. Wire the agreed bulk enrichment workflow through jobs, preserving source lookup controls. |
+| 5F.4 Complete 2026-11-26 | Saved reports and original-source archives | Atomic report/file/paste saves preserve mentions, dates, literal citation hops and replay identity. Opt-in originals have finite capacity/age limits, handling gates and recoverable file reconciliation; expiry preserves evidence. Enrich All uses bounded durable jobs, explicit provider controls and the app loop. Full suite 627 tests: 626 passed and one existing skip; final focused 42 passed. No live activation or migration. See docs/review/2026-11-26-5f4-closeout.md. |
 | 5F.5 | Alert inbox and foundation acceptance | Evidence-linked alerts, deduplication and review state work; selector matching has integration coverage; cross-feature freshness, recovery and restart checks meet the foundation requirements. Email/webhooks and collector playbooks remain later work. |
 
 At each boundary update the table's status, dated review, journal and
 docs/handoff.md. Commit and push remain separately approved operations.
-The next chat starts at 5F.4 using the prompt in docs/handoff.md.
+The next chat starts at 5F.5 after resolving the 5F.4 checkpoint, using
+the prompt in docs/handoff.md.
+
+5F.4 design, decided 2026-11-26: commit report metadata, indicator mentions
+and literal citation edges atomically. Bind replay identity to capture/input
+and parser output. Store originals separately under explicit finite limits
+and public handling, so expiry never deletes evidence history. Default raw
+storage and bulk work off; reviewed provider choices and the existing app
+loop enforce bounded requests, quota and retry controls. Reconcile atomic
+file writes in bounded local maintenance pages. See
+docs/runbooks/saved-reports-and-archives.md. Sensitive quarantine, privacy
+deletion and live source acceptance remain separate work.
 
 5F.3 design, decided 2026-11-26: dispatch durable due work with a stdlib async
 timer because APScheduler is not installed. Submit feed coroutines from the

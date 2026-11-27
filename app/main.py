@@ -10,6 +10,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -26,6 +27,8 @@ from .core.ratelimit import LIMITS, rate_limiter
 from .core.templating import templates
 from .core.web import reject_cross_site
 from .modules.enrich import base, registry, shodan
+from .modules.enrich.bulk import Service as BulkService
+from .modules.extract import saved, saved_routes
 from .modules.extract import atlas, attack, attack_catalog, content, decode, extractor, markdown, tlds
 from .modules.extract import fetch as extract_fetch
 from .modules.extract import pdf as extract_pdf
@@ -67,6 +70,14 @@ async def lifespan(app: FastAPI):
     stopped = asyncio.Event()
     worker = asyncio.create_task(scheduler.serve(stopped)) if settings.scheduled_feeds_enabled else None
     app.state.feed_scheduler = scheduler
+    bulk = BulkService(asyncio.get_running_loop())
+    app.state.bulk_enrichment = bulk
+    bulk_worker = asyncio.create_task(bulk.serve(stopped)) if settings.bulk_enrichment_enabled else None
+    from .core import archives
+    if settings.archive_root is not None:
+        # One bounded page; the runbook describes continuing large maintenance.
+        await asyncio.to_thread(archives.maintenance)
+    archive_worker = asyncio.create_task(archives.serve(stopped)) if settings.archive_root is not None else None
     try:
         yield
     finally:
@@ -74,6 +85,10 @@ async def lifespan(app: FastAPI):
         if worker is not None:
             # No cancellation of a worker thread, active HTTP or committed saves.
             await worker
+        if bulk_worker is not None:
+            await bulk_worker
+        if archive_worker is not None:
+            await archive_worker
         await base.aclose()
 
 
@@ -105,6 +120,7 @@ static_dir = BASE_DIR / "static"
 app.mount("/static", StaticFiles(directory=str(static_dir), check_dir=False), name="static")
 app.include_router(vulnintel_routes.router)
 app.include_router(infra_routes.router)
+app.include_router(saved_routes.router)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -148,6 +164,7 @@ def decoder_page(request: Request):
 def _extraction_page(request: Request, context: dict, document: Document | None = None, *, status_code: int = 200):
     catalog = attack_catalog.load()
     context.update(catalog_version=catalog.get("version"), decode_modes=decode.MODES)
+    context.setdefault("capture_id", uuid4().hex)
     if document is not None:
         content.prepare_text(document)
         context["result"] = extractor.extract(document.indicator_text or "", report_mode=True,
@@ -197,6 +214,17 @@ async def extract(
     text: str = Form(""),
     url: str = Form(""),
     file: UploadFile | None = File(None),
+    save_report: bool = Form(False),
+    capture_id: str = Form(""),
+    source_title: str = Form(""),
+    publisher: str = Form(""),
+    publication_date: str = Form(""),
+    observed_at: str = Form(""),
+    source_modified_at: str = Form(""),
+    provenance_url: str = Form(""),
+    sensitivity: str = Form("unknown"),
+    tlp: str = Form(""),
+    citations: str = Form(""),
 ):
     """Extract IOCs from whichever input was given: a file, a URL, or text.
 
@@ -206,11 +234,26 @@ async def extract(
     reject_cross_site(request)
     ctx: dict = {"text": text, "url": url}
     document: Document | None = None
+    metadata = None
+    if save_report:
+        try:
+            metadata = saved.ReportMetadata(capture_id=capture_id, title=source_title, publisher=publisher,
+                source_url=(provenance_url or (url if not (file and file.filename) else "")).strip() or None,
+                source_published_at=None if publication_date.strip().lower() == "unknown" else publication_date.strip() or None,
+                publication_unknown=publication_date.strip().lower() == "unknown",
+                observed_at=observed_at.strip() or None, sensitivity=sensitivity, tlp=tlp or None,
+                source_modified_at=source_modified_at.strip() or None,
+                citations=tuple(line.strip() for line in citations.splitlines() if line.strip()))
+        except ValueError:
+            ctx["error"] = "Saving requires a capture ID, title, publisher, publication date (or unknown), valid dates and credential-free references."
+            return _extraction_page(request, ctx, status_code=422)
+    raw, origin, media_type = None, "paste", "text/plain"
 
     if file is not None and file.filename:
         # Read one byte past the cap: if we get it, the file is too big, and
         # we have not pulled the rest of it into memory.
         data = await file.read(MAX_UPLOAD_BYTES + 1)
+        raw, origin = data, "file"
         if len(data) > MAX_UPLOAD_BYTES:
             ctx["error"] = f"file too large (over {MAX_UPLOAD_BYTES // (1024 * 1024)} MB)"
         elif data[:5] == b"%PDF-" or (file.filename.lower().endswith(".pdf")):
@@ -226,21 +269,32 @@ async def extract(
                 document = markdown.parse_document(body)
             ctx["source"] = f"file {file.filename}"
     elif url.strip():
+        origin = "report"
         document, kind, err = await extract_fetch.fetch_document(url.strip())
         if err:
             ctx["error"] = err
         ctx["source"] = f"{kind or 'page'} at {url.strip()}"
+        if document is not None:
+            raw, media_type = document.original_bytes, document.media_type
     elif text.strip():
         document = markdown.parse_document(text)
+        raw = text.encode("utf-8")
         ctx["source"] = "pasted text"
     else:
         ctx["error"] = "Paste some text, enter a URL, or choose a file."
 
+    if metadata is not None and document is not None and not ctx.get("error"):
+        try:
+            ctx["saved_report_id"] = await asyncio.to_thread(saved.save, document, raw, metadata, origin=origin,
+                collected_at=document.collected_at, media_type=media_type)
+        except ValueError:
+            ctx["error"] = "Report was not saved. Check input size, source metadata, citation bounds and credential-like content."
     return _extraction_page(request, ctx, document)
 
 
 @app.get("/health", response_class=HTMLResponse)
 async def health(request: Request):
+    from .core.archives import health as archive_health
     keys = {
         "virustotal": bool(settings.virustotal_api_key),
         "abuseipdb": bool(settings.abuseipdb_api_key),
@@ -272,6 +326,7 @@ async def health(request: Request):
          "tranco": tranco,
          "source_health": await asyncio.to_thread(feed_health, feed_catalog()),
          "scheduled_feeds_enabled": settings.scheduled_feeds_enabled,
+         "archive_health": archive_health(),
          "bind": f"{settings.host}:{settings.port}",
          "data_dir": _display_path(settings.data_dir)},
     )

@@ -1609,6 +1609,74 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-26: Subphase 5F.4 Complete, Saved Reports and Original Archives
+
+Implemented only 5F.4 after the required roadmap, newest research, handoff,
+review and runbook reading. Current-chat approved read-only Git checks found
+5F.3 committed at 2491fb3 with matching local origin/main tracking and an
+empty index. No remote contact or repeated 5F.3 commit occurred. Separate
+prototype and OSINT research work remains preserved in shared documents,
+along with Feedly rules and local settings.
+
+Added a transactional version 2 shared schema for report manifests, raw
+availability and normalized bulk results. Extract and Save requires source
+title/name, publisher and a publication date or explicit unknown. Report,
+file and paste origins retain input digests, separate source/observation/
+collection dates, citation references and originating execution. Parsed
+mentions remain mentions. Unknown sources stay F and collection-disabled.
+Save replay binds capture identity, original bytes, metadata and parser
+output/version. Changed input makes another capture. A repeated unchanged
+save preserves its original collection time and later citation resolution.
+Documents, sightings and citations commit together; archives are separate.
+
+Original capture bytes are retained before normalization, without refetching
+for a save. Raw storage requires an explicit private root and finite response,
+source, total and age limits. Capacity reservations, generated paths, an OS
+lock, temporary file/fsync/rename and bounded reconciliation recover interrupted
+writes. A local maintenance loop handles expiry and missing files without
+collection. Health exposes failure/page progress. Expiry changes availability
+immediately and preserves document/indicator/citation history and digests.
+Unknown, sensitive and restricted-TLP material is omitted. Common credential
+patterns and configured keys are guarded, without claiming universal secret
+detection or encryption. Raw data has no web render/download/export route.
+
+Enrich All creates bounded durable batches. Keyless units precede additional
+explicitly chosen providers within each batch. Source review/enabling,
+handling, private-IP/Tranco/hashlookup gates, request/byte/time/day quotas,
+429 cooldowns and retry/cancellation checks apply through resumption. Sync
+jobs submit to the app's existing loop/client/limiter. The worker defaults
+off. Proposed RDAP redirects are restricted to finite named registry routes,
+not arbitrary destination instructions. Endpoint availability and current
+terms were not newly researched; source enabling remains a separate review.
+Normalized results preserve provider attributes and report/capture links.
+Cached results retain query time and make no new-original claim. Hashing
+request inputs prevents identical bodies from different queries sharing
+capture metadata; request secrets themselves are not saved as metadata.
+
+Initial acceptance found and corrected an archive SQL placeholder mismatch,
+an overridden test fixture argument and old one-migration assertions. The
+expanded report/evidence/scheduler run passed 85 tests. Full compatibility
+first ran 626 tests in 133.056 seconds, passing with one existing skip.
+After the RDAP/media refinements, the 627-test run passed 626 with one skip
+in 118.318 seconds. Final focused acceptance passed all 42 new tests in
+17.239 seconds after the last credential suppression refinement. Existing
+deprecation, invalid-PDF and asyncio diagnostics remain. Tests used temporary
+databases and mock HTTP, with the established venv sandbox execution path.
+
+No live migration/restart, source enabling, provider traffic, package change,
+external submission or index/history mutation occurred. Linux and browser
+visual checks were not performed. Full operational v1 acceptance remains
+separate. Runbook saved-reports-and-archives.md records repeatable commands,
+activation gates, bounded history views, local filesystem and handling limits.
+
+**Subphase 5F.4 Complete.** See docs/review/2026-11-26-5f4-closeout.md.
+The exact 28-path proposal uses message Add saved reports and bounded original
+archives. The operator individually approved this exact proposal in this chat;
+execution is prepared and separate push approval remains pending.
+Stage only 5F.4 blocks from the three shared documents; preserve all prototype
+and OSINT research edits. Stop at this boundary. Next chat: only 5F.5 using
+the full prompt in docs/handoff.md.
+
 ### 2026-11-26: Subphase 5F.3 Complete, Scheduled Feed Refresh and Source Health
 
 Checkpoint update: the operator individually approved the exact 58-path

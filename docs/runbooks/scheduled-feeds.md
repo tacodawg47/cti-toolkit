@@ -1,5 +1,12 @@
 # Scheduled Feed Refresh and Source Health
 
+Update 2026-11-26: [Saved Reports and Archives](saved-reports-and-archives.md)
+adds optional bounded retention at the existing capture boundary. Unknown
+source handling omits raw bodies. Request identity now hashes method,
+endpoint and query/payload inputs, keeping equal responses to different
+queries separate without persisting query tokens. Original run/time metadata
+remain immutable on replay. No source, schedule or worker was enabled.
+
 Written 2026-11-26. Subphase 5F.3. All schedules and the worker default to
 disabled. This file documents code and repeatable procedures. It does not
 approve a source, a transfer, a migration or a restart.
