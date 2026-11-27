@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     # GitHub search works without a token at 10 searches a minute.
     nvd_api_key: str = ""
     github_token: str = ""
+    # Phase 3 public-code metadata search must never inherit private-repo access.
+    # Human review of this separate token's public-only access is required.
+    github_exposure_token: str = ""
+    github_exposure_public_only: bool = False
     # ransomware.live PRO (free key from my.ransomware.live): group profiles
     # with the CVEs each group exploits. Phase 3 reuses it for victims.
     ransomwarelive_api_key: str = ""

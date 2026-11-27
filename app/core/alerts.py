@@ -19,7 +19,7 @@ from .indicators import canonical, detect_type, normalise
 
 STATES = ("new", "reviewed", "dismissed")
 TYPES = ("domain", "ip", "hash", "url", "email", "cve", "organization", "sector", "country",
-         "ct_domain", "ct_organization", "ct_brand")
+         "ct_domain", "ct_organization", "ct_brand", "github_domain", "github_organization")
 MAX_SELECTORS = 100
 
 
@@ -33,6 +33,9 @@ def normalize_subject(subject_type, value):
     if subject_type.startswith("ct_"):
         from ..modules.ct_watch.matching import seed
         return seed(value, subject_type[3:])
+    if subject_type.startswith("github_"):
+        from ..modules.github_exposure.models import selector
+        return selector(value, subject_type)
     if subject_type in ("organization", "sector", "country"):
         value = " ".join(unicodedata.normalize("NFKC", value).split()).casefold()
         if not value or len(value) > (512 if subject_type == "organization" else 128):
@@ -61,7 +64,7 @@ def normalize_subject(subject_type, value):
 
 
 class Selector(Metadata):
-    subject_type: Literal["domain", "ip", "hash", "url", "email", "cve", "organization", "sector", "country", "ct_domain", "ct_organization", "ct_brand"]
+    subject_type: Literal["domain", "ip", "hash", "url", "email", "cve", "organization", "sector", "country", "ct_domain", "ct_organization", "ct_brand", "github_domain", "github_organization"]
     mode: Literal["exact", "domain_tree", "network"] = "exact"
     value: str = Field(min_length=1, max_length=2048)
 
@@ -71,6 +74,8 @@ class Selector(Metadata):
             raise ValueError("Credential-like selectors are refused")
         if self.subject_type.startswith("ct_") and self.mode != "exact":
             raise ValueError("CT seeds use explicit exact label/domain rules")
+        if self.subject_type.startswith("github_") and self.mode != "exact":
+            raise ValueError("GitHub query attribution uses exact selectors only")
         if self.mode == "network":
             if self.subject_type != "ip":
                 raise ValueError("Networks match IP observations only")

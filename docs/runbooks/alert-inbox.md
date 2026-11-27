@@ -1,4 +1,10 @@
 # Alert Inbox and Foundation Acceptance
+Update 2026-11-27: [GitHub Public-Code Leads](github-exposure.md) adds exact
+github_domain and github_organization query-attribution selectors. A local
+match means the provider returned metadata for that approved query, not a
+confirmed content occurrence or exposure. Stable repository-ID/file-path
+events retain reviews across blobs and captures. No implicit generic domain,
+owner or organization match is created. Submission authority remains separate.
 
 Update 2026-11-27: [CT Lookalike Watches](ct-lookalike-watches.md) adds exact
 CT-domain and explicit organization/brand DNS-token selectors. They match

@@ -1609,6 +1609,89 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-27: Built Bounded GitHub Public-Code Metadata Leads, 3A.4
+
+**Subphase 3A.4 Complete, implementation/offline acceptance, 2026-11-27.**
+
+The operator directly scoped one API-only exposure lead consumer, metadata
+references only, and authorized public-doc research, routine project edits
+and offline tests. Read the Build order, Phase 3/data-handling and shared
+foundation contracts, newest research/handoff and 3A.3 closeout/reviews.
+Revisited the Phase 2 GitHub repository/README, PoC feed and advisory clients
+and relevant historical catalog candidates. No external tool code was copied
+or installed. The consumer uses the existing app loop/client/limiter, jobs,
+evidence and inbox. No other consumer or subphase was started.
+
+Read current search overview and full code-search endpoint, legacy syntax,
+authentication, version, pagination and rate-limit guides; full primary
+terms/AUP; privacy sections and current main plan prices. The dated API
+review distinguishes full relevant review from unchecked add-ons, contracts,
+account/token pages, outbound links and real service behavior. Current code
+docs conflict on mandatory authentication versus public anonymous access.
+Fine-grained token support is documented but has not been live-tested.
+Chose a separate human-reviewed public-only token and default-false access
+attestation, never inheriting Phase 2 private-repository capability. Source
+eligibility stays unapproved. No real credential or account was inspected.
+
+Exact bounded organization/domain values produce only quoted in:file queries.
+Legacy punctuation may be ignored; local observations therefore mean query
+attribution, not an exact content match or exposure proof. Separate permission
+IDs bind selector/query, API/query versions and token identity. Empty plans
+stay empty; two fixed page slots cap each of at most ten queries. Token changes,
+expiry/revocation/suppression and source/schedule/selector disablement stop
+cooperative units, retries, quota waits, response/stage and ingestion boundaries.
+
+Only validated repository ID/full name, path, blob SHA and literal html_url
+survive. Unknown metadata, descriptions, profiles and repository dates are
+discarded; snippets/content-bearing results fail. Source/file dates remain
+unknown. Raw bodies are omitted and captures sensitive. Page staging retains
+original capture/run identity. Atomic observations, citations, local matches
+and page completion preserve evidence and reviews on recovery. Stable
+provider repository-ID/file-path events deduplicate revisions without merging
+captures. Incomplete/truncated/drifting pages retain leads but do not renew
+per-selector success. Passive views show original age and review links.
+
+Initial 34-case acceptance found two failures. A real multi-page progress
+bug mixed response counts with selector totals. Added an explicit consumer
+unit_progress option in Scope.validated; only the new consumer opts in.
+Existing adapters retain the default. The other was a fixture assumption:
+schedule configuration does not identify a changed nonempty token; saved
+permission identity refuses it when work runs. Corrected the assertion.
+The next 40-case run passed in 43.925 seconds. After binding API version and
+adding final authority/recovery cases, focused GitHub/inbox/shared-evidence
+acceptance passed 77 in 51.547 seconds, including 43 GitHub cases.
+
+The first full suite ran 803 tests in 256.216 seconds, with one old ransomware
+catalog-count assertion failure and one existing skip. Updated that one
+expectation from 34 to 35; earlier breach/CT catalog expectations were already
+updated. Final compatibility: 803 tests in 255.655 seconds, 802 passed and
+one existing skip. Tests use temporary databases
+and synthetic/refused HTTP. The managed Windows launcher could not start the
+existing venv, so the established external execution path ran the authorized
+tests without interpreter/package/security changes. Existing diagnostics remain.
+
+All 35 schedules, workers, bulk and raw storage default off. No provider data
+request, selector submission, source enabling, install, live migration/restart
+or Git operation occurred. The live database remains unmigrated/unrestarted
+for 5F.1 through 3A.4. Linux, native-browser visuals and live v1 acceptance
+remain unperformed. The new runbook records exact offline commands, finite
+budgets, limitations and separately approved measured live acceptance.
+
+Reconciled the operator-supplied actual 3A.3 commit/push result:
+749d97351c5158558789afa8a297a461999b9c42 on 2026-11-27, with matching local
+HEAD/local origin/main/live remote main and an empty index afterward. It
+supersedes prepared-execution notes below. No Git operation was run to verify
+or repeat it. 3A.1/3A.2 checkpoints stay complete. 3A.4 and independent earlier
+reconciliation/handoff-rule work remain uncommitted. A 40-path authored scope
+inventory is not a Git-inspected diff or approval. Preserve unrelated work;
+inspect/select/commit only after direct approvals, with push approved separately.
+
+Next proposed bounded capability is 3A.5, one passive exact-domain subdomain
+inventory API consumer, reviewing CTLogs' domain API first. Its full prompt
+is in docs/handoff.md. No DNS, target probing, combined provider, fuzzy search,
+code/secret fetching, credential testing, collector, playbook or AI was added.
+The final dated closeout status and result are in the 3A.4 review record.
+
 ### 2026-11-27: Inspected the 3A.3 Checkpoint After Direct Approval
 
 The operator directly approved read-only local Git inspection after 3A.3

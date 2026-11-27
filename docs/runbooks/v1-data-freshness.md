@@ -1,4 +1,11 @@
 # V1 Data Freshness Requirements
+Update 2026-11-27: [GitHub Public-Code Leads](github-exposure.md) adds a
+disabled daily consumer with per-selector two-day staleness. A bounded
+consistent query window uses its oldest original page capture for age.
+Partial, drifting, short or truncated windows retain leads without renewing
+success. All 35 composed schedules default off. Reviewed public-only access,
+exact disclosures and measured live freshness/recovery remain separately
+approved operational acceptance; none occurred in this subphase.
 
 Update 2026-11-27: [CT Lookalike Watches](ct-lookalike-watches.md) adds a
 provisional daily schedule with a two-day stale threshold and per-seed

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}GitHub Leads | CTI Toolkit{% endblock %}
+{% block content %}
+<h1>GitHub Public-Code Search Leads</h1>
+<p>Source: GitHub REST code search. Metadata references only. Provider-reported query attribution is a review lead, not proof of exposure, exact content, secret validity, ownership or maliciousness. No code contents, repositories or credentials are fetched or tested.</p>
+<p>Coverage: at most two pages of 50 references per approved query. Default-branch indexing and provider search restrictions apply. Punctuation may be ignored. Results can drift between pages; bounded success never establishes complete historical coverage or absence.</p>
+<p><a href="/github-exposure">Per-Selector Freshness</a> · <a href="/alerts">Local Inbox</a> · <a href="/health">Health</a></p>
+{% include "source_health.html" %}
+{% if watches is defined %}
+<h2>Per-Selector Freshness</h2>
+<p>Daily cadence; stale after two days. Age uses the oldest original capture in a consistent bounded query window. Partial, drifting or truncated windows retain leads but do not renew successful freshness. Collection and submission approval are separate.</p>
+<div class="tablescroll"><table><tr><th>Selector</th><th>Submission Authority</th><th>Last Attempt</th><th>Last Good Window</th><th>State</th></tr>
+{% for row in watches %}<tr><td>{{ row.subject_type }} · <code>{{ row.value }}</code> · <a href="/github-exposure/watches/{{ row.id }}">History</a></td><td>{{ 'Current' if row.authorized else 'Not Eligible' }}</td><td>{{ row.last_attempt or 'Never' }}</td><td>{% if row.document_id %}<a href="/github-exposure/captures/{{ row.document_id }}">{{ row.last_good }}</a> · {{ row.last_good | ago }}{% else %}Never{% endif %}</td><td>{{ row.state }}{% if row.incomplete %} · Incomplete{% endif %}{% if row.error %} · Failed: {{ row.error }}{% endif %}</td></tr>{% else %}<tr><td colspan="5">No separately approved query selectors. Local selectors alone grant no submission authority.</td></tr>{% endfor %}</table></div>
+{% elif history is defined %}
+<h2>Query Capture History</h2>
+<ul>{% for row in history %}<li><a href="/github-exposure/captures/{{ row.document_id }}">Capture {{ row.document_id }}</a> · Page {{ row.page }} · {{ row.collected_at }} · {{ 'Bounded Window Complete' if row.window_complete else 'Incomplete' }}</li>{% else %}<li>No captures.</li>{% endfor %}</ul>
+{% if history | length == 50 %}<a href="/github-exposure/watches/{{ selector_id }}?before={{ history[-1].document_id }}">Older Captures</a>{% endif %}
+{% else %}
+<h2>Immutable Capture {{ document.id }}</h2>
+<p>Source: {{ document.source_id }} · Collected: {{ document.collected_at }} · Age: {{ document.collected_at | ago }} · Capture: <code>{{ document.capture_key }}</code></p>
+<p>Endpoint: <code>{{ document.source_url }}</code>. Query and authorization headers omitted from capture metadata. Published: {{ document.source_published_at or 'Unknown' }} · Modified: {{ document.source_modified_at or 'Unknown' }}. File observation, first-seen and last-seen dates are unknown. Repository dates and HTTP dates never substitute for file or exposure dates.</p>
+<p>Originating Execution: {{ document.job_run_id }} · Originating State: {{ document.originating_state }} · Current Job State: {{ document.job_state }}</p>
+<p>Body SHA-256: <code>{{ document.content_sha256 }}</code>. A digest identifies bytes, not authenticity. Original: {{ archive.state if archive else 'Unavailable' }}. Sensitive capture; raw bodies are forced omitted.</p>
+<p>Page {{ page.page }} · Provider Total: {{ summary.total_count }} · Returned: {{ summary.returned_count }} · Provider Incomplete: {{ summary.incomplete_results }} · Query Window: {{ 'Bounded Window Complete' if unit.window_complete else 'Incomplete / Not Established' }}.</p>
+<p>{% for sibling in pages %}{% if sibling.document_id %}<a href="/github-exposure/captures/{{ sibling.document_id }}">Page {{ sibling.page }}</a> {% endif %}{% endfor %}</p>
+<div class="tablescroll"><table><tr><th>Provider File Reference</th><th>Blob SHA</th><th>Inbox Reviews</th></tr>
+{% for row in leads %}<tr><td>Repository ID {{ row.lead.repository_id }} · <code>{{ row.lead.repository }}</code><br><code>{{ row.lead.path }}</code></td><td><code>{{ row.lead.blob_sha }}</code></td><td>{% for alert in row.alerts %}<a href="/alerts/{{ alert.id }}">{{ alert.state | title }} · Revision {{ alert.revision }}</a> {% else %}No Local Match{% endfor %}</td></tr>{% else %}<tr><td colspan="3">No retained references. No absence or clean verdict is implied.</td></tr>{% endfor %}</table></div>
+<h3>Literal Provider References</h3>
+<ul>{% for citation in citations %}<li><code>{{ citation.target_reference }}</code> · {{ citation.locator }} · {{ 'Resolved Locally' if citation.target_document_id else 'Unresolved' }}</li>{% else %}<li>No reference hops.</li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}

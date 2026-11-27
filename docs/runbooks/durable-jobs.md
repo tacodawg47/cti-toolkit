@@ -1,4 +1,10 @@
 # Durable Job Runner
+Update 2026-11-27: [GitHub Public-Code Leads](github-exposure.md) freezes
+exact permission IDs and two page slots per selector. Token/API/query-version
+changes invalidate old authority. Original staged input and committed pages
+survive restart. Its explicit Scope.unit_progress option tracks logical
+queries independently of captured-response counts; other feeds keep the
+default capture-count behavior. No extra worker or loop is introduced.
 
 Update 2026-11-27: [CT Lookalike Watches](ct-lookalike-watches.md) snapshots
 immutable submission permissions, including pattern content/version and

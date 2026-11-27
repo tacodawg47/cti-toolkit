@@ -1,4 +1,10 @@
 # CT Lookalike Watches
+Checkpoint update 2026-11-27: the operator confirms the exact 35-path/selective
+commit and authorized push completed as 749d97351c5158558789afa8a297a461999b9c42.
+Local HEAD/local origin/main/live remote main matched and the index was empty
+afterward. Prepared commands below are historical, not steps to repeat.
+Reconciled by ordinary documentation edits without Git operations. Independent
+reconciliation/handoff-rule edits remain uncommitted. See the 3A.3 closeout.
 
 Written: 2026-11-27. Subphase 3A.3. Provisional crt.sh implementation and
 offline acceptance only. The operator expressly permitted this disabled

@@ -33,6 +33,7 @@ from .modules.alerts import routes as alert_routes
 from .modules.ransomware import routes as ransomware_routes
 from .modules.breaches import routes as breach_routes
 from .modules.ct_watch import routes as ct_watch_routes
+from .modules.github_exposure import routes as github_exposure_routes
 from .modules.extract import atlas, attack, attack_catalog, content, decode, extractor, markdown, tlds
 from .modules.extract import fetch as extract_fetch
 from .modules.extract import pdf as extract_pdf
@@ -129,6 +130,7 @@ app.include_router(alert_routes.router)
 app.include_router(ransomware_routes.router)
 app.include_router(breach_routes.router)
 app.include_router(ct_watch_routes.router)
+app.include_router(github_exposure_routes.router)
 
 
 @app.get("/", response_class=HTMLResponse)

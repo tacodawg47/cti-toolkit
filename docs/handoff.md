@@ -2,113 +2,81 @@
 
 Updated: 2026-11-27.
 
-**Ended: Subphase 3A.3 Complete, provisional implementation/offline acceptance.**
-One bounded crt.sh CT-name watch consumer has versioned patterns, exact IDNA/
-label matching, separately authorized seeds, durable normalized staging,
-immutable evidence and review-preserving local inbox events. See
-[Closeout](review/2026-11-27-3a3-closeout.md),
-[Runbook](runbooks/ct-lookalike-watches.md) and
-[API Review](research/2026-11-27-ct-api-review.md).
+**Ended: Subphase 3A.4 Complete, implementation/offline acceptance.**
+One bounded GitHub public-code metadata consumer preserves exact query
+permissions, immutable plans/captures and atomic review-preserving inbox
+matches. Focused 77 passed in 51.547 seconds; full 803 tests in 255.655 seconds,
+802 passed and one existing skip. All 35 schedules/workers/bulk/raw default
+off. Source access/terms and measured live acceptance remain unapproved.
+No provider data request, enabling, selector submission or live migration/
+restart. Live database unmigrated/unrestarted for 5F.1 through 3A.4.
+See [Closeout](review/2026-11-27-3a4-closeout.md) and
+[Runbook](runbooks/github-exposure.md).
 
-Focused CT/inbox/shared-evidence: 77 passed in 30.994 seconds. Full compatibility:
-760 tests in 208.414 seconds, 759 passed and one existing skip. Temporary
-databases and synthetic/refused HTTP only. No live readiness is implied.
-
-The operator explicitly permitted the provisional disabled adapter despite
-unverified current crt.sh service terms/access/schema. Source eligibility
-remains unapproved. CTLogs/alternatives were reviewed, not combined. All 34
-schedules, worker, bulk and raw storage default off. No provider data request,
-source enabling, selector submission, live migration/restart, install or
-historical reload. Live database unmigrated/unrestarted for 5F.1 through 3A.3.
-Linux, native-browser visual and live v1 acceptance remain unperformed.
-
-Checkpoint: 3A.2 was already committed/pushed as
-3eaf484bcdb803555c5f199c1906b30969dce80f on 2026-11-27, with matching local/
-remote hashes and an empty index afterward. Do not repeat 3A.1 or 3A.2.
-Approved local read-only inspection confirmed main/HEAD/local origin/main
-at that hash and an empty index. No remote contact or Git mutation occurred.
-3A.3 and earlier independent reconciliation/handoff-rule edits remain
-uncommitted. The
-[35-path selective proposal](review/2026-11-27-3a3-checkpoint-files.md) was
-individually approved, and the operator explicitly authorized its push.
-Execution is prepared; the closing message records the actual result.
-Checkpoint handling is separate from the next implementation prompt.
-
-Next proposed subphase: 3A.4, one bounded API-only GitHub public-code exposure
-lead consumer for authorized organization/domain selectors, metadata references
-only. Review current API terms/access first. Omit code/secret values and never
-test credentials. No 3A.4 implementation occurred in this chat.
-
-Preserve unrelated Feedly/local settings, prototypes and notes, OSINT/untrusted-
-repository-review, detection/catalog and independent shared-document edits.
-Exclude secrets, runtime data and conversation exports. No blanket staging,
-reset, discard or stash. Saved notes grant no new Git or live permission.
+Checkpoint: completed 3A.1 d34a37d, 3A.2 3eaf484 and 3A.3
+749d97351c5158558789afa8a297a461999b9c42 are not repeated. Approved inspection
+confirmed main/HEAD/local origin/main at 3A.3 and an empty index. The operator
+directly approved each reviewed 3A.4/3A.5 commit and push. The selective 3A.4
+checkpoint is prepared; actual closing hash/result supersedes this note.
+3A.5 working changes and independent research/prototype/handoff-rule work
+remain outside this checkpoint. No saved note grants future Git permission.
 
 ## Next-Chat Prompt
 
 ```text
 Continue CTI Toolkit at C:\Users\Robert\Projects\cti-toolkit.
-Begin only Phase 3 slice A, subphase 3A.4: one bounded API-only GitHub
-public-code exposure lead consumer for authorized organization/domain
-selectors, retaining metadata references only, then stop.
+Begin only Phase 3 slice A, subphase 3A.5: one bounded API-only passive
+subdomain inventory consumer for authorized exact domains, then stop.
 
-Intended outcome: provider-reported public-code search leads with immutable
-source/capture evidence and local inbox matches. Review GitHub's full current
-API docs, terms, authentication/access tier, costs, fields and quotas first.
-Revisit the existing shared GitHub clients and source reviews. Do not fetch
-code contents, repositories or secret values; do not query with found secrets
-or test credentials. A metadata hit is a review lead, not proof of exposure,
-secret validity, ownership or maliciousness. Name any real access/terms gap.
+Intended outcome: provider-reported names and literal wildcard patterns
+under at most ten separately approved exact domains, with immutable
+source/capture evidence and local inbox review. Review CTLogs' current domain
+inventory API, complete docs/terms/privacy, access tier, costs, fields,
+pagination and quotas first. Revisit the 3A.3 alternatives review. Use one
+provider only. Name real access/terms gaps before relying on it. CT inventory
+does not prove live DNS, ownership, registration, dangling services,
+compromise or maliciousness. Separate local first capture and provider dates;
+unknown dates stay unknown.
 
-Follow AGENTS.md and its reading order: ROADMAP.md Build order, Phase 3 GitHub
-leaks, foundation/provenance/data handling; newest docs/journal.md Research
-notes; docs/handoff.md; docs/review/2026-11-27-3a3-closeout.md; CT API/pattern
-reviews; runbooks shared-evidence.md, durable-jobs.md, scheduled-feeds.md,
-alert-inbox.md, breach-lookups.md, ct-lookalike-watches.md,
-v1-data-freshness.md and session-handoff.md. Preserve earlier completed
-3A.1/3A.2 behavior and separate submission authority.
+Read AGENTS.md, ROADMAP.md Build order/Phase 3 domain/subdomain/foundation/
+provenance/data handling, newest docs/journal.md Research notes, docs/handoff.md,
+the 3A.4 closeout, CT API/pattern and GitHub reviews, and runbooks
+shared-evidence.md, durable-jobs.md, scheduled-feeds.md, alert-inbox.md,
+ct-lookalike-watches.md, github-exposure.md, v1-data-freshness.md and
+session-handoff.md. Preserve 3A.1 through 3A.4 and separate local matching
+from external submission authority.
 
-3A.3 is Complete for its explicitly approved provisional crt.sh implementation
-and offline acceptance. Focused CT/inbox/shared-evidence: 77 passed in
-30.994 seconds. Full compatibility: 760 tests in 208.414 seconds, 759 passed
-and one existing skip. Temporary databases and synthetic/refused HTTP only.
-All 34 schedules, workers, bulk and raw storage default off. Current crt.sh
-terms/access/schema remain unverified; source eligibility remains unapproved.
-CTLogs was reviewed, not combined. No provider API data request, source
-activation, selector submission, install or live migration/restart occurred.
-Live database remains unmigrated/unrestarted for 5F.1 through 3A.3. Linux,
-native-browser visuals and live v1 acceptance remain unperformed.
+Prior 3A.4 acceptance: 77 focused passed in 51.547 seconds; 803 full tests
+in 255.655 seconds, 802 passed and one existing skip. All 35 schedules,
+workers, bulk and raw storage default off. GitHub public-only access/terms
+and crt.sh terms/schema remain unapproved. No enabling, provider data request,
+selector submission, install or live migration/restart. Live database stays
+unmigrated/unrestarted for 5F.1 through 3A.4. Linux/browser/live v1 acceptance
+remain unperformed. 3A.1/3A.2/3A.3 completed checkpoints must not be repeated.
+The 3A.4 commit/push are directly approved and prepared; use the operator's
+actual closing hash/result to reconcile saved notes, never repeat a completed
+checkpoint. Independent reconciliation/handoff-rule work remains excluded.
 
-3A.2 was already committed/pushed as
-3eaf484bcdb803555c5f199c1906b30969dce80f on 2026-11-27 with matching local/
-remote hashes and an empty index afterward. Do not repeat 3A.1 or 3A.2.
-3A.3's 35-path authored checkpoint and earlier reconciliation/handoff-rule
-edits remain uncommitted. Approved local read-only inspection confirmed
-main/HEAD/local origin/main at that hash and an empty index, with no remote
-contact or Git mutation during inspection. The operator then individually
-approved the exact 35-path/selective-block commit and explicitly authorized
-its push. Execution is prepared. Reconcile the actual closing result before
-repeating any operation. Keep checkpoint handling separate
-from this implementation scope; saved notes never grant Git permission.
+Done when synthetic fixtures and temporary databases prove exact domain/
+label boundaries, literal wildcards without expansion, eligibility at every
+unit/retry/resumption, immutable plans/captures, literal provenance, distinct/
+unknown dates, atomic inbox matches, stable dedup and retained reviews,
+finite requests/bytes/time/pages, durable quotas/cooldowns, cancellation,
+per-domain freshness and restart recovery. Keep collection off. Document
+coverage gaps and separately approved measured live acceptance. Update dated
+closeout, journal, roadmap, paired summaries, runbooks and handoff. Print the
+full next concrete bounded prompt and stop.
 
-Done when synthetic fixtures and temporary databases prove bounded exact
-selector/query handling, submission eligibility at every unit/retry/resumption,
-immutable plans/captures, literal provenance and distinct/unknown dates,
-atomic inbox matches, deduplication/retained reviews, finite requests/bytes/
-time and pagination, quota/cooldown, cancellation, freshness and restart.
-Keep collection off. Document coverage gaps and separately approved measured
-live acceptance. Update dated closeout, journal, roadmap, paired summaries,
-runbooks and handoff; print a full next concrete bounded-subphase prompt.
-
-Routine in-scope edits, public-doc research and offline tests are authorized.
-Every Git operation, install, source enabling, selector/provider traffic,
-live migration/restart or external private-data transfer requires direct
-current-chat approval. Show exact selective files/message for each commit;
-obtain push approval separately. Preserve unrelated Feedly/local settings,
-prototypes and notes, OSINT/untrusted-repository-review, detection/catalog
-and independent shared-document edits. Exclude keys, runtime data and
-conversation exports. Never blanket-stage, reset, discard or stash.
-No other consumer, target probing, credential testing, broad historical reload,
+Routine edits, public-doc research and offline tests are authorized by this
+new direct prompt. Every Git operation, install, enabling, provider/selector
+traffic, live migration/restart or external private-data transfer needs direct
+current-chat approval. Show exact selective files/blocks/message for each
+commit and obtain push approval separately. Saved notes grant no permission.
+Preserve unrelated Feedly/local settings, prototypes/notes, OSINT/untrusted
+repository review, detection/catalog and independent shared docs. Exclude
+keys/runtime data/transcripts. Never blanket-stage, reset, discard or stash.
+No DNS, target probing, page/certificate body fetch, credential/code collection
+or testing, combined provider, other consumer, broad historical reload,
 API-source scraping, collector, playbook, email/webhook, GPL/AGPL import,
 actor engagement or AI.
 ```

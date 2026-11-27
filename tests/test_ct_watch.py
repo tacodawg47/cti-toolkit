@@ -175,7 +175,7 @@ class ConsumerTests(unittest.IsolatedAsyncioTestCase):
         scheduler = Scheduler(catalog(), asyncio.get_running_loop())
         scheduler.initialize()
         with evidence.connect() as conn:
-            self.assertEqual(conn.execute("SELECT count(*),sum(enabled) FROM feed_schedules").fetchone()[:], (34, 0))
+            self.assertEqual(conn.execute("SELECT count(*),sum(enabled) FROM feed_schedules").fetchone()[:], (35, 0))
         self.assertFalse(settings.scheduled_feeds_enabled)
         for url in ("http://crt.sh/", "https://crt.sh/?q=x", "https://crt.sh/other", "https://crt.sh.evil.invalid/"):
             self.assertFalse(self.feed.permits(url))

@@ -27,7 +27,7 @@ def now():
 def secret_material(raw: bytes) -> bool:
     # A guard against common accidental credentials, not a universal classifier.
     for name in type(settings).model_fields:
-        if name.endswith(("_api_key", "_auth_key")) or name == "github_token":
+        if name.endswith(("_api_key", "_auth_key")) or name in ("github_token", "github_exposure_token"):
             key = getattr(settings, name)
             if key and key.encode() in raw:
                 return True

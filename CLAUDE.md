@@ -89,50 +89,31 @@ APScheduler, Cytoscape.js (vendored). pip + venv. Docker in phase 8.
 
 ## Current status (2026-11-27)
 
-Subphase 3A.3 Complete, 2026-11-27, for the explicitly approved provisional
-crt.sh implementation/offline acceptance. Versioned patterns, exact CT-name
-matching, immutable staged captures and review-preserving inbox integration
-passed 77 focused tests in 30.994 seconds. Full compatibility: 760 tests,
-759 passed and one existing skip in 208.414 seconds. All 34 schedules,
-workers, bulk and raw storage default off. Current crt.sh hosted-service
-terms/access/schema remain unverified and source eligibility unapproved.
-CTLogs was reviewed, not integrated. Approved local read-only Git inspection
-confirmed main/HEAD/local origin/main at 3eaf484 and an empty index, without
-remote contact or mutation. No provider data request, enabling or live
-migration/restart occurred. The operator approved the exact 35-path commit
-and explicitly authorized its push. Execution is prepared; preserve earlier
-reconciliation/handoff-rule edits. See the 3A.3 closeout and docs/handoff.md
-for the proposed bounded 3A.4 GitHub public-code exposure metadata consumer.
+Subphase 3A.4 Complete, implementation/offline acceptance, 2026-11-27.
+One bounded GitHub public-code metadata consumer has exact query permissions,
+immutable plans/captures, atomic review-preserving inbox matches and
+per-selector freshness. Focused acceptance: 77 passed in 51.547 seconds.
+Full compatibility: 803 tests in 255.655 seconds, 802 passed and one existing
+skip. All 35 schedules, workers, bulk and raw storage default off. No provider
+data request, selector submission, source enabling, install or live migration/
+restart. GitHub anonymous/token access docs conflict; actual public-only token
+support, terms/purpose and measured live acceptance remain unapproved.
+Current crt.sh terms/access/schema remain unverified. See the 3A.4 closeout.
 
-Phase 1 is complete. Phase 2 accepted first-delivery implementation closed
-2026-11-25. See docs/review/2026-11-25-phase2-closeout.md for delivered scope,
-validation and remaining limits. Its final suite ran 511 tests: 510 passed,
-one skipped; all 26 local acceptance pages returned 200. These are prior
-verified results, not an automatic rerun in a new session.
+3A.1 d34a37d, 3A.2 3eaf484bcdb803555c5f199c1906b30969dce80f and 3A.3
+749d97351c5158558789afa8a297a461999b9c42 are completed/pushed. Do not repeat
+them. Approved inspection confirmed main/HEAD/local origin/main at the 3A.3
+hash and an empty index. The operator directly approved committing/pushing
+each reviewed 3A.4/3A.5 checkpoint. The 3A.4 selective checkpoint is prepared;
+its actual closing hash/result supersedes this saved execution note. 3A.5
+working changes and independent reconciliation/handoff-rule work stay out of
+this checkpoint. No saved note grants future Git permission.
 
-Subphase 3A.2 Complete, 2026-11-27, for implementation/offline acceptance.
-One bounded HIBP direct-email consumer uses shared evidence, durable jobs
-and the inbox for at most ten separately approved exact email watches.
-Final focused breach/shared-evidence acceptance: 54 passed in 32.105 seconds.
-Full compatibility: 717 tests, 716 passed and one existing skip in 180.083
-seconds. See docs/review/2026-11-27-3a2-closeout.md and
-docs/runbooks/breach-lookups.md. All 33 schedules, worker, bulk and raw
-storage default off. No source enabling, selector submission, live migration/
-restart, API data request or install occurred. Linux/native-browser visual
-and live v1 acceptance remain unperformed. The operator confirms 3A.1
-committed and separately pushed as d34a37d on 2026-11-27 with matching hashes
-and an empty index. The operator confirms 3A.2 individually committed and
-separately pushed as 3eaf484bcdb803555c5f199c1906b30969dce80f on 2026-11-27,
-with matching local HEAD/local origin/main/live remote main and an empty
-index afterward. Do not repeat either checkpoint. This supplied result was
-reconciled without a new Git operation. Read docs/handoff.md. Begin another
-subphase only after the operator directly names its bounded scope.
-
-Data catch-up is optional during the build only. Scheduled freshness,
-visible stale/failure states and tested recovery are required before v1
-daily use; see docs/runbooks/v1-data-freshness.md. Existing Phase 2 deferrals
-remain parked. Development is on Windows; collectors later require WSL2
-or Linux. The app remains local-only.
+Next bounded scope is 3A.5, one passive exact-domain subdomain inventory API
+consumer, reviewing CTLogs first. Phase 1 and Phase 2 accepted first delivery
+remain complete. Live database unmigrated/unrestarted for 5F.1 through 3A.4.
+Linux, native-browser visuals and live v1 acceptance remain unperformed.
+Preserve unrelated work. See docs/handoff.md.
 
 The roadmap holds scope, order, and decisions only. Troubleshooting, policy
 exceptions, build narrative, and parked design notes go in docs/journal.md.

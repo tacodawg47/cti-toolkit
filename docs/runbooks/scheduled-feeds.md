@@ -1,4 +1,10 @@
 # Scheduled Feed Refresh and Source Health
+Update 2026-11-27: [GitHub Public-Code Leads](github-exposure.md) adds one
+disabled daily API schedule, bringing the composed catalog to 35. All
+schedules, workers, bulk and raw storage default off. Exact submission
+authority and reviewed public-only access are separate gates. Two fixed
+pages per query, finite body/request/time bounds and persistent GitHub
+cooldowns apply. Truncated/provider-incomplete windows do not renew success.
 
 Update 2026-11-27: [CT Lookalike Watches](ct-lookalike-watches.md) adds one
 provisional disabled daily crtsh_watch schedule. The composed catalog is 34;

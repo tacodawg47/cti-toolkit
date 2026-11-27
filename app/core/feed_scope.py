@@ -36,6 +36,9 @@ class Scope:
         self.captures = {}
         self.lock = asyncio.Lock()
         self.tasks = set()
+        # Multi-page consumers can own logical-unit progress independently of
+        # captured-response counts. Existing feed adapters keep their contract.
+        self.unit_progress = False
 
     def status(self, name, entries, version, error):
         # Do not let partial legacy functions briefly renew a green success.
@@ -176,7 +179,8 @@ class Scope:
                                      [(now, ingested, now, job["id"], ident) for ident in selected])
                     conn.execute("UPDATE feed_schedules SET last_retrieval_at=? WHERE feed=?", (now, self.feed.key))
                     count = conn.execute("SELECT count(*) FROM feed_capture_progress WHERE job_id=? AND ingested_at IS NOT NULL", (job["id"],)).fetchone()[0]
-                self.context.progress(count, checkpoint={"captures_ingested": count})
+                if not self.unit_progress:
+                    self.context.progress(count, checkpoint={"captures_ingested": count})
             await asyncio.to_thread(save)
 
 

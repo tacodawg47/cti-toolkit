@@ -1123,12 +1123,13 @@ performed no new Git operation. Another subphase requires directly named scope.
   across services using a single private salt.
 - GitHub secret and credential leaks for watched domains and organization
   names. CVE and exploit content on GitHub stays in Phase 2.
-  Proposed next subphase 3A.4: one bounded API-only public-code exposure lead
+  Subphase 3A.4: one bounded API-only public-code exposure lead
   consumer for authorized organization/domain selectors, retaining metadata
-  references only. Review current API terms/access first. Preserve immutable
+  references only. Current API terms/access reviewed 2026-11-27. Preserve immutable
   evidence, per-selector submission authority, durable recovery and inbox
-  reviews; omit code/secret values and never test found credentials. This is
-  the next scoped handoff, not work or activation performed in 3A.3.
+  reviews; omit code/secret values and never test found credentials. See
+  docs/runbooks/github-exposure.md and the dated API review. Source eligibility
+  and real public-only token support remain separately approved live work.
 - Exposed public cloud assets tied to the organization, found through search
   indexes (Shodan, Censys, GrayhatWarfare-style indexes). No guessing of
   storage names.
@@ -1185,7 +1186,33 @@ evidence and review-preserving inbox integration passed 77 focused tests in
 unapproved. No live migration/restart, enabling or provider data request.
 CTLogs was reviewed, not combined: its documented organization search is
 subject O=, not DNS brand-token discovery. See
-docs/review/2026-11-27-3a3-closeout.md. Proposed next scope is bounded 3A.4.
+docs/review/2026-11-27-3a3-closeout.md. Operator-supplied checkpoint result:
+749d97351c5158558789afa8a297a461999b9c42 was committed/pushed on 2026-11-27,
+with matching local/remote hashes and an empty index then. Reconciled without
+Git operations. Do not repeat 3A.1, 3A.2 or 3A.3.
+
+3A.4 design, decided 2026-11-27: freeze at most ten exact organization/domain
+query permissions and two fixed 50-result page slots per selector. Bind
+authority to exact text, query/API versions and a separately reviewed
+public-only token. Use dedicated query-attribution observations because
+legacy search can ignore punctuation. Retain metadata references and literal
+unresolved citations only, with unknown source/file dates. Atomic page
+ingestion, stable provider file events and original captures preserve reviews
+and recovery. Keep logical query progress separate from capture counts.
+Truncated, drifting or provider-incomplete windows never renew per-selector
+success. One disabled daily schedule brings the total to 35; collection,
+bulk and raw storage stay off. This bounds disclosure and avoids content/
+credential collection. Current access docs conflict; live support is unverified.
+
+**Subphase 3A.4 Complete, 2026-11-27.** Implementation/offline acceptance.
+Focused GitHub/inbox/shared-evidence acceptance: 77 passed in 51.547 seconds.
+Full compatibility: 803 tests in 255.655 seconds, 802 passed and one existing
+skip. See docs/review/2026-11-27-3a4-closeout.md.
+No live migration/restart, provider request, enabling, selector submission,
+install or Git operation occurred. Proposed next bounded subphase 3A.5:
+one API-only passive exact-domain subdomain inventory consumer, reviewing
+CTLogs first. Keep literal names/patterns and immutable evidence/inbox without
+DNS, target probing, fuzzy expansion or combining providers.
 
 - Newly registered domain monitoring: WhoisDS daily NRD files, ICANN CZDS zone files, certstream certificate transparency. dnstwist permutations of org domains, OpenSquat patterns.
   - Scheduled daily run against org domains.
@@ -1418,10 +1445,13 @@ on 2026-11-27, with matching hashes and an empty index. Do not repeat 5F.5 or
 with matching local/remote hashes and an empty index afterward. Do not repeat
 3A.2. The operator directly scoped and accepted provisional offline-only
 adapter work for 3A.3 CT-name watches. Implementation/offline acceptance is
-complete; local read-only inspection is complete. Its 35-path selective
-checkpoint commit and push were directly approved. Execution is prepared;
-reconcile the actual closing result before repeating any checkpoint step.
-Proposed next capability is bounded 3A.4 public-code exposure metadata leads.
+complete. The operator confirms its 35-path selective checkpoint completed
+as 749d973 on 2026-11-27 with matching hashes and an empty index then.
+3A.4 implementation/offline acceptance is complete. The operator directly
+approved each reviewed 3A.4/3A.5 commit and push. This 3A.4 checkpoint is
+prepared; its closing hash/result records actual execution. Independent
+shared-document work remains excluded. Proposed next capability is 3A.5
+passive exact-domain subdomain inventory through one reviewed API.
 See docs/handoff.md for separate checkpoint and implementation instructions.
 Live v1 activation remains separately approved work.
 

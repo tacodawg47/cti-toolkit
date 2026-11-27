@@ -1,4 +1,9 @@
 # Shared Evidence and Source Registry
+Update 2026-11-27: [GitHub Public-Code Leads](github-exposure.md) retains
+only bounded file references and literal unresolved html_url citations.
+Sensitive raw captures are omitted. Dedicated GitHub observations attribute
+results to a query, never prove exact content, ownership or exposure. File/
+source dates stay unknown. This adds no automatic source approval.
 
 Update 2026-11-27: [CT Lookalike Watches](ct-lookalike-watches.md) adds one
 provisional disabled consumer. Sensitive captures retain literal certificate

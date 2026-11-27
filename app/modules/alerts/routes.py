@@ -34,6 +34,8 @@ def detail(request: Request, ident: int, citation_offset: int = Query(0, ge=0), 
         value["breach_document_id"] = value["document"]["id"]
     if value["document"]["source_id"] == "crtsh_watch":
         value["ct_document_id"] = value["document"]["id"]
+    if value["document"]["source_id"] == "github_exposure":
+        value["github_document_id"] = value["document"]["id"]
     value["source_health"] = health(feeds) if feeds else []
     return templates.TemplateResponse(request, "alerts.html", value)
 

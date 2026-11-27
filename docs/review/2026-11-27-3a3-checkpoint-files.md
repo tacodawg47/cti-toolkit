@@ -1,5 +1,12 @@
 # Subphase 3A.3 Authored Checkpoint Scope
 
+Actual result, supplied by the operator and reconciled 2026-11-27 without
+Git operations: 749d97351c5158558789afa8a297a461999b9c42 was individually
+committed and its authorized push completed. Local HEAD/local origin/main/
+live remote main matched; the index was empty then. Prepared and approval
+notes below are historical. Do not repeat this checkpoint or infer current
+Git permission or a clean working tree. Independent edits remain preserved.
+
 Prepared and inspected: 2026-11-27. The operator directly approved local
 read-only Git inspection. It confirmed main/HEAD/local origin/main at
 3eaf484bcdb803555c5f199c1906b30969dce80f and an empty index. No remote contact
