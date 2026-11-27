@@ -52,6 +52,9 @@ LIMITS: dict[str, dict[str, int]] = {
     # their side) but answers bursts with 429s (seen at ~2/s on 2026-11-04).
     # One a second is tolerated; the sweep also backs off on a 429.
     "ransomwarelive": {"rpm": 60},
+    # RansomLook publishes no numeric public cap. These are local courtesy
+    # bounds for the hourly recent-post snapshot, not provider guarantees.
+    "ransomlook": {"rpm": 1, "rpd": 24},
     "vulnlookup": {"rpm": 30},            # CIRCL's public instance, keyless; courtesy limit
     "cvedb": {"rpm": 10},                # keyless, on-demand only; local courtesy limit
     "euvd": {"rpm": 60},                  # ENISA's public API, keyless; courtesy limit

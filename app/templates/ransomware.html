@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Ransomware Victim Claims | CTI Toolkit{% endblock %}
+{% block content %}
+<h1>Ransomware Victim Claims</h1>
+<p><a href="/ransomware">Victim Claims</a> · <a href="/alerts">Watch Selectors and Alert Reviews</a></p>
+<p>Source: <a href="https://www.ransomlook.io/about" rel="noopener noreferrer" target="_blank">RansomLook</a>, CC BY 4.0. These are reported group claims. They do not confirm a breach.</p>
+<p>Only the latest 100 posts per retrieval are covered. History, gaps during downtime and independent corroboration are not assessed. Current means the bounded snapshot was refreshed. RansomLook's documented post fields supply no sector or country; those values stay unknown.</p>
+<p>Organization watches match exact names after Unicode, case and whitespace normalization. Punctuation is significant. Sector watches match an explicit source label; country watches match an explicit two-letter code. No fuzzy names, aliases, domain expansion or inferred country/sector. Configure local watches in the inbox. They do not authorize collection.</p>
+{% include "source_health.html" %}
+{% if rows is defined %}
+<h2>Saved Claims</h2>
+<table><tr><th>Organization Claim</th><th>Reported Group</th><th>Source Discovery</th><th>Latest Collected</th><th>Captures</th></tr>
+{% for r in rows %}<tr><td><a href="/ransomware/claims/{{ r.id }}">{{ r.claim.organization }}</a></td><td>{{ r.claim.group }}</td><td>{{ r.claim.discovered_literal or 'Unknown' }}</td><td>{{ r.collected_at }}</td><td>{{ r.captures }}</td></tr>
+{% else %}<tr><td colspan="5">No saved victim claims. Collection defaults off. Opening this page performs no provider request.</td></tr>{% endfor %}</table>
+{% if rows | length == 50 %}<p><a href="/ransomware?before={{ rows[-1].id }}">Older Claims</a></p>{% endif %}
+{% else %}
+<h2>Claim Capture History</h2>
+<p>Source: {{ record.source_id }} · Claim Identity: <code>{{ record.external_key }}</code>. Separate captures remain evidence. Repeated sightings retain the original alert and its review history. Unknown timezone values stay literal.</p>
+{% for c in captures %}<section class="card">
+<h3>{{ c.claim.organization }}</h3><p>Group: {{ c.claim.group }} · Sector: {{ c.claim.sector or 'Unknown' }} · Country: {{ c.claim.country or 'Unknown' }}</p>
+<p>Source Discovery (Literal): {{ c.claim.discovered_literal or 'Unknown' }} · Source Published: {{ c.source_published_at or 'Unknown' }} · Source Modified: {{ c.source_modified_at or 'Unknown' }} · Collected: {{ c.collected_at }}</p>
+<p>Website (Passive): <code>{{ c.claim.website or 'Unknown' }}</code></p>
+<p>Literal Citation Hops: {% for hop in c.citations %}<code>{{ hop.target_reference }}</code> · {{ hop.relationship }} · {% if hop.target_document_id %}Resolved to local document {{ hop.target_document_id }}: {{ hop.resolution_note }}{% else %}Unresolved{% endif %}{% else %}Not supplied{% endfor %}</p>
+<p>Capture: {{ c.capture_key }} · Digest: <code>{{ c.content_sha256 }}</code> · Originating Execution: {{ c.job_run_id }} · Originating State: {{ c.originating_state }} · Current Job State: {{ c.job_state }}</p>
+<p>Original Availability: {{ c.archive.state if c.archive else 'Unavailable' }} · {{ c.archive.reason if c.archive else 'No archive record' }}. Capture and alert metadata survive raw omission or expiry.</p>
+<p>{% for a in c.alerts %}<a href="/alerts/{{ a.id }}">Alert {{ a.id }}: {{ a.state | title }}</a> {% else %}No matching watches for this capture.{% endfor %}</p>
+</section>{% endfor %}
+{% if captures | length == 50 %}<a href="/ransomware/claims/{{ record.id }}?before={{ captures[-1].document_id }}">Older Captures</a>{% endif %}
+{% endif %}
+{% endblock %}

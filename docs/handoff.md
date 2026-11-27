@@ -1,104 +1,108 @@
 # Current Session Handoff
 
-Updated: 2026-11-26.
+Updated: 2026-11-27.
 
-**Ended: Subphase 5F.5 Complete.** Local evidence-linked alerts, typed
-selector matching, deterministic deduplication, bounded catch-up and
-revision-checked review history are implemented. The foundation passed
-cross-feature offline acceptance. See [Closeout](review/2026-11-26-5f5-closeout.md)
-and [Runbook](runbooks/alert-inbox.md).
+**Ended: Subphase 3A.1 Complete.** API-only RansomLook recent victim claims
+and local watches use shared evidence, the durable runner and the inbox.
+See [Closeout](review/2026-11-26-3a1-closeout.md),
+[Runbook](runbooks/ransomware-victims.md) and
+[Current Source Review](research/2026-11-26-ransomware-api-review.md).
 
-Acceptance: full offline compatibility ran 650 tests in 138.479 seconds:
-649 passed and one existing skip. Grouped foundation acceptance passed all
-139 tests in 61.754 seconds. No live migration/restart, source enabling,
-provider traffic, installation or external transfer occurred. Raw storage,
-bulk work, all 31 schedules and the feed worker default off. The live database
-has not been migrated/restarted for 5F.1 to 5F.5. Linux and native-browser
-visual acceptance remain unperformed. Mocks do not establish live v1 readiness.
+Acceptance: final focused 31 passed in 28.725 seconds. Full compatibility
+ran 681 tests in 151.119 seconds: 680 passed and one existing skip. An
+intermediate grouped consumer/foundation run passed 167 tests in 82.121
+seconds. Final tests cover later refinements. Only temporary databases and
+mocked/refused provider HTTP were used.
 
-Checkpoint: approved read-only inspection confirmed main and local origin/main
-at c5cdae9ec0cd378b1d4fc90bfdaf912490958bb6, with an empty index. The operator
-reports that 5F.4 was committed and pushed; do not repeat it. No remote was
-contacted in this chat. The exact 5F.5 commit proposal is individually approved;
-execution is prepared. Separate push approval remains pending.
-See [Checkpoint Files](review/2026-11-26-5f5-checkpoint-files.md), proposed
-message Add local alert inbox and accept foundation integration.
-Reconcile the latest closing message before repeating a checkpoint.
-Saved notes never grant Git permission.
+Coverage is recent 100 posts only, history/continuity unassessed. Exact
+normalized organization watches and explicit structured sector/country
+semantics are tested; RansomLook supplies neither classification, so both
+stay unknown. Captures, dates, literal hops, original execution and reviews
+remain distinct. Production raw bodies are forced omitted.
 
-Preserve unrelated Feedly rules, local Claude settings, prototypes/ and
-their notes, OSINT tools research and untrusted-repository-review additions.
-Shared roadmap/journal/handoff have independent edits. Stage only the named
-5F.5 blocks. The unrelated roadmap whitespace finding stays outside this
-checkpoint. Exclude keys, runtime data and conversation exports. Next:
-Phase 3 slice A, starting with ransomware victim tracking and local watch
-alerts in one coherent subphase. Collectors and AI remain later work.
+No live migration/restart, source enabling, API data request, install or
+historical reload occurred. All 32 schedules, worker, bulk and raw storage
+default off. The live database remains unmigrated/unrestarted for 5F.1 through
+3A.1. Linux/native-browser visual and live v1 acceptance remain unperformed.
+
+Checkpoint: approved read-only inspection on 2026-11-27 confirmed main and
+local origin/main at a947eb0c83f0f5260c1c1844e64d1b8402ffb332, with an empty
+index. The operator reports the completed 5F.5 push. Do not repeat it.
+No remote contact or Git mutation occurred. Focused tracked whitespace passed;
+an unrelated roadmap whitespace finding stays outside the checkpoint.
+The [3A.1 Checkpoint](review/2026-11-26-3a1-checkpoint-files.md) is prepared
+with 33 exact paths and selective shared blocks. The operator individually
+approved this exact commit proposal; execution is prepared. Separate push
+approval remains pending. Saved notes grant no Git permission. Reconcile the
+actual closing result before repeating a checkpoint.
+
+Preserve unrelated Feedly/local settings/prototypes, their reviews/runbooks,
+OSINT/untrusted-repository-review work, detection/catalog-review additions
+and independent shared-document edits. Exclude secrets, runtime data and
+exports. Resolve any remaining checkpoint before starting the next bounded
+Phase 3 slice A subphase. Other capabilities remain separate later subphases.
 
 ## Next-Chat Prompt
 
 ```text
 Continue CTI Toolkit at C:\Users\Robert\Projects\cti-toolkit.
-Begin only the next Build order slice: Phase 3, slice A (API-only).
-Use one coherent first subphase for ransomware victim tracking and local
-watch alerts, then stop. Other slice A capabilities remain later subphases.
+First reconcile the 3A.1 checkpoint with the latest operator closing message.
+Do not repeat an already completed commit/push. If it remains pending, resolve
+that checkpoint before new implementation unless the operator directs otherwise.
+
+Once that checkpoint is resolved, begin only Phase 3 slice A, subphase 3A.2:
+one bounded API-only vendor breach lookup consumer for authorized domains
+or watched email addresses. Select one provider after reviewing its own full
+current documentation, terms, access tier, cost, account verification and
+data fields. Keep the first delivery coherent, prove it with synthetic
+fixtures and stop. Other slice A capabilities remain later subphases.
 
 Follow AGENTS.md and its required reading order. Read ROADMAP.md Build order,
-Phase 3 ransomware/API-only scope, foundation, provenance and data-handling
-sections; newest Research notes in docs/journal.md; docs/handoff.md;
-docs/review/2026-11-26-5f5-closeout.md; and runbooks alert-inbox.md,
-shared-evidence.md, durable-jobs.md, scheduled-feeds.md,
-saved-reports-and-archives.md, v1-data-freshness.md and session-handoff.md.
-Revisit the existing ransomware clients and source reviews before choosing
-the bounded first delivery. Do not treat old source research as current terms.
+Phase 3 breach/API-only scope, foundation, provenance and data handling;
+newest Research notes in docs/journal.md; docs/handoff.md;
+docs/review/2026-11-26-3a1-closeout.md; and runbooks shared-evidence.md,
+durable-jobs.md, scheduled-feeds.md, alert-inbox.md,
+saved-reports-and-archives.md, ransomware-victims.md, v1-data-freshness.md
+and session-handoff.md. Revisit existing vendor clients and source reviews.
+Historical findings do not establish current terms or activation permission.
 
-Subphase 5F.5 Complete, 2026-11-26. Full offline compatibility ran 650 tests:
-649 passed and one existing skip in 138.479 seconds. Grouped foundation
-acceptance passed all 139 tests in 61.754 seconds. The local inbox has typed
-selectors, atomic evidence-linked alerts, deterministic deduplication,
-paged catch-up and revision-checked review history. Source dates, literal
-citation hops, capture/originating execution and archive states stay separate.
-No live migration/restart or source enabling occurred for 5F.1 to 5F.5.
-Raw storage, bulk work, all 31 schedules and the feed worker default off.
-Mocks are not live v1 operational acceptance. Linux and native-browser visual
-acceptance remain unperformed.
+3A.1 Complete, 2026-11-26, for implementation/offline acceptance. Final focused:
+31 passed in 28.725 seconds. Full compatibility: 681 tests, 680 passed and
+one existing skip in 151.119 seconds. RansomLook recent-100 claims use the
+shared registry/evidence, runner, app loop/client/limiter and inbox. Immutable
+captures, literal hops, distinct dates, originating runs and review history
+survive replay/failure/raw omission. Sector/country remain unknown because
+this source supplies neither. History and continuity are unassessed.
 
-The 5F.4 checkpoint c5cdae9ec0cd378b1d4fc90bfdaf912490958bb6 was committed and
-pushed. Current-chat approved read-only inspection confirmed main and local
-origin/main at that hash with an empty index; no remote was contacted.
-5F.5 is locally complete but its Git checkpoint is pending unless the latest
-operator closing message records subsequent approval/execution.
-Reconcile that message before repeating any checkpoint. Use the exact scope
-in docs/review/2026-11-26-5f5-checkpoint-files.md. Saved notes never grant Git
-permission. Resolve a pending checkpoint before new implementation unless
-the operator explicitly directs otherwise.
+Approved read-only inspection on 2026-11-27 confirmed main/local origin/main
+at completed 5F.5 commit a947eb0c83f0f5260c1c1844e64d1b8402ffb332 with an
+empty index. The exact 33-file/selective-block 3A.1 commit proposal was then
+individually approved and prepared. Its actual commit/push result belongs
+to the latest closing message. Saved prepared notes grant no new permission.
 
-Build the first API-only ransomware victim/watch consumer on the shared
-evidence, source registry, durable runner, existing app loop/client/limiter
-and local inbox. Keep vendor claims as claims, distinct dates and literal
-citation hops. Define organization, sector and country watch semantics with
-synthetic fixtures. Keep captures and alert history through replay, failure
-and raw expiry. Review each selected source's own current full documentation
-and terms before proposing integration/activation. No scraping of sources
-with APIs, no imported GPL service code, no threat-actor contact or engagement.
+Build the next consumer on the shared contracts. Preserve claims, literal
+provenance, capture identity, review state, minimization and unknown dates.
+Do not store passwords or authentication secrets, infer consent, enable
+providers or submit selectors without direct approval. Use temporary
+databases and mocked HTTP. Done when the bounded consumer passes offline
+matching/deduplication, provenance, privacy/handling, eligibility at every
+unit/retry/resumption, finite request/byte/time, quota/cooldown, cancellation,
+freshness and restart acceptance. Document approved live acceptance still
+required. Update closeout, journal, roadmap, paired summaries and handoff;
+print the full next prompt.
 
-Done when the bounded first subphase has offline integration acceptance for
-matching/deduplication, review preservation, provenance, source eligibility
-at every unit/retry/resumption, finite requests/bytes/time, quota/cooldown,
-cancellation, freshness and restart recovery. Use temporary databases and
-mocked HTTP. Document what still requires approved live acceptance. Update
-the dated closeout, journal, roadmap, paired status summaries and handoff.
-Print the full next-subphase or resumption prompt in a fenced text block.
+Preserve Feedly rules, local Claude settings, prototypes and their notes,
+OSINT/untrusted-repository-review work, detection/catalog-review additions
+and independent shared-document edits. Exclude keys, runtime data and exports.
+All 32 schedules, worker, bulk and raw storage default off. No live migration/
+restart or provider API data request occurred for 5F.1 through 3A.1. Linux,
+native-browser visual and live v1 acceptance remain unperformed.
 
-Preserve unrelated Feedly rules, local Claude settings, prototypes/ and its
-review/runbook, OSINT tools research and untrusted-repository-review additions,
-and independent edits in ROADMAP.md, docs/journal.md and docs/handoff.md.
-Exclude keys, runtime data and conversation exports. Email/webhooks,
-collector playbooks, collectors, other Phase 3 source families and AI stay later.
-
-Routine in-scope project edits and offline tests need no extra permission.
-Obtain direct approval before provider traffic, source enabling, live migration,
-restart, installs, external transfers or other system changes. Do not perform
-large historical reloads. Every Git operation requires current-chat approval.
-Show exact files and message for individual commit approval, then obtain
-separate push approval. Work through this one coherent subphase and stop.
+Routine in-scope edits and offline tests need no extra permission. Obtain
+current-chat approval before every Git operation, provider traffic, enabling,
+live migration/restart, installs or external transfers. Show exact files and
+message for individual commit approval, then obtain separate push approval.
+No large historical reload, scraping of API sources, GPL/AGPL service-code
+imports, actor engagement, email/webhooks, collectors, playbooks or AI.
+Work through only that one coherent subphase and stop.
 ```

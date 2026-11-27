@@ -1,5 +1,11 @@
 # Alert Inbox and Foundation Acceptance
 
+Update 2026-11-26: [Ransomware Victim Claims](ransomware-victims.md) adds
+exact organization/sector/country selectors and an optional stable source-claim
+deduplication key. All immutable observations/captures survive; repeat victim
+sightings retain the first alert and review. Generic evidence keeps the
+per-observation semantics below. No watch enables provider collection.
+
 Written 2026-11-26. Subphase 5F.5. Local metadata only, no new dependency.
 The live database has not been migrated or the application restarted in this
 chat. These features become available after a separately approved normal

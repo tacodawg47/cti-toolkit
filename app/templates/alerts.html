@@ -24,7 +24,7 @@
 <form method="post" action="/alert-selectors">
 <label>Subject Type <select name="subject_type">{% for t in types %}<option>{{ t }}</option>{% endfor %}</select></label>
 <label>Match <select name="mode"><option value="exact">Exact Typed Value</option><option value="domain_tree">Domain and Subdomains</option><option value="network">IP in CIDR Network</option></select></label>
-<p>Domain trees match domain observations only. Networks match IP observations only. Exact URLs preserve case; email local parts preserve case. No regex or substring rules.</p>
+<p>Domain trees match domain observations only. Networks match IP observations only. Exact URLs preserve case; email local parts preserve case. Organization and sector use exact case/whitespace/Unicode normalization, with punctuation significant. Country requires an explicit two-letter code. No aliases, inferred classifications, regex or substring rules. <a href="/ransomware">Ransomware Victim Claims</a></p>
 <label>Value <input type="text" name="value" maxlength="2048" required></label>
 <label><input type="checkbox" name="authorized" value="true" required> I own or am authorized to monitor this selector.</label><p><button>Add Selector</button></p></form></details>
 {% else %}
@@ -35,6 +35,7 @@
 <p>State: {{ alert.state | title }} · Matched Locally: {{ alert.matched_at }} · Selector: {{ selector.subject_type }} / {{ selector.mode }} / <code>{{ selector.value }}</code> · {{ 'Enabled' if selector.enabled else 'Disabled' }}</p>
 <form method="post" action="/alerts/{{ alert.id }}/review"><input type="hidden" name="revision" value="{{ alert.revision }}"><label>Review State <select name="state">{% for s in ('new','reviewed','dismissed') %}<option value="{{ s }}" {% if alert.state == s %}selected{% endif %}>{{ s | title }}</option>{% endfor %}</select></label><button class="small">Save Review</button></form>
 <h3>Source Assertion</h3>
+{% if ransomware_claim_id %}<p><a href="/ransomware/claims/{{ ransomware_claim_id }}">All Captures of This Reported Victim Claim</a>. Repeated captures retain this alert and its review.</p>{% endif %}
 <p>{{ observation.assertion }}: <code>{{ observation.subject_type }} · {{ observation.subject_value }}</code></p>
 <p>Observed: {{ observation.observed_at or 'Unknown' }} · First Seen: {{ observation.first_seen or 'Unknown' }} · Last Seen: {{ observation.last_seen or 'Unknown' }}</p>
 {% if document.sensitivity == 'public' and document.tlp in (none, 'CLEAR') %}<blockquote>{{ observation.excerpt }}</blockquote>{% endif %}

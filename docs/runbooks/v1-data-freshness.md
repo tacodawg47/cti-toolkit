@@ -1,5 +1,11 @@
 # V1 Data Freshness Requirements
 
+Update 2026-11-26: [Ransomware Victim Claims](ransomware-victims.md) adds an
+hourly recent-100 snapshot proposal with a six-hour stale threshold. Scoped
+Current status cannot establish continuous monitoring or historical coverage.
+All 32 composed schedules remain disabled. Approve and measure source-specific
+live freshness/recovery before daily use; no live acceptance occurred here.
+
 Update 2026-11-26: 5F.5 connects local alerts to evidence and displays the
 shared freshness panel in the inbox. Its cross-feature mock acceptance and
 the earlier failure-injection suites establish application invariants. They

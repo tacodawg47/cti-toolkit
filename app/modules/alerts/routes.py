@@ -7,7 +7,8 @@ from ...core import alerts, evidence
 from ...core.feed_scheduler import health
 from ...core.templating import templates
 from ...core.web import reject_cross_site
-from ..vulnerability_intelligence.scheduled import catalog
+from ...core.feed_catalog import catalog
+from ..ransomware import store as ransomware_store
 
 router = APIRouter()
 
@@ -28,6 +29,7 @@ def detail(request: Request, ident: int, citation_offset: int = Query(0, ge=0), 
     if value is None:
         raise HTTPException(404, "Alert not found")
     feeds = [feed for feed in catalog() if feed.source == value["document"]["source_id"]]
+    value["ransomware_claim_id"] = ransomware_store.for_observation(value["observation"]["id"])
     value["source_health"] = health(feeds) if feeds else []
     return templates.TemplateResponse(request, "alerts.html", value)
 

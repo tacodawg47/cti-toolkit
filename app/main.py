@@ -30,6 +30,7 @@ from .modules.enrich import base, registry, shodan
 from .modules.enrich.bulk import Service as BulkService
 from .modules.extract import saved, saved_routes
 from .modules.alerts import routes as alert_routes
+from .modules.ransomware import routes as ransomware_routes
 from .modules.extract import atlas, attack, attack_catalog, content, decode, extractor, markdown, tlds
 from .modules.extract import fetch as extract_fetch
 from .modules.extract import pdf as extract_pdf
@@ -38,7 +39,7 @@ from .modules.infrastructure import c2feed, routes as infra_routes
 from .modules.vulnerability_intelligence import routes as vulnintel_routes
 from .modules.vulnerability_intelligence import service as vulnintel_service
 from .modules.vulnerability_intelligence import store as vulnintel_store
-from .modules.vulnerability_intelligence.scheduled import catalog as feed_catalog
+from .core.feed_catalog import catalog as feed_catalog
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -123,6 +124,7 @@ app.include_router(vulnintel_routes.router)
 app.include_router(infra_routes.router)
 app.include_router(saved_routes.router)
 app.include_router(alert_routes.router)
+app.include_router(ransomware_routes.router)
 
 
 @app.get("/", response_class=HTMLResponse)

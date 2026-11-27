@@ -84,6 +84,9 @@ def init_db() -> None:
         from .alert_schema import migrate as migrate_alerts
 
         migrate_alerts(conn)
+        from ..modules.ransomware.schema import migrate as migrate_ransomware
+
+        migrate_ransomware(conn)
         # Drop expired cache rows so the table doesn't grow without bound.
         conn.execute("DELETE FROM cache WHERE expires_at < ?",
                      (datetime.now(timezone.utc).isoformat(),))

@@ -1,5 +1,12 @@
 # Shared Evidence and Source Registry
 
+Update 2026-11-26: [Ransomware Victim Claims](ransomware-victims.md) writes
+immutable reported organization assertions, optional explicit structured
+sector/country assertions, and literal original-post citations. Independent
+module tables retain source-claim identity, capture history and bounded
+normalized recovery input. Optional inbox event keys deduplicate alerts
+without merging evidence. Registry defaults and approval rules remain unchanged.
+
 Update 2026-11-26: [Alert Inbox](alert-inbox.md) adds atomic local selector
 matching to shared observation writes and report saves. Its separate additive
 schema retains alert/review history independently of original availability.

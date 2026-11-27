@@ -134,7 +134,7 @@ class Scope:
                 source_id=self.feed.source, external_id=safe_url, capture_key=uuid4().hex,
                 title=self.feed.label, source_url=safe_url, kind=getattr(self, "capture_kind", "feed"),
                 collection_method=self.feed.method, content_sha256=digest,
-                sensitivity="public" if self.feed.source in settings.archive_public_sources else "unknown",
+                sensitivity="public" if self.feed.raw_allowed and self.feed.source in settings.archive_public_sources else "unknown",
                 collected_at=self.context._runner._stamp(self.context._runner._now())))
             # Saved metadata can only be replayed for this exact original input.
             if doc.content_sha256 != digest:

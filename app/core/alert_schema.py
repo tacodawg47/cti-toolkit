@@ -33,7 +33,21 @@ CREATE TABLE evidence_alert_reviews (
 );
 """
 
-MIGRATIONS = ((1, VERSION_1),)
+VERSION_2 = """
+CREATE TABLE evidence_alert_subjects (
+    observation_id INTEGER PRIMARY KEY REFERENCES evidence_observations(id),
+    event_key TEXT NOT NULL
+);
+CREATE TABLE evidence_alert_events (
+    selector_id INTEGER NOT NULL REFERENCES evidence_selectors(id),
+    event_key TEXT NOT NULL,
+    alert_id INTEGER NOT NULL REFERENCES evidence_alerts(id),
+    PRIMARY KEY(selector_id,event_key)
+);
+CREATE INDEX evidence_alert_events_key ON evidence_alert_events(event_key);
+"""
+
+MIGRATIONS = ((1, VERSION_1), (2, VERSION_2))
 
 
 def migrate(conn: sqlite3.Connection) -> None:

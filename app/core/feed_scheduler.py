@@ -35,6 +35,7 @@ class Feed:
     response_bytes: int = 64 * 1024 * 1024
     redirects: int = 0
     legacy_status: object = lambda: None
+    raw_allowed: bool = True
 
     def __post_init__(self):
         limits = ((self.cadence, 60, 30*86400), (self.stale, self.cadence+1, 90*86400),

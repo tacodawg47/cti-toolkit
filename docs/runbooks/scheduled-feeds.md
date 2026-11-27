@@ -1,5 +1,12 @@
 # Scheduled Feed Refresh and Source Health
 
+Update 2026-11-26: [Ransomware Victim Claims](ransomware-victims.md) adds one
+disabled API snapshot schedule. `app.core.feed_catalog.catalog` composes it
+with the existing 31 vulnerability/infrastructure surfaces for app startup,
+Health and the inbox. The original module catalog remains 31. All 32
+schedules and the worker default off. Source review and live acceptance are
+separate. No existing source registration or cadence changed.
+
 Update 2026-11-26: [Alert Inbox](alert-inbox.md) reuses this read-only source
 health panel. Foundation integration tests connect mocked scoped retrievals,
 observation alerts, progress/recovery, persistent cooldowns and archive

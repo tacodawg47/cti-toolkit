@@ -7,6 +7,7 @@ stay separate even when their indicator values or citations agree.
 from datetime import datetime, timezone
 import ipaddress
 import re
+import unicodedata
 from typing import Literal
 from urllib.parse import urlsplit
 
@@ -17,7 +18,7 @@ from .evidence_models import Metadata
 from .indicators import canonical, detect_type, normalise
 
 STATES = ("new", "reviewed", "dismissed")
-TYPES = ("domain", "ip", "hash", "url", "email", "cve")
+TYPES = ("domain", "ip", "hash", "url", "email", "cve", "organization", "sector", "country")
 MAX_SELECTORS = 100
 
 
@@ -28,6 +29,15 @@ def now():
 def normalize_subject(subject_type, value):
     if subject_type not in TYPES or not isinstance(value, str) or not 1 <= len(value) <= 2048:
         raise ValueError("Use a bounded typed subject")
+    if subject_type in ("organization", "sector", "country"):
+        value = " ".join(unicodedata.normalize("NFKC", value).split()).casefold()
+        if not value or len(value) > (512 if subject_type == "organization" else 128):
+            raise ValueError("Use a bounded watch value")
+        if subject_type == "country":
+            if not re.fullmatch(r"[a-z]{2}", value):
+                raise ValueError("Use a two-letter country code, without aliases")
+            return value.upper()
+        return value
     value = normalise(value)
     if subject_type == "email":
         local, sep, domain = value.rpartition("@")
@@ -47,7 +57,7 @@ def normalize_subject(subject_type, value):
 
 
 class Selector(Metadata):
-    subject_type: Literal["domain", "ip", "hash", "url", "email", "cve"]
+    subject_type: Literal["domain", "ip", "hash", "url", "email", "cve", "organization", "sector", "country"]
     mode: Literal["exact", "domain_tree", "network"] = "exact"
     value: str = Field(min_length=1, max_length=2048)
 
@@ -112,8 +122,19 @@ def matches(selector, observation):
 
 def _match(conn, selector, observation):
     if matches(selector, observation):
+        # Only a trusted consumer assigns a stable source-claim identity.
+        # Ordinary evidence retains its original per-observation semantics.
+        event = conn.execute("SELECT event_key FROM evidence_alert_subjects WHERE observation_id=?",
+                             (observation["id"],)).fetchone()
+        if event and conn.execute("SELECT 1 FROM evidence_alert_events WHERE selector_id=? AND event_key=?",
+                                  (selector["id"], event[0])).fetchone():
+            return
         conn.execute("INSERT OR IGNORE INTO evidence_alerts(selector_id,observation_id,matched_at) VALUES (?,?,?)",
                      (selector["id"], observation["id"], now()))
+        if event:
+            alert = conn.execute("SELECT id FROM evidence_alerts WHERE selector_id=? AND observation_id=?",
+                                 (selector["id"], observation["id"])).fetchone()[0]
+            conn.execute("INSERT INTO evidence_alert_events VALUES (?,?,?)", (selector["id"], event[0], alert))
 
 
 def match_observation(conn, observation_id):

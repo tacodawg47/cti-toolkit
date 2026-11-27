@@ -149,7 +149,7 @@ Plain, short sentences. No em dashes. Dates as YYYY-MM-DD. UI table and
 section titles in Title Case. Roadmap entries say what was decided and why;
 narrative and troubleshooting go to the journal.
 
-## Current status (2026-11-26)
+## Current status (2026-11-27)
 
 Phase 1 is complete. Phase 2 accepted first-delivery implementation closed
 2026-11-25. See docs/review/2026-11-25-phase2-closeout.md for delivered scope,
@@ -157,20 +157,21 @@ validation and remaining limits. Its final suite ran 511 tests: 510 passed,
 one skipped; all 26 local acceptance pages returned 200. These are prior
 verified results, not an automatic rerun in a new session.
 
-Subphase 5F.5 Complete, 2026-11-26. Full offline compatibility ran 650 tests:
-649 passed and one existing skip in 138.479 seconds. Grouped foundation
-acceptance passed all 139 tests. Local evidence-linked alerts, bounded typed
-matching/catch-up and review history are implemented. See
-docs/review/2026-11-26-5f5-closeout.md and docs/runbooks/alert-inbox.md.
-Raw storage, bulk work, all 31 schedules and the feed worker default off.
-No source was enabled/contacted. The live database has not been migrated or
-restarted for 5F.1 to 5F.5. Linux/native-browser visual and live v1 operational
-acceptance remain unperformed. Approved read-only inspection confirmed main
-and local origin/main at the completed 5F.4 commit c5cdae9 with an empty index.
-The 5F.5 commit/push checkpoint remains pending; saved notes grant no Git
-permission. Next: Phase 3 slice A, starting with ransomware victim tracking
-and local watch alerts in one coherent subphase. Read docs/handoff.md after
-the roadmap/current journal entry. Follow session-handoff.md at boundaries.
+Subphase 3A.1 Complete, 2026-11-26. API-only RansomLook recent victim claims
+and local organization/sector/country watch semantics use shared evidence,
+durable jobs and the inbox. Final focused acceptance: 31 passed in 28.725
+seconds. Full compatibility: 681 tests, 680 passed and one existing skip in
+151.119 seconds. See docs/review/2026-11-26-3a1-closeout.md and
+docs/runbooks/ransomware-victims.md. Coverage is recent 100 posts only;
+RansomLook supplies no sector/country. All 32 schedules, worker, bulk and
+raw storage default off. No live migration/restart, enabling or provider
+API data request occurred. Linux/native-browser visual and live v1
+acceptance remain unperformed. Approved read-only inspection on 2026-11-27
+confirmed main/local origin/main at a947eb0 and an empty index; the operator
+reports its completed push. Do not repeat 5F.5. No remote contact or Git
+mutation occurred during inspection. The 3A.1 commit proposal was subsequently
+approved; execution is prepared and separate push approval is pending. Read docs/handoff.md for its
+resumption prompt. Other Phase 3 capabilities remain later subphases.
 
 Data catch-up is optional during the build only. Scheduled freshness,
 visible stale/failure states and tested recovery are required before v1

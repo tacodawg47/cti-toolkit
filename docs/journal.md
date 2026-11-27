@@ -1609,6 +1609,122 @@ Built 2026-11-04 after the live dashboard review:
 
 ## Research notes
 
+### 2026-11-27: Inspected the Pending 3A.1 Checkpoint After Approval
+
+The operator approved read-only Git inspection in the current chat and then
+requested a retry. Confirmed main and local origin/main at the completed
+5F.5 commit a947eb0c83f0f5260c1c1844e64d1b8402ffb332 with an empty index.
+No remote contact or Git mutation. Reviewed tracked diffs and the exact
+33-path authored manifest. Preserve all independent roadmap/journal/handoff
+research and prototype blocks, plus the unrelated files named in the manifest.
+Focused tracked whitespace passed; the whole-tree check identified trailing
+spaces in an unrelated roadmap addition. Leave that addition outside this
+checkpoint. Global-ignore permission and LF/CRLF notices were nonfatal.
+Updated handoff, paired summaries, closeout, checkpoint and the ransomware
+runbook with the actual inspection result. Individual staging/commit and
+separate push remained pending at inspection. The operator subsequently
+individually approved the exact 33-file/selective-block commit proposal and
+message. Execution is prepared; separate push approval remains pending.
+No implementation or test result changed. The closing result records actual
+execution; prepared notes never grant another chat Git permission.
+
+### 2026-11-26: Subphase 3A.1 Complete, API-Only Ransomware Victim Watches
+
+Built only the first coherent Phase 3 slice A consumer after the required
+build-order, current journal/handoff, foundation closeout/runbook and source
+review reading. The operator reports 5F.5 committed and pushed as
+a947eb0c83f0f5260c1c1844e64d1b8402ffb332 with matching hashes and an empty
+index afterward. Saved prepared checkpoint notes were not treated as current
+Git state or permission. No Git operation occurred before the subsequent
+2026-11-27 approved checkpoint inspection recorded above.
+
+Selected RansomLook's public recent-100 API after reading its full current
+About/API documentation and Swagger schema. Its data terms declare CC BY 4.0;
+the service docs describe AGPL v3, correcting old GPL wording. No service
+code was imported. Existing ransomware.live group-profile client/limiter and
+historical reviews were revisited. Current ransomware.live documentation and
+terms failed in the web reader; the browser then explicitly blocked the PRO
+documentation under its site-safety policy. No subsequent workaround.
+Third-party examples did not establish current schema/terms/quotas.
+Details and unchecked material are in the dated ransomware API review.
+
+Added app/modules/ransomware with original parsing, an independent additive
+migration, bounded normalized staging, atomic row ingestion and read-only
+/ransomware claim/capture pages. A composed trusted core catalog includes
+the new opt-in registration and the existing 31 surfaces. The shared app
+loop, client, limiter, durable runner, quota/cooldown ledger and inbox remain
+the owners of execution. No dependency or alternate worker was added.
+
+Organization watches compare exact normalized titles with Unicode NFKC,
+case folding and whitespace collapse; punctuation stays significant. Sector
+and two-letter country code watches require explicit structured values.
+Synthetic normalized integration fixtures verify those types. RansomLook's
+documented Post schema supplies neither, so the adapter leaves both unknown,
+ignores undocumented fields and makes no inference from websites/prose.
+Several watches are independent OR matches, not one combined filter.
+
+Preserved source/group/exact-title claim identity separately from normalized
+matching. Optional trusted inbox event keys retain one alert per watch and
+source claim without merging immutable capture observations. Existing
+generic evidence keeps per-observation semantics. Repeat retrieval, catch-up,
+failed work and restart cannot reset original review revisions. Claim pages
+link every capture and the original alerts. Literal cited references and
+explicit resolutions remain separate. Discovery is aggregator discovery,
+not attack/publication time; naive values stay literal with no guessed zone.
+Originating interrupted execution and later successful job stay distinct.
+
+Durable normalized batches retain at most 100 rows/1 MiB. At each row,
+claim/capture/assertions/citations/alerts/cursor commit atomically, with source
+and schedule eligibility checked at the write boundary too. Resume saved
+input before a changed upstream snapshot. Later eligible scopes can drain
+failed terminal batches; cancelled queues remain retained but do not auto-
+resume. Production raw bodies are forced omitted because API Post records
+can include encoded HTML/screenshots. No decoding/rendering/following source
+content. Synthetic metadata-only archive expiry preserves queues/citations/
+reviews. Omission is honest availability, not a claim that originals exist.
+
+One endpoint, one request, 2 MiB response/charged bytes, 60-second soft pass,
+three attempts, local 1/minute and 24/day limits, persisted 429 cooldown and
+cooperative cancellation keep collection bounded. At most one old and one
+new batch drain per attempt. The one-hour cadence/six-hour stale threshold
+are local proposals, not upstream guarantees. Coverage says recent 100 posts
+only, history/continuity not assessed. Restart never creates a catch-up burst.
+Failed refresh keeps last-good age/coverage and visible failure/stale states.
+
+The Windows venv launcher hit its established managed-launch restriction.
+Authorized offline tests ran through the existing execution path, changing
+no interpreter, dependency or security setting. The first focused run found
+a test using Origin instead of the established Sec-Fetch-Site header; fixed
+the fixture. Earlier inbox/scheduler compatibility passed 48 tests in
+32.656 seconds. An intermediate grouped consumer/foundation run passed 167
+tests in 82.121 seconds. Added three final cases and tightened literal title/
+citation preservation and transaction-boundary checks. Final focused run:
+31 passed in 28.725 seconds. Final full compatibility: 681 tests in
+151.119 seconds, 680 passed and one existing skip. Existing deprecation,
+invalid-PDF and asyncio timing diagnostics remain. All provider HTTP was
+synthetic MockTransport or refused; databases were temporary.
+
+No live migration/restart, source enabling, API data request, install,
+historical reload or external private-data transfer occurred. All 32
+schedules, worker, bulk and raw storage default off. The live database is
+still unmigrated/unrestarted for 5F.1 through 3A.1. Mocks do not establish
+live schema/quotas/availability, Linux, native-browser visual or v1 readiness.
+The source review, runbook and closeout specify approved bounded live
+acceptance still required before daily use.
+
+**Subphase 3A.1 Complete.** Implementation/offline acceptance ended here.
+The exact 33-path checkpoint and selective shared-doc scope are prepared,
+message Add API-only ransomware victim tracking and local watches.
+At implementation closeout, inspection, individual commit approval/execution
+and separate push remained pending. See the subsequent inspection update.
+Preserve Feedly rules, local Claude settings, prototypes and their
+notes, OSINT/untrusted-repository-review work, detection/catalog-review work
+and every independent shared-document block. Exclude secrets, runtime data
+and exports. docs/handoff.md contains the full prompt to resume only this
+checkpoint first, then one bounded vendor breach consumer in a fresh chat
+after that checkpoint is resolved. Other slice A capabilities, email/webhooks, playbooks,
+collectors and AI remain later work.
+
 ### 2026-11-26: Subphase 5F.5 Complete, Alert Inbox and Foundation Acceptance
 
 Implemented only 5F.5 after the required foundation, provenance, handling,

@@ -936,11 +936,28 @@ fake-profile monitoring.
 
 **Ransomware and leak-site tracking**
 - Sources: ransomware.live (free PRO tier; use its API, never site scraping),
-  RansomLook (GPL-3.0, actively maintained; self-host it as a separate
-  service and read its API to cover leak sites, markets, forums, and
-  Telegram; never import its code), breach.house (paid API, account TBD).
+  RansomLook (current service docs say AGPL v3; never import its code),
+  breach.house (paid API, account TBD). First delivery uses RansomLook's
+  hosted API. Self-hosting and broader collection remain later work.
 - Watchlist of organizations, sectors, and countries with alerts on new
   victims.
+
+3A.1 scope, decided 2026-11-26: one opt-in RansomLook recent-100 API snapshot
+feeds shared evidence and the local inbox. Preserve immutable captures but
+deduplicate alerts by watch and source claim, retaining review history.
+Organization names match exact normalized titles; sector/country require
+explicit structured values. RansomLook supplies neither, so they stay unknown.
+Use bounded durable normalized staging and the existing app loop/client/limiter;
+raw bodies are omitted because the schema can include HTML/screenshots.
+Coverage is latest 100 posts only, with history/continuity unassessed. See
+docs/runbooks/ransomware-victims.md and the dated source API review. Other
+slice A capabilities remain separate subphases. Live activation needs approval.
+
+**Subphase 3A.1 Complete, 2026-11-26.** Implementation/offline acceptance:
+31 focused tests passed; full compatibility ran 681 tests, 680 passed and one
+existing skip. See docs/review/2026-11-26-3a1-closeout.md. All 32 composed
+schedules default off. No live source enabling, migration, restart or API
+data request occurred. The 3A.1 Git checkpoint is pending current-chat approval.
 
 **Breach and credential-leak monitoring** (for the watched domains and email
 addresses)
@@ -1338,10 +1355,11 @@ at a tested milestone if its scope proves too large.
 
 At each boundary update the table's status, dated review, journal and
 docs/handoff.md. Commit and push remain separately approved operations.
-The next chat starts Phase 3 slice A with ransomware victim tracking and
-local watch alerts as its first coherent subphase, after resolving the 5F.5
-checkpoint. Use the prompt in docs/handoff.md. Live v1 activation remains
-separately approved work, not implied by foundation completion.
+Approved read-only inspection on 2026-11-27 confirmed main/local origin/main
+at a947eb0 with an empty index; the operator reports its completed push.
+Do not repeat 5F.5. Phase 3 slice A starts with bounded ransomware victim/watch
+consumer 3A.1. Use the current prompt in docs/handoff.md for its checkpoint
+or later subphase. Live v1 activation remains separately approved work.
 
 5F.5 design, decided 2026-11-26: match bounded operator-configured typed
 selectors against local immutable observations. Deduplicate by selector and

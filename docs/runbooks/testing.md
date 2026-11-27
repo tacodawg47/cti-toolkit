@@ -2,9 +2,12 @@
 
 Written 2026-10-28. Updated 2026-11-26.
 
-The current suite ran 650 tests, with 649 passing and one skipped, verified
-at the 2026-11-26 subphase 5F.5 closeout in 138.479 seconds. Grouped foundation
-acceptance passed all 139 tests in 61.754 seconds. They use Python's built-in `unittest`,
+The current suite ran 681 tests, with 680 passing and one skipped, verified
+at the 2026-11-26 subphase 3A.1 closeout in 151.119 seconds. Final ransomware
+acceptance passed all 31 tests in 28.725 seconds. An earlier grouped consumer/
+foundation run passed 167 tests in 82.121 seconds, before three final tests
+and small identity/transaction refinements covered by the final runs.
+They use Python's built-in `unittest`,
 so no extra dependency is needed, and they never touch the network: importing the
 `tests` package replaces the shared HTTP client with one that refuses every
 request, so a test that forgets to mock fails loudly instead of spending
@@ -37,6 +40,7 @@ import base (so `import app...` works), and `-v` lists each test.
 
 | File | Covers |
 |---|---|
+| `tests/test_ransomware.py` | 31 API-only ransomware cases: disabled defaults, fixed destinations and scoped calls, explicit typed watch semantics, claim/capture deduplication and preserved reviews, local catch-up, literal dates/citations, omitted or expired originals, staged changed-response recovery, atomic row failure, revocation at requests/waits/rows/retries/resumption, cancellation, schedule disablement, durable/shared quota and cooldowns, finite requests/bytes/time, passive escaped local pages and additive migration rollback/newer-version refusal. See [Ransomware Victim Claims](ransomware-victims.md). |
 | `tests/test_alerts.py` | 16 inbox cases: atomic report/observation matches, canonical typed values, domain/CIDR boundaries, passive/invalid rules, separate assertions, disabled/replayed selectors, paged restart/concurrent catch-up, rollback, review conflicts/history, provenance/citation resolution, expiry preservation, capacity/paging, migration rollback and guarded escaped routes. |
 | `tests/test_foundation_acceptance.py` | 7 cross-feature integrations: crash after alert before progress, retained originating run and review on restart, failed/stale freshness rendered on eight consuming pages, offline first start/recovery, 429/cancellation, revocation at ingestion, downtime/daily quotas and missing-original reconciliation. See [Alert Inbox](alert-inbox.md) for commands and live acceptance limits. |
 | `tests/test_saved_reports.py` | 42 offline save/archive/bulk cases: atomic saves and migrations, replay/changed input, source/run/date/citation provenance, malformed/bounded input, handling and credential guards, capacity/concurrency, interrupted file writes/rename recovery, corruption/orphans, expiry preserving history, local escaped views, provider selection/gates, app-loop quota ownership, request/byte/time/day budgets, 429 cooldowns, cancellation/revocation/retry, cached originals, Enrich All batching and finite RDAP redirects. See [Saved Reports and Archives](saved-reports-and-archives.md). |
